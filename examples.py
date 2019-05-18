@@ -9,7 +9,7 @@ def basic_scarf(n: int) -> Pattern:
                           [Stitch.KNIT] * 3 +
                           [Stitch.SLIP, Stitch.KNIT2TOG, Stitch.PSSO] +
                           [Stitch.KNIT] * 3 +
-                          [Stitch.YARN_OVER, Stitch.KNIT]) * 3] * n +
+                          [Stitch.YARN_OVER, Stitch.KNIT]) * 4] * n +
         [[Stitch.BIND_OFF] * 41]
     )
 

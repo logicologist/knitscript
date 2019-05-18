@@ -9,7 +9,7 @@ class Stitch(Enum):
     KNIT = ("K", 1, 1, lambda: Stitch.PURL)
     PURL = ("P", 1, 1, lambda: Stitch.KNIT)
     SLIP = ("SL", 1, 1, lambda: Stitch.SLIP)
-    PSSO = ("PSSO", 2, 1, lambda: Stitch.PSSO)
+    PSSO = ("PSSO", 0, -1, lambda: Stitch.PSSO)
     YARN_OVER = ("YO", 0, 1, lambda: Stitch.YARN_OVER)
     KNIT2TOG = ("K2T", 2, 1, lambda: Stitch.SLIP_SLIP_PURL)
     PURL2TOG = ("P2T", 2, 1, lambda: Stitch.SLIP_SLIP_KNIT)
