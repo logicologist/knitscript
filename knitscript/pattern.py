@@ -1,6 +1,7 @@
 from typing import List
 
-from stitch import Stitch
+from knitscript.stitch import Stitch
+
 
 class Pattern:
     def __init__(self, stitches: List[List[Stitch]]):
@@ -20,7 +21,7 @@ class Pattern:
                 return "too many stitches"
             count = next_count
             next_count = 0
-            
+
         if count > 0:
             return "left over stitches"
         return "ok"

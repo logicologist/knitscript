@@ -2,12 +2,15 @@ from __future__ import annotations
 from enum import Enum
 from typing import Callable
 
+
 class Stitch(Enum):
-    CAST_ON = ("CO", 0, 1, lambda: None)
-    BIND_OFF = ("BO", 1, 0, lambda: None)
+    CAST_ON = ("CO", 0, 1, lambda: Stitch.CAST_ON)
+    BIND_OFF = ("BO", 1, 0, lambda: Stitch.BIND_OFF)
     KNIT = ("K", 1, 1, lambda: Stitch.PURL)
     PURL = ("P", 1, 1, lambda: Stitch.KNIT)
-    YARN_OVER = ("YO", 1, 1, lambda: Stitch.YARN_OVER)
+    SLIP = ("SL", 1, 1, lambda: Stitch.SLIP)
+    PSSO = ("PSSO", 2, 1, lambda: Stitch.PSSO)
+    YARN_OVER = ("YO", 0, 1, lambda: Stitch.YARN_OVER)
     KNIT2TOG = ("K2T", 2, 1, lambda: Stitch.SLIP_SLIP_PURL)
     PURL2TOG = ("P2T", 2, 1, lambda: Stitch.SLIP_SLIP_KNIT)
     SLIP_SLIP_KNIT = ("SSK", 2, 1, lambda: Stitch.PURL2TOG)
