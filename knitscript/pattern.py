@@ -3,8 +3,8 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Tuple
 
-from knitscript.ast import StitchExpr, PatternExpr, RepeatStitchExpr, \
-    RepeatRowExpr
+from knitscript.ast import ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, \
+    PatternExpr, RowRepeatExpr, StitchExpr
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -28,11 +28,11 @@ def _(stitch: StitchExpr, available: int) -> Tuple[int, int]:
 
 
 @count_stitches.register
-def _(repeat_stitch: RepeatStitchExpr, available: int) -> Tuple[int, int]:
+def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
     this_side = available
     next_side = 0
-    for _ in range(repeat_stitch.count):
-        for stitch in repeat_stitch.stitches:
+    for _ in range(repeat.count):
+        for stitch in repeat.stitches:
             (consumed, produced) = count_stitches(stitch, this_side)
             _at_least(consumed, this_side)
             this_side -= consumed
@@ -41,14 +41,29 @@ def _(repeat_stitch: RepeatStitchExpr, available: int) -> Tuple[int, int]:
 
 
 @count_stitches.register
-def _(repeat_row: RepeatRowExpr, available: int) -> Tuple[int, int]:
+def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
+    # TODO: This is too similar to the FixedStitchRepeatExpr case.
     this_side = available
-    for _ in range(repeat_row.count):
-        for row in repeat_row.rows:
-            (consumed, produced) = count_stitches(row, this_side)
-            _exactly(consumed, this_side)
-            this_side = produced
-    return available, this_side
+    next_side = 0
+    while this_side > repeat.to_last:
+        for stitch in repeat.stitches:
+            (consumed, produced) = count_stitches(stitch, this_side)
+            _at_least(consumed, this_side)
+            this_side -= consumed
+            next_side += produced
+    _exactly(repeat.to_last, this_side)
+    return available - this_side, next_side
+
+
+@count_stitches.register
+def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
+    count = available
+    for _ in range(repeat.count):
+        for row in repeat.rows:
+            (consumed, produced) = count_stitches(row, count)
+            _exactly(consumed, count)
+            count = produced
+    return available, count
 
 
 def _exactly(expected: int, actual: int) -> None:
