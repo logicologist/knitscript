@@ -1,10 +1,11 @@
+from __future__ import annotations
 from typing import List
 
 from knitscript.stitch import Stitch
 
 
 class Pattern:
-    def __init__(self, stitches: List[List[Stitch]]):
+    def __init__(self, stitches: List[List[Stitch]]) -> None:
         self._stitches = stitches
 
     def verify(self):
