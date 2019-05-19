@@ -33,7 +33,7 @@ def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
     next_side = 0
     for _ in range(repeat.count):
         for stitch in repeat.stitches:
-            (consumed, produced) = count_stitches(stitch, this_side)
+            consumed, produced = count_stitches(stitch, this_side)
             _at_least(consumed, this_side)
             this_side -= consumed
             next_side += produced
@@ -42,7 +42,7 @@ def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
 
 @count_stitches.register
 def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
-    (consumed, produced) = count_stitches(
+    consumed, produced = count_stitches(
         FixedStitchRepeatExpr(repeat.stitches, 1), available - repeat.to_last)
     n = available // consumed
     _exactly(n * consumed, available - repeat.to_last)
@@ -54,7 +54,7 @@ def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
     count = available
     for _ in range(repeat.count):
         for row in repeat.rows:
-            (consumed, produced) = count_stitches(row, count)
+            consumed, produced = count_stitches(row, count)
             _exactly(consumed, count)
             count = produced
     return available, count
