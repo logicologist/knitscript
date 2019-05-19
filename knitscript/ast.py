@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import List
+from typing import Collection
 
 from knitscript.stitch import Stitch
 
@@ -20,13 +20,13 @@ class StitchExpr(Expr):
 
 
 class FixedStitchRepeatExpr(Expr):
-    def __init__(self, stitches: List[Expr], count: int) -> None:
-        self._stitches = stitches
+    def __init__(self, stitches: Collection[Expr], count: int) -> None:
+        self._stitches = tuple(stitches)
         self._count = count
 
     @property
-    def stitches(self) -> List[Expr]:
-        return self._stitches.copy()
+    def stitches(self) -> Collection[Expr]:
+        return self._stitches
 
     @property
     def count(self) -> int:
@@ -34,13 +34,13 @@ class FixedStitchRepeatExpr(Expr):
 
 
 class ExpandingStitchRepeatExpr(Expr):
-    def __init__(self, stitches: List[Expr], to_last: int = 0) -> None:
-        self._stitches = stitches
+    def __init__(self, stitches: Collection[Expr], to_last: int = 0) -> None:
+        self._stitches = tuple(stitches)
         self._to_last = to_last
 
     @property
-    def stitches(self) -> List[Expr]:
-        return self._stitches.copy()
+    def stitches(self) -> Collection[Expr]:
+        return self._stitches
 
     @property
     def to_last(self) -> int:
@@ -48,18 +48,18 @@ class ExpandingStitchRepeatExpr(Expr):
 
 
 class RowExpr(FixedStitchRepeatExpr):
-    def __init__(self, stitches: List[Expr]):
+    def __init__(self, stitches: Collection[Expr]):
         super().__init__(stitches, 1)
 
 
 class RowRepeatExpr(Expr):
-    def __init__(self, rows: List[Expr], count: int) -> None:
-        self._rows = rows
+    def __init__(self, rows: Collection[Expr], count: int) -> None:
+        self._rows = tuple(rows)
         self._count = count
 
     @property
-    def rows(self) -> List[Expr]:
-        return self._rows.copy()
+    def rows(self) -> Collection[Expr]:
+        return self._rows
 
     @property
     def count(self) -> int:
@@ -67,5 +67,5 @@ class RowRepeatExpr(Expr):
 
 
 class PatternExpr(RowRepeatExpr):
-    def __init__(self, rows: List[Expr]) -> None:
+    def __init__(self, rows: Collection[Expr]) -> None:
         super().__init__(rows, 1)
