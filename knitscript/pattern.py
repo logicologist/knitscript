@@ -1,75 +1,63 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from itertools import chain, tee
-from typing import Callable, Iterable, Iterator, TypeVar
+from typing import Tuple
 
-from knitscript.ast import StitchExpr, RowExpr, PatternExpr, \
-    RepeatStitchExpr, RepeatRowExpr
-from knitscript.stitch import Stitch
+from knitscript.ast import StitchExpr, PatternExpr, RepeatStitchExpr, \
+    RepeatRowExpr
 
-_T = TypeVar("_T")
-_U = TypeVar("_U")
+
+def is_valid_pattern(pattern: PatternExpr) -> bool:
+    return count_stitches(pattern, 0) == (0, 0)
 
 
 @singledispatch
-def to_rows(_: object) -> Iterator[Iterator[Stitch]]:
+def count_stitches(_object: object, _available: int) -> Tuple[int, int]:
+    """
+    Returns the number of stitches consumed from the current row and the number
+    of stitches produced for the next row after evaluating all the stitches in
+    the tree.
+    """
     raise NotImplementedError()
 
 
-@to_rows.register
-def _(stitch: StitchExpr) -> Iterator[Iterator[Stitch]]:
-    def wrap():
-        yield stitch.stitch
-
-    yield wrap()
+@count_stitches.register
+def _(stitch: StitchExpr, available: int) -> Tuple[int, int]:
+    _at_least(stitch.stitch.consumes, available)
+    return stitch.stitch.consumes, stitch.stitch.produces
 
 
-@to_rows.register
-def _(row: RowExpr) -> Iterator[Iterator[Stitch]]:
-    yield _flat_map(lambda stitch: next(to_rows(stitch)), row.stitches)
+@count_stitches.register
+def _(repeat_stitch: RepeatStitchExpr, available: int) -> Tuple[int, int]:
+    this_side = available
+    next_side = 0
+    for _ in range(repeat_stitch.count):
+        for stitch in repeat_stitch.stitches:
+            (consumed, produced) = count_stitches(stitch, this_side)
+            _at_least(consumed, this_side)
+            this_side -= consumed
+            next_side += produced
+    return available - this_side, next_side
 
 
-@to_rows.register
-def _(pattern: PatternExpr) -> Iterator[Iterator[Stitch]]:
-    return _flat_map(to_rows, pattern.rows)
+@count_stitches.register
+def _(repeat_row: RepeatRowExpr, available: int) -> Tuple[int, int]:
+    this_side = available
+    for _ in range(repeat_row.count):
+        for row in repeat_row.rows:
+            (consumed, produced) = count_stitches(row, this_side)
+            _exactly(consumed, this_side)
+            this_side = produced
+    return available, this_side
 
 
-@to_rows.register
-def _(repeat_stitch: RepeatStitchExpr) -> Iterator[Iterator[Stitch]]:
-    yield _cycle(_flat_map(lambda stitch: next(to_rows(stitch)),
-                           repeat_stitch.stitches), repeat_stitch.count)
+def _exactly(expected: int, actual: int) -> None:
+    _at_least(expected, actual)
+    if expected < actual:
+        raise Exception(f"{actual - expected} stitches left over")
 
 
-@to_rows.register
-def _(repeat_row: RepeatRowExpr) -> Iterator[Iterator[Stitch]]:
-    return _cycle(_flat_map(to_rows, repeat_row.rows), repeat_row.count)
-
-
-def validate(rows: Iterable[Iterable[Stitch]]) -> str:
-    count = 0
-    next_count = 0
-    for row in rows:
-        for stitch in row:
-            if count < stitch.consumes:
-                return "not enough stitches"
-            count -= stitch.consumes
-            next_count += stitch.produces
-
-        if count > 0:
-            return "too many stitches"
-        count = next_count
-        next_count = 0
-
-    if count > 0:
-        return "left over stitches"
-    return "ok"
-
-
-def _flat_map(func: Callable[[_T], Iterable[_U]], iterable: Iterable[_T]) \
-        -> Iterator[_U]:
-    return chain.from_iterable(map(func, iterable))
-
-
-def _cycle(iterable: Iterable[_T], n: int) -> Iterator[_T]:
-    return chain.from_iterable(tee(iterable, n))
+def _at_least(expected: int, actual: int) -> None:
+    if expected > actual:
+        raise Exception(
+            f"expected {expected} stitches, but only {actual} are available")

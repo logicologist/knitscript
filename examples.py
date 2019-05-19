@@ -2,7 +2,7 @@ from typing import List
 
 from knitscript.ast import PatternExpr, RepeatRowExpr, RepeatStitchExpr, \
     RowExpr, StitchExpr
-from knitscript.pattern import to_rows, validate
+from knitscript.pattern import is_valid_pattern
 from knitscript.stitch import Stitch
 
 
@@ -98,9 +98,9 @@ def basic_scarf_ast(n: int) -> PatternExpr:
     ])
 
 
-print(validate(basic_scarf(5)))
-print(validate(to_rows(
-    PatternExpr([RowExpr([RepeatStitchExpr([StitchExpr(Stitch.CAST_ON)], 3)]),
-                 RowExpr(
-                     [RepeatStitchExpr([StitchExpr(Stitch.BIND_OFF)], 3)])]))))
-print(validate(to_rows(basic_scarf_ast(1))))
+simple = PatternExpr(
+    [RowExpr([RepeatStitchExpr([StitchExpr(Stitch.CAST_ON)], 3)]),
+     RowExpr([RepeatStitchExpr([StitchExpr(Stitch.BIND_OFF)], 3)])])
+print(is_valid_pattern(simple))
+print(is_valid_pattern((basic_scarf_ast(1))))
+print(is_valid_pattern((basic_scarf_ast(5))))

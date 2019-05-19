@@ -19,24 +19,6 @@ class StitchExpr(Expr):
         return self._stitch
 
 
-class RowExpr(Expr):
-    def __init__(self, stitches: List[Expr]) -> None:
-        self._stitches = stitches
-
-    @property
-    def stitches(self) -> List[Expr]:
-        return self._stitches.copy()
-
-
-class PatternExpr(Expr):
-    def __init__(self, rows: List[Expr]) -> None:
-        self._rows = rows
-
-    @property
-    def rows(self) -> List[Expr]:
-        return self._rows.copy()
-
-
 class RepeatStitchExpr(Expr):
     def __init__(self, stitches: List[Expr], count: int) -> None:
         self._stitches = stitches
@@ -51,6 +33,11 @@ class RepeatStitchExpr(Expr):
         return self._count
 
 
+class RowExpr(RepeatStitchExpr):
+    def __init__(self, stitches: List[Expr]):
+        super().__init__(stitches, 1)
+
+
 class RepeatRowExpr(Expr):
     def __init__(self, rows: List[Expr], count: int) -> None:
         self._rows = rows
@@ -63,3 +50,8 @@ class RepeatRowExpr(Expr):
     @property
     def count(self) -> int:
         return self._count
+
+
+class PatternExpr(RepeatRowExpr):
+    def __init__(self, rows: List[Expr]) -> None:
+        super().__init__(rows, 1)
