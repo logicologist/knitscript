@@ -3,8 +3,8 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Tuple
 
-from knitscript.ast import ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, \
-    PatternExpr, RowRepeatExpr, StitchExpr
+from knitscript.ast import ExpandingStitchRepeatExpr, Expr, \
+    FixedStitchRepeatExpr, PatternExpr, RowRepeatExpr, StitchExpr
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -12,7 +12,7 @@ def is_valid_pattern(pattern: PatternExpr) -> bool:
 
 
 @singledispatch
-def count_stitches(_object: object, _available: int) -> Tuple[int, int]:
+def count_stitches(_expr: Expr, _available: int) -> Tuple[int, int]:
     """
     Returns the number of stitches consumed from the current row and the number
     of stitches produced for the next row after evaluating all the stitches in
@@ -42,17 +42,11 @@ def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
 
 @count_stitches.register
 def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
-    # TODO: This is too similar to the FixedStitchRepeatExpr case.
-    this_side = available
-    next_side = 0
-    while this_side > repeat.to_last:
-        for stitch in repeat.stitches:
-            (consumed, produced) = count_stitches(stitch, this_side)
-            _at_least(consumed, this_side)
-            this_side -= consumed
-            next_side += produced
-    _exactly(repeat.to_last, this_side)
-    return available - this_side, next_side
+    (consumed, produced) = count_stitches(
+        FixedStitchRepeatExpr(repeat.stitches, 1), available - repeat.to_last)
+    n = available // consumed
+    _exactly(n * consumed, available - repeat.to_last)
+    return n * consumed, n * produced
 
 
 @count_stitches.register
@@ -66,13 +60,13 @@ def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
     return available, count
 
 
-def _exactly(expected: int, actual: int) -> None:
-    _at_least(expected, actual)
-    if expected < actual:
-        raise Exception(f"{actual - expected} stitches left over")
-
-
 def _at_least(expected: int, actual: int) -> None:
     if expected > actual:
         raise Exception(
             f"expected {expected} stitches, but only {actual} are available")
+
+
+def _exactly(expected: int, actual: int) -> None:
+    _at_least(expected, actual)
+    if expected < actual:
+        raise Exception(f"{actual - expected} stitches left over")
