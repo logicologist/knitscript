@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from itertools import chain
 from typing import Any, List
 
-from knitscript.pattern import Pattern
 from knitscript.stitch import Stitch
 
 
@@ -33,7 +32,7 @@ class RepeatExpr(Expr):
         self._exprs = exprs
         self._count = count
 
-    def eval(self) -> List[Stitch]:
+    def eval(self) -> List[Any]:
         return flat_eval(self._exprs) * self._count
 
 
@@ -41,8 +40,8 @@ class PatternExpr(Expr):
     def __init__(self, rows: List[Expr]) -> None:
         self._rows = rows
 
-    def eval(self) -> Pattern:
-        return Pattern(flat_eval(self._rows))
+    def eval(self) -> List[List[Stitch]]:
+        return flat_eval(self._rows)
 
 
 def flat_eval(exprs: List[Expr]) -> List[Any]:
