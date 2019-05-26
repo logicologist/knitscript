@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Dict, Tuple
+from typing import Dict, Tuple, Union
 
 from knitscript.ast import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
@@ -20,13 +20,13 @@ def is_valid_pattern(pattern: PatternExpr) -> bool:
 
 
 @singledispatch
-def count_stitches(_expr: Expr, _available: int) -> Tuple[int, int]:
+def count_stitches(expr: Expr, _available: int) -> Tuple[int, int]:
     """
     Counts the number of stitches used at the beginning and end of the
     expression, and makes sure the expression does not use too many stitches or
     not enough stitches at any point.
 
-    :param _expr: the expression to count the stitches of
+    :param expr: the expression to count the stitches of
     :param _available: the number of stitches remaining in the current row
     :return:
         a pair; the first is the number of stitches consumed from the current
@@ -35,7 +35,7 @@ def count_stitches(_expr: Expr, _available: int) -> Tuple[int, int]:
     :raise Exception:
         if the expression uses too many stitches or not enough stitches
     """
-    raise NotImplementedError()
+    raise TypeError(f"unsupported expression {type(expr).__name__}")
 
 
 @count_stitches.register
@@ -83,15 +83,15 @@ def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
 
 
 @singledispatch
-def compile_text(_expr: Expr) -> str:
+def compile_text(expr: Expr) -> str:
     """
     Compiles the expression to human-readable knitting instructions in plain
     text.
 
-    :param _expr: the expression to compile
+    :param expr: the expression to compile
     :return: the instructions for the expression
     """
-    raise NotImplementedError()
+    raise TypeError(f"unsupported expression {type(expr).__name__}")
 
 
 @compile_text.register
@@ -140,6 +140,12 @@ def substitute(expr: Expr, _env: Dict[str, Expr]) -> Expr:
     :return:
         the transformed expression with all variables and calls substituted out
     """
+    raise TypeError(f"unsupported expression {type(expr).__name__}")
+
+
+@substitute.register(StitchExpr)
+@substitute.register(NaturalLit)
+def _(expr: Union[StitchExpr, NaturalLit], _env: Dict[str, Expr]) -> Expr:
     return expr
 
 
@@ -199,14 +205,14 @@ def _(call: CallExpr, env: Dict[str, Expr]) -> Expr:
 
 
 @singledispatch
-def flatten(_expr: Expr) -> Expr:
+def flatten(expr: Expr) -> Expr:
     """
     Flattens each block concatenation expression into a single pattern.
 
-    :param _expr: the expression to transform
+    :param expr: the expression to transform
     :return: the transformed expression after flattening block concatenations
     """
-    raise NotImplementedError()
+    raise TypeError(f"unsupported expression {type(expr).__name__}")
 
 
 @flatten.register
