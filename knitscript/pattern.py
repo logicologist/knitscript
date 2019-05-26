@@ -45,7 +45,7 @@ def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
     consumed, produced = count_stitches(
         FixedStitchRepeatExpr(repeat.stitches, 1), available - repeat.to_last
     )
-    n = available // consumed
+    n = (available - repeat.to_last) // consumed
     _exactly(n * consumed, available - repeat.to_last)
     return n * consumed, n * produced
 

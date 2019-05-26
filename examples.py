@@ -12,7 +12,7 @@ print(is_valid_pattern(simple))
 
 def basic_scarf(n: int) -> PatternExpr:
     kpk = RowExpr([StitchExpr(Stitch.KNIT),
-                   FixedStitchRepeatExpr([StitchExpr(Stitch.PURL)], 39),
+                   ExpandingStitchRepeatExpr([StitchExpr(Stitch.PURL)], 1),
                    StitchExpr(Stitch.KNIT)])
 
     return PatternExpr([
