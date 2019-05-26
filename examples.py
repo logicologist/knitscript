@@ -1,8 +1,9 @@
-from knitscript.ast import CallExpr, ExpandingStitchRepeatExpr, \
-    FixedStitchRepeatExpr, GetExpr, NaturalLit, PatternExpr, RowExpr, \
-    RowRepeatExpr, StitchExpr
+from knitscript.ast import BlockConcatExpr, CallExpr, \
+    ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
+    PatternExpr, RowExpr, RowRepeatExpr, StitchExpr
 
-from knitscript.interpreter import compile_text, is_valid_pattern, substitute
+from knitscript.interpreter import compile_text, flatten, is_valid_pattern, \
+    substitute
 from knitscript.stitch import Stitch
 
 simple = PatternExpr(
@@ -12,7 +13,6 @@ simple = PatternExpr(
      RowExpr([FixedStitchRepeatExpr([StitchExpr(Stitch.BIND_OFF)],
                                     NaturalLit(3))])])
 print(is_valid_pattern(simple))
-
 
 kpk = RowExpr([StitchExpr(Stitch.KNIT),
                ExpandingStitchRepeatExpr([StitchExpr(Stitch.PURL)],
@@ -100,10 +100,15 @@ seed = PatternExpr([
 
 first_class_patterns_omg = PatternExpr([
     RowExpr([FixedStitchRepeatExpr([StitchExpr(Stitch.CAST_ON)],
-                                   NaturalLit(2))]),
-    GetExpr("stitch"),
+                                   NaturalLit(4))]),
+    BlockConcatExpr([GetExpr("stitch"), GetExpr("stitch")]),
+    BlockConcatExpr([GetExpr("stitch"), GetExpr("stitch")]),
     RowExpr([ExpandingStitchRepeatExpr([StitchExpr(Stitch.BIND_OFF)])])
 ], ["stitch"])
 
+processed = flatten(substitute(CallExpr(first_class_patterns_omg, [seed]), {}))
+assert isinstance(processed, PatternExpr)
+
 print()
-print(compile_text(substitute(CallExpr(first_class_patterns_omg, [seed]), {})))
+print(is_valid_pattern(processed))
+print(compile_text(processed))

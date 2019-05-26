@@ -3,9 +3,9 @@ from __future__ import annotations
 from functools import singledispatch
 from typing import Dict, Tuple
 
-from knitscript.ast import CallExpr, ExpandingStitchRepeatExpr, Expr, \
-    FixedStitchRepeatExpr, GetExpr, NaturalLit, PatternExpr, RowRepeatExpr, \
-    StitchExpr
+from knitscript.ast import BlockConcatExpr, CallExpr, \
+    ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
+    NaturalLit, PatternExpr, RowRepeatExpr, StitchExpr, RowExpr
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -168,6 +168,13 @@ def _(repeat: RowRepeatExpr, env: Dict[str, Expr]) -> Expr:
 
 
 @substitute.register
+def _(concat: BlockConcatExpr, env: Dict[str, Expr]) -> Expr:
+    return BlockConcatExpr(
+        list(map(lambda expr: substitute(expr, env), concat.blocks))
+    )
+
+
+@substitute.register
 def _(pattern: PatternExpr, env: Dict[str, Expr]) -> Expr:
     return PatternExpr(
         list(map(lambda expr: substitute(expr, env), pattern.rows)),
@@ -189,6 +196,52 @@ def _(call: CallExpr, env: Dict[str, Expr]) -> Expr:
     assert isinstance(target, PatternExpr)
     return substitute(call.target,
                       {**env, **dict(zip(target.params, call.args))})
+
+
+@singledispatch
+def flatten(_expr: Expr) -> Expr:
+    """
+    Flattens each block concatenation expression into a single pattern.
+
+    :param _expr: the expression to transform
+    :return: the transformed expression after flattening block concatenations
+    """
+    raise NotImplementedError()
+
+
+@flatten.register
+def _(stitch: StitchExpr) -> Expr:
+    return stitch
+
+
+@flatten.register
+def _(repeat: FixedStitchRepeatExpr) -> Expr:
+    return FixedStitchRepeatExpr(list(map(flatten, repeat.stitches)),
+                                 repeat.count)
+
+
+@flatten.register
+def _(repeat: ExpandingStitchRepeatExpr) -> Expr:
+    return ExpandingStitchRepeatExpr(list(map(flatten, repeat.stitches)),
+                                     repeat.to_last)
+
+
+@flatten.register
+def _(repeat: RowRepeatExpr) -> Expr:
+    return RowRepeatExpr(list(map(flatten, repeat.rows)), repeat.count)
+
+
+@flatten.register
+def _(pattern: PatternExpr) -> Expr:
+    return PatternExpr(list(map(flatten, pattern.rows)), pattern.params)
+
+
+@flatten.register
+def _(concat: BlockConcatExpr) -> Expr:
+    for block in concat.blocks:
+        assert isinstance(block, PatternExpr)
+    rows = map(RowExpr, zip(*map(lambda pattern: pattern.rows, concat.blocks)))
+    return PatternExpr(list(rows))
 
 
 def _at_least(expected: int, actual: int) -> None:

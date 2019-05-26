@@ -145,6 +145,23 @@ class RowRepeatExpr(Expr):
         return self._count
 
 
+class BlockConcatExpr(Expr):
+    """An AST node representing horizontal concatenation of 2D blocks."""
+
+    def __init__(self, blocks: Collection[Expr]) -> None:
+        """
+        Creates a new block concatenation expression.
+
+        :param blocks: the blocks to concatenate
+        """
+        self._blocks = blocks
+
+    @property
+    def blocks(self) -> Collection[Expr]:
+        """The blocks to concatenate."""
+        return self._blocks
+
+
 class PatternExpr(RowRepeatExpr):
     """An AST node representing a pattern."""
 
