@@ -92,3 +92,18 @@ assert isinstance(basic_scarf5, PatternExpr)
 print(is_valid_pattern(basic_scarf5))
 print()
 print(compile_text(basic_scarf5))
+
+seed = PatternExpr([
+    RowExpr([StitchExpr(Stitch.KNIT), StitchExpr(Stitch.PURL)]),
+    RowExpr([StitchExpr(Stitch.PURL), StitchExpr(Stitch.KNIT)])
+])
+
+first_class_patterns_omg = PatternExpr([
+    RowExpr([FixedStitchRepeatExpr([StitchExpr(Stitch.CAST_ON)],
+                                   NaturalLit(2))]),
+    GetExpr("stitch"),
+    RowExpr([ExpandingStitchRepeatExpr([StitchExpr(Stitch.BIND_OFF)])])
+], ["stitch"])
+
+print()
+print(compile_text(substitute(CallExpr(first_class_patterns_omg, [seed]), {})))
