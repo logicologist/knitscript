@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from functools import singledispatch
-from typing import Tuple
+from typing import Dict, Tuple
 
-from knitscript.ast import ExpandingStitchRepeatExpr, Expr, \
-    FixedStitchRepeatExpr, PatternExpr, RowRepeatExpr, StitchExpr
+from knitscript.ast import CallExpr, ExpandingStitchRepeatExpr, Expr, \
+    FixedStitchRepeatExpr, GetExpr, NaturalLit, PatternExpr, RowRepeatExpr, \
+    StitchExpr
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -47,7 +48,8 @@ def _(stitch: StitchExpr, available: int) -> Tuple[int, int]:
 def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
     this_side = available
     next_side = 0
-    for _ in range(repeat.count):
+    assert isinstance(repeat.count, NaturalLit)
+    for _ in range(repeat.count.value):
         for stitch in repeat.stitches:
             consumed, produced = count_stitches(stitch, this_side)
             _at_least(consumed, this_side)
@@ -58,18 +60,21 @@ def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
 
 @count_stitches.register
 def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
+    assert isinstance(repeat.to_last, NaturalLit)
     consumed, produced = count_stitches(
-        FixedStitchRepeatExpr(repeat.stitches, 1), available - repeat.to_last
+        FixedStitchRepeatExpr(repeat.stitches, NaturalLit(1)),
+        available - repeat.to_last.value
     )
-    n = (available - repeat.to_last) // consumed
-    _exactly(n * consumed, available - repeat.to_last)
+    n = (available - repeat.to_last.value) // consumed
+    _exactly(n * consumed, available - repeat.to_last.value)
     return n * consumed, n * produced
 
 
 @count_stitches.register
 def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
     count = available
-    for _ in range(repeat.count):
+    assert isinstance(repeat.count, NaturalLit)
+    for _ in range(repeat.count.value):
         for row in repeat.rows:
             consumed, produced = count_stitches(row, count)
             _exactly(consumed, count)
@@ -97,7 +102,7 @@ def _(stitch: StitchExpr) -> str:
 @compile_text.register
 def _(repeat: FixedStitchRepeatExpr) -> str:
     stitches = ", ".join(map(compile_text, repeat.stitches))
-    if repeat.count == 1:
+    if repeat.count == NaturalLit(1):
         return stitches
     elif len(repeat.stitches) == 1:
         return f"{stitches} {repeat.count}"
@@ -107,8 +112,9 @@ def _(repeat: FixedStitchRepeatExpr) -> str:
 
 @compile_text.register
 def _(repeat: ExpandingStitchRepeatExpr) -> str:
-    stitches = compile_text(FixedStitchRepeatExpr(repeat.stitches, 1))
-    if repeat.to_last == 0:
+    stitches = compile_text(FixedStitchRepeatExpr(repeat.stitches,
+                                                  NaturalLit(1)))
+    if repeat.to_last == NaturalLit(0):
         return f"*{stitches}; rep from * to end"
     else:
         return f"*{stitches}; rep from * to last {repeat.to_last}"
@@ -117,10 +123,72 @@ def _(repeat: ExpandingStitchRepeatExpr) -> str:
 @compile_text.register
 def _(repeat: RowRepeatExpr) -> str:
     rows = ".\n".join(map(compile_text, repeat.rows)) + "."
-    if repeat.count == 1:
+    if repeat.count == NaturalLit(1):
         return rows
     else:
         return f"**\n{rows}\nrep from ** {repeat.count} times"
+
+
+@singledispatch
+def substitute(expr: Expr, _env: Dict[str, Expr]) -> Expr:
+    """
+    Substitutes all variables and calls in the expression with their equivalent
+    expressions.
+
+    :param expr: the expression to transform
+    :param _env: the environment
+    :return:
+        the transformed expression with all variables and calls substituted out
+    """
+    return expr
+
+
+@substitute.register
+def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
+    return FixedStitchRepeatExpr(
+        list(map(lambda expr: substitute(expr, env), repeat.stitches)),
+        substitute(repeat.count, env)
+    )
+
+
+@substitute.register
+def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
+    return ExpandingStitchRepeatExpr(
+        list(map(lambda expr: substitute(expr, env), repeat.stitches)),
+        substitute(repeat.to_last, env)
+    )
+
+
+@substitute.register
+def _(repeat: RowRepeatExpr, env: Dict[str, Expr]) -> Expr:
+    return RowRepeatExpr(
+        list(map(lambda expr: substitute(expr, env), repeat.rows)),
+        substitute(repeat.count, env)
+    )
+
+
+@substitute.register
+def _(pattern: PatternExpr, env: Dict[str, Expr]) -> Expr:
+    return PatternExpr(
+        list(map(lambda expr: substitute(expr, env), pattern.rows)),
+        pattern.params
+    )
+
+
+@substitute.register
+def _(get: GetExpr, env: Dict[str, Expr]) -> Expr:
+    return env[get.name]
+
+
+@substitute.register
+def _(call: CallExpr, env: Dict[str, Expr]) -> Expr:
+    target = call.target
+    if isinstance(target, GetExpr):
+        target = substitute(target, env)
+
+    assert isinstance(target, PatternExpr)
+    return substitute(call.target,
+                      {**env, **dict(zip(target.params, call.args))})
 
 
 def _at_least(expected: int, actual: int) -> None:

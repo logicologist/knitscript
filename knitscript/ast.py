@@ -11,6 +11,32 @@ class Expr(ABC):
     pass
 
 
+class NaturalLit(Expr):
+    """An AST node for a natural number (non-negative integer) literal."""
+
+    def __init__(self, value: int) -> None:
+        """
+        Creates a new natural number literal.
+
+        :param value: the value of the literal
+        :raise ValueError: if the value is negative
+        """
+        if value < 0:
+            raise ValueError("value must be non-negative")
+        self._value = value
+
+    @property
+    def value(self) -> int:
+        """The value of the literal."""
+        return self._value
+
+    def __str__(self) -> str:
+        return str(self._value)
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, NaturalLit) and self.value == other.value
+
+
 class StitchExpr(Expr):
     """An AST node for a single stitch."""
 
@@ -33,7 +59,7 @@ class FixedStitchRepeatExpr(Expr):
     An AST node for repeating a sequence of stitches a fixed number of times.
     """
 
-    def __init__(self, stitches: Collection[Expr], count: int) -> None:
+    def __init__(self, stitches: Collection[Expr], count: Expr) -> None:
         """
         Creates a new fixed stitch repeat expression.
 
@@ -49,7 +75,7 @@ class FixedStitchRepeatExpr(Expr):
         return self._stitches
 
     @property
-    def count(self) -> int:
+    def count(self) -> Expr:
         """The number of times to repeat the stitches."""
         return self._count
 
@@ -60,7 +86,9 @@ class ExpandingStitchRepeatExpr(Expr):
     times.
     """
 
-    def __init__(self, stitches: Collection[Expr], to_last: int = 0) -> None:
+    def __init__(self,
+                 stitches: Collection[Expr],
+                 to_last: Expr = NaturalLit(0)) -> None:
         """
         Creates a new expanding stitch repeat expression.
 
@@ -76,7 +104,7 @@ class ExpandingStitchRepeatExpr(Expr):
         return self._stitches
 
     @property
-    def to_last(self) -> int:
+    def to_last(self) -> Expr:
         """The number of stitches to leave at the end of the row."""
         return self._to_last
 
@@ -90,13 +118,13 @@ class RowExpr(FixedStitchRepeatExpr):
 
         :param stitches: the stitches in the row
         """
-        super().__init__(stitches, 1)
+        super().__init__(stitches, NaturalLit(1))
 
 
 class RowRepeatExpr(Expr):
     """An AST node for repeating a sequence of rows a fixed number of times."""
 
-    def __init__(self, rows: Collection[Expr], count: int) -> None:
+    def __init__(self, rows: Collection[Expr], count: Expr) -> None:
         """
         Creates a new row repeat expression.
 
@@ -112,7 +140,7 @@ class RowRepeatExpr(Expr):
         return self._rows
 
     @property
-    def count(self) -> int:
+    def count(self) -> Expr:
         """The number of times to repeat the rows."""
         return self._count
 
@@ -120,10 +148,59 @@ class RowRepeatExpr(Expr):
 class PatternExpr(RowRepeatExpr):
     """An AST node representing a pattern."""
 
-    def __init__(self, rows: Collection[Expr]) -> None:
+    def __init__(self, rows: Collection[Expr], params: Collection[str] = ()) \
+            -> None:
         """
         Creates a new pattern expression.
 
         :param rows: the sequence of rows in the pattern
+        :param params: the names of the parameters for the pattern
         """
-        super().__init__(rows, 1)
+        super().__init__(rows, NaturalLit(1))
+        self._params = tuple(params)
+
+    @property
+    def params(self) -> Collection[str]:
+        """The names of the parameters for the pattern."""
+        return self._params
+
+
+class GetExpr(Expr):
+    """An AST node representing a variable lookup."""
+
+    def __init__(self, name: str) -> None:
+        """
+        Creates a new get expression.
+
+        :param name: the name of the variable to lookup
+        """
+        self._name = name
+
+    @property
+    def name(self) -> str:
+        """The name of the variable to lookup."""
+        return self._name
+
+
+class CallExpr(Expr):
+    """An AST node representing a call to a pattern or texture."""
+
+    def __init__(self, target: Expr, args: Collection[Expr]) -> None:
+        """
+        Creates a new call expression.
+
+        :param target: the expression to call
+        :param args: the arguments to send to the target expression
+        """
+        self._target = target
+        self._args = tuple(args)
+
+    @property
+    def target(self) -> Expr:
+        """The expression to call."""
+        return self._target
+
+    @property
+    def args(self) -> Collection[Expr]:
+        """The arguments to send to the target expression."""
+        return self._args
