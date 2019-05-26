@@ -2,7 +2,7 @@ from knitscript.ast import CallExpr, ExpandingStitchRepeatExpr, \
     FixedStitchRepeatExpr, GetExpr, NaturalLit, PatternExpr, RowExpr, \
     RowRepeatExpr, StitchExpr
 
-from knitscript.pattern import compile_text, is_valid_pattern, substitute
+from knitscript.interpreter import compile_text, is_valid_pattern, substitute
 from knitscript.stitch import Stitch
 
 simple = PatternExpr(
