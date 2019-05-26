@@ -93,7 +93,7 @@ def _(repeat: ExpandingStitchRepeatExpr) -> str:
 
 @compile_text.register
 def _(repeat: RowRepeatExpr) -> str:
-    rows = ".\n".join(map(compile_text, repeat.rows))
+    rows = ".\n".join(map(compile_text, repeat.rows)) + "."
     if repeat.count == 1:
         return rows
     else:
