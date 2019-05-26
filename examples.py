@@ -1,6 +1,6 @@
 from knitscript.ast import ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, \
     PatternExpr, RowExpr, RowRepeatExpr, StitchExpr
-from knitscript.pattern import is_valid_pattern
+from knitscript.pattern import compile_text, is_valid_pattern
 from knitscript.stitch import Stitch
 
 simple = PatternExpr(
@@ -27,7 +27,8 @@ def basic_scarf(n: int) -> PatternExpr:
                           StitchExpr(Stitch.PSSO),
                           FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)], 3),
                           StitchExpr(Stitch.YARN_OVER),
-                          StitchExpr(Stitch.KNIT)])]),
+                          StitchExpr(Stitch.KNIT)
+                      ])]),
              kpk,
              RowExpr([StitchExpr(Stitch.KNIT),
                       ExpandingStitchRepeatExpr([
@@ -39,8 +40,8 @@ def basic_scarf(n: int) -> PatternExpr:
                           StitchExpr(Stitch.PSSO),
                           FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)], 2),
                           StitchExpr(Stitch.YARN_OVER),
-                          FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)],
-                                                2)])]),
+                          FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)], 2)
+                      ])]),
              kpk,
              RowExpr([StitchExpr(Stitch.KNIT),
                       ExpandingStitchRepeatExpr([
@@ -52,8 +53,8 @@ def basic_scarf(n: int) -> PatternExpr:
                           StitchExpr(Stitch.PSSO),
                           StitchExpr(Stitch.KNIT),
                           StitchExpr(Stitch.YARN_OVER),
-                          FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)],
-                                                3)])]),
+                          FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)], 3)
+                      ])]),
              kpk,
              RowExpr([StitchExpr(Stitch.KNIT),
                       ExpandingStitchRepeatExpr([
@@ -63,14 +64,16 @@ def basic_scarf(n: int) -> PatternExpr:
                           StitchExpr(Stitch.KNIT2TOG),
                           StitchExpr(Stitch.PSSO),
                           StitchExpr(Stitch.YARN_OVER),
-                          FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)],
-                                                4)])]),
+                          FixedStitchRepeatExpr([StitchExpr(Stitch.KNIT)], 4)
+                      ])]),
              kpk],
             n
         ),
-        RowExpr([FixedStitchRepeatExpr([StitchExpr(Stitch.BIND_OFF)], 41)])
+        RowExpr([ExpandingStitchRepeatExpr([StitchExpr(Stitch.BIND_OFF)])])
     ])
 
 
-print(is_valid_pattern((basic_scarf(1))))
-print(is_valid_pattern((basic_scarf(5))))
+print(is_valid_pattern(basic_scarf(5)))
+
+print()
+print(compile_text(basic_scarf(5)))

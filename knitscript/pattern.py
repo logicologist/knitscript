@@ -43,7 +43,8 @@ def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
 @count_stitches.register
 def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
     consumed, produced = count_stitches(
-        FixedStitchRepeatExpr(repeat.stitches, 1), available - repeat.to_last)
+        FixedStitchRepeatExpr(repeat.stitches, 1), available - repeat.to_last
+    )
     n = available // consumed
     _exactly(n * consumed, available - repeat.to_last)
     return n * consumed, n * produced
@@ -60,10 +61,50 @@ def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
     return available, count
 
 
+@singledispatch
+def compile_text(_expr: Expr) -> str:
+    raise NotImplementedError()
+
+
+@compile_text.register
+def _(stitch: StitchExpr) -> str:
+    return stitch.stitch.symbol
+
+
+@compile_text.register
+def _(repeat: FixedStitchRepeatExpr) -> str:
+    stitches = ", ".join(map(compile_text, repeat.stitches))
+    if repeat.count == 1:
+        return stitches
+    elif len(repeat.stitches) == 1:
+        return f"{stitches} {repeat.count}"
+    else:
+        return f"[{stitches}] {repeat.count}"
+
+
+@compile_text.register
+def _(repeat: ExpandingStitchRepeatExpr) -> str:
+    stitches = compile_text(FixedStitchRepeatExpr(repeat.stitches, 1))
+    if repeat.to_last == 0:
+        return f"*{stitches}; rep from * to end"
+    else:
+        return f"*{stitches}; rep from * to last {repeat.to_last}"
+
+
+@compile_text.register
+def _(repeat: RowRepeatExpr) -> str:
+    rows = ".\n".join(map(compile_text, repeat.rows))
+    if repeat.count == 1:
+        return rows
+    else:
+        return f"**\n{rows}\nrep from ** {repeat.count} times"
+
+
 def _at_least(expected: int, actual: int) -> None:
     if expected > actual:
         raise Exception(
-            f"expected {expected} stitches, but only {actual} are available")
+            f"expected {expected} stitches, but only {actual} are available"
+        )
 
 
 def _exactly(expected: int, actual: int) -> None:

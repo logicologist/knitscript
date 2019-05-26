@@ -27,6 +27,10 @@ class Stitch(Enum):
         self._reverse = reverse
 
     @property
+    def symbol(self) -> str:
+        return self._symbol
+
+    @property
     def consumes(self) -> int:
         return self._consumes
 
