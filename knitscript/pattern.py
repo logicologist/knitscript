@@ -8,15 +8,31 @@ from knitscript.ast import ExpandingStitchRepeatExpr, Expr, \
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
+    """
+    Checks if the pattern is valid. A valid pattern has the right number of
+    stitches in each row.
+
+    :param pattern: the pattern to validate
+    :return: True if the pattern is valid and False otherwise
+    """
     return count_stitches(pattern, 0) == (0, 0)
 
 
 @singledispatch
 def count_stitches(_expr: Expr, _available: int) -> Tuple[int, int]:
     """
-    Returns the number of stitches consumed from the current row and the number
-    of stitches produced for the next row after evaluating all the stitches in
-    the tree.
+    Counts the number of stitches used at the beginning and end of the
+    expression, and makes sure the expression does not use too many stitches or
+    not enough stitches at any point.
+
+    :param _expr: the expression to count the stitches of
+    :param _available: the number of stitches remaining in the current row
+    :return:
+        a pair; the first is the number of stitches consumed from the current
+        row and the second is the number of stitches produced at the end of the
+        expression
+    :raise Exception:
+        if the expression uses too many stitches or not enough stitches
     """
     raise NotImplementedError()
 
@@ -63,6 +79,13 @@ def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
 
 @singledispatch
 def compile_text(_expr: Expr) -> str:
+    """
+    Compiles the expression to human-readable knitting instructions in plain
+    text.
+
+    :param _expr: the expression to compile
+    :return: the instructions for the expression
+    """
     raise NotImplementedError()
 
 

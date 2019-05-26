@@ -4,6 +4,10 @@ from typing import Callable
 
 
 class Stitch(Enum):
+    """
+    A single stitch.
+    """
+
     CAST_ON = ("CO", 0, 1, lambda: Stitch.CAST_ON)
     BIND_OFF = ("BO", 1, 0, lambda: Stitch.BIND_OFF)
     KNIT = ("K", 1, 1, lambda: Stitch.PURL)
@@ -21,6 +25,18 @@ class Stitch(Enum):
                  consumes: int,
                  produces: int,
                  reverse: Callable[[], Stitch]) -> None:
+        """
+        Creates a new stitch type.
+
+        :param symbol:
+            an abbreviation that represents the stitch in knitting instructions
+        :param consumes:
+            the number of stitches this stitch consumes from the current row
+        :param produces:
+            the number of stitches this stitch produces for the next row
+        :param reverse:
+            a thunk that returns this stitch's side-reversed stitch type
+        """
         self._symbol = symbol
         self._consumes = consumes
         self._produces = produces
@@ -28,16 +44,22 @@ class Stitch(Enum):
 
     @property
     def symbol(self) -> str:
+        """
+        An abbreviation that represents the stitch in knitting instructions.
+        """
         return self._symbol
 
     @property
     def consumes(self) -> int:
+        """The number of stitches this stitch consumes from the current row."""
         return self._consumes
 
     @property
     def produces(self) -> int:
+        """The number of stitches this stitch produces for the next row."""
         return self._produces
 
     @property
     def reverse(self) -> Stitch:
+        """This stitch's side-reversed stitch type."""
         return self._reverse()
