@@ -284,5 +284,5 @@ def _(expr: FixedStitchRepeatExpr) -> Expr:
     return FixedStitchRepeatExpr(map(reverse, reversed(expr.stitches)), expr.count)
 
 @reverse.register
-def _(expr: StitchExpr) -> Expr:
+def _(expr: StitchLit) -> Expr:
     return StitchExpr(expr.stitch.reverse())
