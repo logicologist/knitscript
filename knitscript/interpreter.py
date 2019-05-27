@@ -6,7 +6,7 @@ from typing import Dict, Tuple, Union
 
 from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    NaturalLit, PatternExpr, RowRepeatExpr, StitchLit, RowExpr
+    NaturalLit, Node, PatternExpr, RowRepeatExpr, StitchLit, RowExpr
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -22,7 +22,7 @@ def is_valid_pattern(pattern: PatternExpr) -> bool:
 
 # noinspection PyUnusedLocal
 @singledispatch
-def count_stitches(expr: Expr, available: int) -> Tuple[int, int]:
+def count_stitches(expr: Node, available: int) -> Tuple[int, int]:
     """
     Counts the number of stitches used at the beginning and end of the
     expression, and makes sure the expression does not use too many stitches or
@@ -37,7 +37,7 @@ def count_stitches(expr: Expr, available: int) -> Tuple[int, int]:
     :raise Exception:
         if the expression uses too many stitches or not enough stitches
     """
-    raise TypeError(f"unsupported expression {type(expr).__name__}")
+    raise TypeError(f"unsupported node {type(expr).__name__}")
 
 
 @count_stitches.register
@@ -85,7 +85,7 @@ def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
 
 
 @singledispatch
-def compile_text(expr: Expr) -> str:
+def compile_text(expr: Node) -> str:
     """
     Compiles the expression to human-readable knitting instructions in plain
     text.
@@ -93,7 +93,7 @@ def compile_text(expr: Expr) -> str:
     :param expr: the expression to compile
     :return: the instructions for the expression
     """
-    raise TypeError(f"unsupported expression {type(expr).__name__}")
+    raise TypeError(f"unsupported node {type(expr).__name__}")
 
 
 @compile_text.register
@@ -133,28 +133,28 @@ def _(repeat: RowRepeatExpr) -> str:
 
 # noinspection PyUnusedLocal
 @singledispatch
-def substitute(expr: Expr, env: Dict[str, Expr]) -> Expr:
+def substitute(node: Node, env: Dict[str, Node]) -> Node:
     """
-    Substitutes all variables and calls in the expression with their equivalent
+    Substitutes all variables and calls in the AST with their equivalent
     expressions.
 
-    :param expr: the expression to transform
+    :param node: the AST to transform
     :param env: the environment
     :return:
         the transformed expression with all variables and calls substituted out
     """
-    raise TypeError(f"unsupported expression {type(expr).__name__}")
+    raise TypeError(f"unsupported node {type(node).__name__}")
 
 
 # noinspection PyUnusedLocal
 @substitute.register(StitchLit)
 @substitute.register(NaturalLit)
-def _(lit: Union[StitchLit, NaturalLit], env: Dict[str, Expr]) -> Expr:
+def _(lit: Union[StitchLit, NaturalLit], env: Dict[str, Node]) -> Node:
     return lit
 
 
 @substitute.register
-def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
+def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return FixedStitchRepeatExpr(
         map(partial(substitute, env=env), repeat.stitches),
@@ -163,7 +163,7 @@ def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
 
 
 @substitute.register
-def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
+def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return ExpandingStitchRepeatExpr(
         map(partial(substitute, env=env), repeat.stitches),
@@ -172,32 +172,32 @@ def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
 
 
 @substitute.register
-def _(repeat: RowRepeatExpr, env: Dict[str, Expr]) -> Expr:
+def _(repeat: RowRepeatExpr, env: Dict[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return RowRepeatExpr(map(partial(substitute, env=env), repeat.rows),
                          substitute(repeat.count, env))
 
 
 @substitute.register
-def _(concat: BlockConcatExpr, env: Dict[str, Expr]) -> Expr:
+def _(concat: BlockConcatExpr, env: Dict[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return BlockConcatExpr(map(partial(substitute, env=env), concat.blocks))
 
 
 @substitute.register
-def _(pattern: PatternExpr, env: Dict[str, Expr]) -> Expr:
+def _(pattern: PatternExpr, env: Dict[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return PatternExpr(map(partial(substitute, env=env), pattern.rows),
                        pattern.params)
 
 
 @substitute.register
-def _(get: GetExpr, env: Dict[str, Expr]) -> Expr:
+def _(get: GetExpr, env: Dict[str, Node]) -> Node:
     return env[get.name]
 
 
 @substitute.register
-def _(call: CallExpr, env: Dict[str, Expr]) -> Expr:
+def _(call: CallExpr, env: Dict[str, Node]) -> Node:
     target = call.target
     if isinstance(target, GetExpr):
         target = substitute(target, env)
@@ -208,14 +208,14 @@ def _(call: CallExpr, env: Dict[str, Expr]) -> Expr:
 
 
 @singledispatch
-def flatten(expr: Expr) -> Expr:
+def flatten(node: Node) -> Expr:
     """
     Flattens each block concatenation expression into a single pattern.
 
-    :param expr: the expression to transform
+    :param node: the AST to transform
     :return: the transformed expression after flattening block concatenations
     """
-    raise TypeError(f"unsupported expression {type(expr).__name__}")
+    raise TypeError(f"unsupported node {type(node).__name__}")
 
 
 @flatten.register

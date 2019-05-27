@@ -6,12 +6,63 @@ from typing import Collection, Iterable
 from knitscript.stitch import Stitch
 
 
-class Expr(ABC):
+class Node(ABC):
+    """An AST node."""
+    pass
+
+
+class Document(Node):
+    """An AST node describing a complete KnitScript document."""
+
+    def __init__(self, patterns: Iterable[Node]) -> None:
+        """
+        Creates a new document node.
+
+        :param patterns: the patterns in the document
+        """
+        self._patterns = tuple(patterns)
+
+    @property
+    def patterns(self) -> Collection[Node]:
+        """The patterns in the document."""
+        return self._patterns
+
+
+class PatternDef(Node):
+    """An AST node that defines a named pattern."""
+
+    def __init__(self, name: str, pattern: Node) -> None:
+        """
+        Creates a new pattern definition node.
+
+        :param name: the name of the pattern
+        :param pattern: the pattern expression
+        """
+        self._name = name
+        self._pattern = pattern
+
+    @property
+    def name(self) -> str:
+        """The name of the pattern."""
+        return self._name
+
+    @property
+    def pattern(self) -> Node:
+        """The pattern expression."""
+        return self._pattern
+
+
+class Expr(Node):
     """An expression AST node."""
     pass
 
 
-class NaturalLit(Expr):
+class Lit(Expr):
+    """A literal expression node."""
+    pass
+
+
+class NaturalLit(Lit):
     """An AST node for a natural number (non-negative integer) literal."""
 
     def __init__(self, value: int) -> None:
@@ -37,7 +88,7 @@ class NaturalLit(Expr):
         return isinstance(other, NaturalLit) and self.value == other.value
 
 
-class StitchLit(Expr):
+class StitchLit(Lit):
     """An AST node for a stitch literal."""
 
     def __init__(self, stitch: Stitch) -> None:
@@ -59,7 +110,7 @@ class FixedStitchRepeatExpr(Expr):
     An AST node for repeating a sequence of stitches a fixed number of times.
     """
 
-    def __init__(self, stitches: Iterable[Expr], count: Expr) -> None:
+    def __init__(self, stitches: Iterable[Node], count: Node) -> None:
         """
         Creates a new fixed stitch repeat expression.
 
@@ -70,12 +121,12 @@ class FixedStitchRepeatExpr(Expr):
         self._count = count
 
     @property
-    def stitches(self) -> Collection[Expr]:
+    def stitches(self) -> Collection[Node]:
         """The sequence of stitches to repeat."""
         return self._stitches
 
     @property
-    def count(self) -> Expr:
+    def count(self) -> Node:
         """The number of times to repeat the stitches."""
         return self._count
 
@@ -87,8 +138,8 @@ class ExpandingStitchRepeatExpr(Expr):
     """
 
     def __init__(self,
-                 stitches: Iterable[Expr],
-                 to_last: Expr = NaturalLit(0)) -> None:
+                 stitches: Iterable[Node],
+                 to_last: Node = NaturalLit(0)) -> None:
         """
         Creates a new expanding stitch repeat expression.
 
@@ -99,12 +150,12 @@ class ExpandingStitchRepeatExpr(Expr):
         self._to_last = to_last
 
     @property
-    def stitches(self) -> Collection[Expr]:
+    def stitches(self) -> Collection[Node]:
         """The sequence of stitches to repeat."""
         return self._stitches
 
     @property
-    def to_last(self) -> Expr:
+    def to_last(self) -> Node:
         """The number of stitches to leave at the end of the row."""
         return self._to_last
 
@@ -112,7 +163,7 @@ class ExpandingStitchRepeatExpr(Expr):
 class RowExpr(FixedStitchRepeatExpr):
     """An AST node representing a row."""
 
-    def __init__(self, stitches: Iterable[Expr], rs=True):
+    def __init__(self, stitches: Iterable[Node], rs=True):
         """
         Creates a new row expression.
 
@@ -128,7 +179,7 @@ class RowExpr(FixedStitchRepeatExpr):
 class RowRepeatExpr(Expr):
     """An AST node for repeating a sequence of rows a fixed number of times."""
 
-    def __init__(self, rows: Iterable[Expr], count: Expr) -> None:
+    def __init__(self, rows: Iterable[Node], count: Node) -> None:
         """
         Creates a new row repeat expression.
 
@@ -139,12 +190,12 @@ class RowRepeatExpr(Expr):
         self._count = count
 
     @property
-    def rows(self) -> Collection[Expr]:
+    def rows(self) -> Collection[Node]:
         """The sequence of rows to repeat."""
         return self._rows
 
     @property
-    def count(self) -> Expr:
+    def count(self) -> Node:
         """The number of times to repeat the rows."""
         return self._count
 
@@ -152,7 +203,7 @@ class RowRepeatExpr(Expr):
 class BlockConcatExpr(Expr):
     """An AST node representing horizontal concatenation of 2D blocks."""
 
-    def __init__(self, blocks: Iterable[Expr]) -> None:
+    def __init__(self, blocks: Iterable[Node]) -> None:
         """
         Creates a new block concatenation expression.
 
@@ -161,7 +212,7 @@ class BlockConcatExpr(Expr):
         self._blocks = tuple(blocks)
 
     @property
-    def blocks(self) -> Collection[Expr]:
+    def blocks(self) -> Collection[Node]:
         """The blocks to concatenate."""
         return self._blocks
 
@@ -169,7 +220,7 @@ class BlockConcatExpr(Expr):
 class PatternExpr(RowRepeatExpr):
     """An AST node representing a pattern."""
 
-    def __init__(self, rows: Iterable[Expr], params: Collection[str] = ()) \
+    def __init__(self, rows: Iterable[Node], params: Collection[str] = ()) \
             -> None:
         """
         Creates a new pattern expression.
@@ -206,7 +257,7 @@ class GetExpr(Expr):
 class CallExpr(Expr):
     """An AST node representing a call to a pattern or texture."""
 
-    def __init__(self, target: Expr, args: Iterable[Expr]) -> None:
+    def __init__(self, target: Node, args: Iterable[Node]) -> None:
         """
         Creates a new call expression.
 
@@ -217,11 +268,11 @@ class CallExpr(Expr):
         self._args = tuple(args)
 
     @property
-    def target(self) -> Expr:
+    def target(self) -> Node:
         """The expression to call."""
         return self._target
 
     @property
-    def args(self) -> Collection[Expr]:
+    def args(self) -> Collection[Node]:
         """The arguments to send to the target expression."""
         return self._args

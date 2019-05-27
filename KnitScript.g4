@@ -1,6 +1,9 @@
 grammar KnitScript;
 
-pattern: rows+=row+ EOF;
+document: patterns+=patternDef* EOF;
+
+patternDef: 'pattern' ID ('(' paramList ')')? ':' rows+=row+;
+paramList: params+=ID+;
 
 row: stitchList '.';
 
