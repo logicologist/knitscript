@@ -112,13 +112,17 @@ class ExpandingStitchRepeatExpr(Expr):
 class RowExpr(FixedStitchRepeatExpr):
     """An AST node representing a row."""
 
-    def __init__(self, stitches: Collection[Expr]):
+    def __init__(self, stitches: Collection[Expr], rs=True):
         """
         Creates a new row expression.
 
         :param stitches: the stitches in the row
         """
         super().__init__(stitches, NaturalLit(1))
+        self._rs = rs
+
+    def reverse_in_place(self):
+        pass
 
 
 class RowRepeatExpr(Expr):
