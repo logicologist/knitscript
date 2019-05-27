@@ -6,7 +6,7 @@ from typing import Dict, Tuple, Union
 
 from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    NaturalLit, PatternExpr, RowRepeatExpr, StitchExpr, RowExpr
+    NaturalLit, PatternExpr, RowRepeatExpr, StitchLit, RowExpr
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -41,7 +41,7 @@ def count_stitches(expr: Expr, available: int) -> Tuple[int, int]:
 
 
 @count_stitches.register
-def _(stitch: StitchExpr, available: int) -> Tuple[int, int]:
+def _(stitch: StitchLit, available: int) -> Tuple[int, int]:
     _at_least(stitch.stitch.consumes, available)
     return stitch.stitch.consumes, stitch.stitch.produces
 
@@ -97,7 +97,7 @@ def compile_text(expr: Expr) -> str:
 
 
 @compile_text.register
-def _(stitch: StitchExpr) -> str:
+def _(stitch: StitchLit) -> str:
     return stitch.stitch.symbol
 
 
@@ -147,10 +147,10 @@ def substitute(expr: Expr, env: Dict[str, Expr]) -> Expr:
 
 
 # noinspection PyUnusedLocal
-@substitute.register(StitchExpr)
+@substitute.register(StitchLit)
 @substitute.register(NaturalLit)
-def _(expr: Union[StitchExpr, NaturalLit], env: Dict[str, Expr]) -> Expr:
-    return expr
+def _(lit: Union[StitchLit, NaturalLit], env: Dict[str, Expr]) -> Expr:
+    return lit
 
 
 @substitute.register
@@ -219,7 +219,7 @@ def flatten(expr: Expr) -> Expr:
 
 
 @flatten.register
-def _(stitch: StitchExpr) -> Expr:
+def _(stitch: StitchLit) -> Expr:
     return stitch
 
 
