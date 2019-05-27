@@ -7,7 +7,7 @@ from knitscript.stitch import Stitch
 
 
 class Expr(ABC):
-    """An AST node for any expression."""
+    """An expression AST node."""
     pass
 
 
@@ -37,20 +37,20 @@ class NaturalLit(Expr):
         return isinstance(other, NaturalLit) and self.value == other.value
 
 
-class StitchExpr(Expr):
-    """An AST node for a single stitch."""
+class StitchLit(Expr):
+    """An AST node for a stitch literal."""
 
     def __init__(self, stitch: Stitch) -> None:
         """
-        Creates a new stitch expression.
+        Creates a new stitch literal.
 
-        :param stitch: the stitch in this expression
+        :param stitch: the stitch value of this literal
         """
         self._stitch = stitch
 
     @property
     def stitch(self) -> Stitch:
-        """The stitch in this expression."""
+        """The stitch value of this literal."""
         return self._stitch
 
 

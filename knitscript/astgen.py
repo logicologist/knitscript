@@ -2,7 +2,7 @@ from functools import singledispatch
 from typing import Collection, Union
 
 from knitscript.astnodes import ExpandingStitchRepeatExpr, Expr, \
-    FixedStitchRepeatExpr, NaturalLit, PatternExpr, RowExpr, StitchExpr
+    FixedStitchRepeatExpr, NaturalLit, PatternExpr, RowExpr, StitchLit
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
     ParserRuleContext
 from knitscript.stitch import Stitch
@@ -51,7 +51,7 @@ def _(expanding: KnitScriptParser.ExpandingStitchRepeatContext) -> Expr:
 
 @build_ast.register
 def _(stitch: KnitScriptParser.StitchContext) -> Expr:
-    return StitchExpr(Stitch.from_symbol(stitch.ID().getText()))
+    return StitchLit(Stitch.from_symbol(stitch.ID().getText()))
 
 
 def _stitches(ctx: Union[KnitScriptParser.FixedStitchRepeatContext,
