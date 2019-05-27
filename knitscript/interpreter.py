@@ -265,6 +265,7 @@ def _exactly(expected: int, actual: int) -> None:
     if expected < actual:
         raise Exception(f"{actual - expected} stitches left over")
 
+
 @singledispatch
 def reverse(expr: Expr) -> Expr:
     """
@@ -277,7 +278,7 @@ def reverse(expr: Expr) -> Expr:
 
 @reverse.register
 def _(expr: RowExpr) -> Expr:
-    return RowExpr(map(reverse, reversed(expr.stitches)), !expr.rs)
+    return RowExpr(map(reverse, reversed(expr.stitches)), not expr.rs)
 
 @reverse.register
 def _(expr: FixedStitchRepeatExpr) -> Expr:

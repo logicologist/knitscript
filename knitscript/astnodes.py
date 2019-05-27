@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from abc import ABC
-from typing import Collection, Iterable
+from abc import ABC, abstractmethod
+from typing import Collection, Iterable, Optional
 
 from knitscript.stitch import Stitch
 
@@ -9,6 +9,13 @@ from knitscript.stitch import Stitch
 class Expr(ABC):
     """An expression AST node."""
     pass
+
+
+class KnitExpr(Expr):
+    """An AST node for a unit of knitting."""
+    @abstractmethod
+    def __init__(self):
+        self._stitch_input = None
 
 
 class NaturalLit(Expr):
@@ -37,7 +44,7 @@ class NaturalLit(Expr):
         return isinstance(other, NaturalLit) and self.value == other.value
 
 
-class StitchLit(Expr):
+class StitchLit(KnitExpr):
     """An AST node for a stitch literal."""
 
     def __init__(self, stitch: Stitch) -> None:
@@ -54,7 +61,7 @@ class StitchLit(Expr):
         return self._stitch
 
 
-class FixedStitchRepeatExpr(Expr):
+class FixedStitchRepeatExpr(KnitExpr):
     """
     An AST node for repeating a sequence of stitches a fixed number of times.
     """
@@ -80,7 +87,7 @@ class FixedStitchRepeatExpr(Expr):
         return self._count
 
 
-class ExpandingStitchRepeatExpr(Expr):
+class ExpandingStitchRepeatExpr(KnitExpr):
     """
     An AST node for repeating a sequence of stitches an undetermined number of
     times.
@@ -127,7 +134,7 @@ class RowExpr(FixedStitchRepeatExpr):
     
 
 
-class RowRepeatExpr(Expr):
+class RowRepeatExpr(KnitExpr):
     """An AST node for repeating a sequence of rows a fixed number of times."""
 
     def __init__(self, rows: Iterable[Expr], count: Expr) -> None:
@@ -151,7 +158,7 @@ class RowRepeatExpr(Expr):
         return self._count
 
 
-class BlockConcatExpr(Expr):
+class BlockConcatExpr(KnitExpr):
     """An AST node representing horizontal concatenation of 2D blocks."""
 
     def __init__(self, blocks: Iterable[Expr]) -> None:
