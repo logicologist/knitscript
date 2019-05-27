@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Collection
+from typing import Collection, Iterable
 
 from knitscript.stitch import Stitch
 
@@ -59,7 +59,7 @@ class FixedStitchRepeatExpr(Expr):
     An AST node for repeating a sequence of stitches a fixed number of times.
     """
 
-    def __init__(self, stitches: Collection[Expr], count: Expr) -> None:
+    def __init__(self, stitches: Iterable[Expr], count: Expr) -> None:
         """
         Creates a new fixed stitch repeat expression.
 
@@ -87,7 +87,7 @@ class ExpandingStitchRepeatExpr(Expr):
     """
 
     def __init__(self,
-                 stitches: Collection[Expr],
+                 stitches: Iterable[Expr],
                  to_last: Expr = NaturalLit(0)) -> None:
         """
         Creates a new expanding stitch repeat expression.
@@ -112,7 +112,7 @@ class ExpandingStitchRepeatExpr(Expr):
 class RowExpr(FixedStitchRepeatExpr):
     """An AST node representing a row."""
 
-    def __init__(self, stitches: Collection[Expr]):
+    def __init__(self, stitches: Iterable[Expr]):
         """
         Creates a new row expression.
 
@@ -124,7 +124,7 @@ class RowExpr(FixedStitchRepeatExpr):
 class RowRepeatExpr(Expr):
     """An AST node for repeating a sequence of rows a fixed number of times."""
 
-    def __init__(self, rows: Collection[Expr], count: Expr) -> None:
+    def __init__(self, rows: Iterable[Expr], count: Expr) -> None:
         """
         Creates a new row repeat expression.
 
@@ -148,13 +148,13 @@ class RowRepeatExpr(Expr):
 class BlockConcatExpr(Expr):
     """An AST node representing horizontal concatenation of 2D blocks."""
 
-    def __init__(self, blocks: Collection[Expr]) -> None:
+    def __init__(self, blocks: Iterable[Expr]) -> None:
         """
         Creates a new block concatenation expression.
 
         :param blocks: the blocks to concatenate
         """
-        self._blocks = blocks
+        self._blocks = tuple(blocks)
 
     @property
     def blocks(self) -> Collection[Expr]:
@@ -165,7 +165,7 @@ class BlockConcatExpr(Expr):
 class PatternExpr(RowRepeatExpr):
     """An AST node representing a pattern."""
 
-    def __init__(self, rows: Collection[Expr], params: Collection[str] = ()) \
+    def __init__(self, rows: Iterable[Expr], params: Collection[str] = ()) \
             -> None:
         """
         Creates a new pattern expression.
@@ -202,7 +202,7 @@ class GetExpr(Expr):
 class CallExpr(Expr):
     """An AST node representing a call to a pattern or texture."""
 
-    def __init__(self, target: Expr, args: Collection[Expr]) -> None:
+    def __init__(self, target: Expr, args: Iterable[Expr]) -> None:
         """
         Creates a new call expression.
 

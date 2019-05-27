@@ -21,12 +21,12 @@ def build_ast(ctx: ParserRuleContext) -> Expr:
 
 @build_ast.register
 def _(pattern: KnitScriptParser.PatternContext) -> Expr:
-    return PatternExpr(list(map(build_ast, pattern.rows)))
+    return PatternExpr(map(build_ast, pattern.rows))
 
 
 @build_ast.register
 def _(row: KnitScriptParser.RowContext) -> Expr:
-    return RowExpr(list(map(build_ast, row.stitchList().stitches)))
+    return RowExpr(map(build_ast, row.stitchList().stitches))
 
 
 @build_ast.register
@@ -39,17 +39,14 @@ def _(repeat: KnitScriptParser.StitchRepeatContext) -> Expr:
 @build_ast.register
 def _(fixed: KnitScriptParser.FixedStitchRepeatContext) -> Expr:
     count = NaturalLit(int(fixed.count.text))
-    return FixedStitchRepeatExpr(list(map(build_ast, _stitches(fixed))),
-                                 count)
+    return FixedStitchRepeatExpr(map(build_ast, _stitches(fixed)), count)
 
 
 @build_ast.register
 def _(expanding: KnitScriptParser.ExpandingStitchRepeatContext) -> Expr:
     to_last = NaturalLit(int(expanding.toLast.text) if expanding.toLast else 0)
-    return ExpandingStitchRepeatExpr(
-        list(map(build_ast, _stitches(expanding))),
-        to_last
-    )
+    return ExpandingStitchRepeatExpr(map(build_ast, _stitches(expanding)),
+                                     to_last)
 
 
 @build_ast.register

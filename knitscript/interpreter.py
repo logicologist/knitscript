@@ -157,7 +157,7 @@ def _(expr: Union[StitchExpr, NaturalLit], env: Dict[str, Expr]) -> Expr:
 def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
     # noinspection PyTypeChecker
     return FixedStitchRepeatExpr(
-        list(map(partial(substitute, env=env), repeat.stitches)),
+        map(partial(substitute, env=env), repeat.stitches),
         substitute(repeat.count, env)
     )
 
@@ -166,7 +166,7 @@ def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
 def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
     # noinspection PyTypeChecker
     return ExpandingStitchRepeatExpr(
-        list(map(partial(substitute, env=env), repeat.stitches)),
+        map(partial(substitute, env=env), repeat.stitches),
         substitute(repeat.to_last, env)
     )
 
@@ -174,27 +174,21 @@ def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
 @substitute.register
 def _(repeat: RowRepeatExpr, env: Dict[str, Expr]) -> Expr:
     # noinspection PyTypeChecker
-    return RowRepeatExpr(
-        list(map(partial(substitute, env=env), repeat.rows)),
-        substitute(repeat.count, env)
-    )
+    return RowRepeatExpr(map(partial(substitute, env=env), repeat.rows),
+                         substitute(repeat.count, env))
 
 
 @substitute.register
 def _(concat: BlockConcatExpr, env: Dict[str, Expr]) -> Expr:
     # noinspection PyTypeChecker
-    return BlockConcatExpr(
-        list(map(partial(substitute, env=env), concat.blocks))
-    )
+    return BlockConcatExpr(map(partial(substitute, env=env), concat.blocks))
 
 
 @substitute.register
 def _(pattern: PatternExpr, env: Dict[str, Expr]) -> Expr:
     # noinspection PyTypeChecker
-    return PatternExpr(
-        list(map(partial(substitute, env=env), pattern.rows)),
-        pattern.params
-    )
+    return PatternExpr(map(partial(substitute, env=env), pattern.rows),
+                       pattern.params)
 
 
 @substitute.register
@@ -231,32 +225,32 @@ def _(stitch: StitchExpr) -> Expr:
 
 @flatten.register
 def _(repeat: FixedStitchRepeatExpr) -> Expr:
-    return FixedStitchRepeatExpr(list(map(flatten, repeat.stitches)),
-                                 repeat.count)
+    return FixedStitchRepeatExpr(map(flatten, repeat.stitches), repeat.count)
 
 
 @flatten.register
 def _(repeat: ExpandingStitchRepeatExpr) -> Expr:
-    return ExpandingStitchRepeatExpr(list(map(flatten, repeat.stitches)),
+    return ExpandingStitchRepeatExpr(map(flatten, repeat.stitches),
                                      repeat.to_last)
 
 
 @flatten.register
 def _(repeat: RowRepeatExpr) -> Expr:
-    return RowRepeatExpr(list(map(flatten, repeat.rows)), repeat.count)
+    return RowRepeatExpr(map(flatten, repeat.rows), repeat.count)
 
 
 @flatten.register
 def _(pattern: PatternExpr) -> Expr:
-    return PatternExpr(list(map(flatten, pattern.rows)), pattern.params)
+    return PatternExpr(map(flatten, pattern.rows), pattern.params)
 
 
 @flatten.register
 def _(concat: BlockConcatExpr) -> Expr:
     for block in concat.blocks:
         assert isinstance(block, PatternExpr)
-    rows = map(RowExpr, zip(*map(attrgetter("rows"), concat.blocks)))
-    return PatternExpr(list(rows))
+    return PatternExpr(
+        map(RowExpr, zip(*map(attrgetter("rows"), concat.blocks)))
+    )
 
 
 def _at_least(expected: int, actual: int) -> None:
