@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from functools import singledispatch
+from functools import partial, singledispatch
+from operator import attrgetter
 from typing import Dict, Tuple, Union
 
-from knitscript.ast import BlockConcatExpr, CallExpr, \
+from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
     NaturalLit, PatternExpr, RowRepeatExpr, StitchExpr, RowExpr
 
@@ -19,15 +20,16 @@ def is_valid_pattern(pattern: PatternExpr) -> bool:
     return count_stitches(pattern, 0) == (0, 0)
 
 
+# noinspection PyUnusedLocal
 @singledispatch
-def count_stitches(expr: Expr, _available: int) -> Tuple[int, int]:
+def count_stitches(expr: Expr, available: int) -> Tuple[int, int]:
     """
     Counts the number of stitches used at the beginning and end of the
     expression, and makes sure the expression does not use too many stitches or
     not enough stitches at any point.
 
     :param expr: the expression to count the stitches of
-    :param _available: the number of stitches remaining in the current row
+    :param available: the number of stitches remaining in the current row
     :return:
         a pair; the first is the number of stitches consumed from the current
         row and the second is the number of stitches produced at the end of the
@@ -129,63 +131,64 @@ def _(repeat: RowRepeatExpr) -> str:
         return f"**\n{rows}\nrep from ** {repeat.count} times"
 
 
+# noinspection PyUnusedLocal
 @singledispatch
-def substitute(expr: Expr, _env: Dict[str, Expr]) -> Expr:
+def substitute(expr: Expr, env: Dict[str, Expr]) -> Expr:
     """
     Substitutes all variables and calls in the expression with their equivalent
     expressions.
 
     :param expr: the expression to transform
-    :param _env: the environment
+    :param env: the environment
     :return:
         the transformed expression with all variables and calls substituted out
     """
     raise TypeError(f"unsupported expression {type(expr).__name__}")
 
 
+# noinspection PyUnusedLocal
 @substitute.register(StitchExpr)
 @substitute.register(NaturalLit)
-def _(expr: Union[StitchExpr, NaturalLit], _env: Dict[str, Expr]) -> Expr:
+def _(expr: Union[StitchExpr, NaturalLit], env: Dict[str, Expr]) -> Expr:
     return expr
 
 
 @substitute.register
 def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
+    # noinspection PyTypeChecker
     return FixedStitchRepeatExpr(
-        list(map(lambda expr: substitute(expr, env), repeat.stitches)),
+        map(partial(substitute, env=env), repeat.stitches),
         substitute(repeat.count, env)
     )
 
 
 @substitute.register
 def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Expr]) -> Expr:
+    # noinspection PyTypeChecker
     return ExpandingStitchRepeatExpr(
-        list(map(lambda expr: substitute(expr, env), repeat.stitches)),
+        map(partial(substitute, env=env), repeat.stitches),
         substitute(repeat.to_last, env)
     )
 
 
 @substitute.register
 def _(repeat: RowRepeatExpr, env: Dict[str, Expr]) -> Expr:
-    return RowRepeatExpr(
-        list(map(lambda expr: substitute(expr, env), repeat.rows)),
-        substitute(repeat.count, env)
-    )
+    # noinspection PyTypeChecker
+    return RowRepeatExpr(map(partial(substitute, env=env), repeat.rows),
+                         substitute(repeat.count, env))
 
 
 @substitute.register
 def _(concat: BlockConcatExpr, env: Dict[str, Expr]) -> Expr:
-    return BlockConcatExpr(
-        list(map(lambda expr: substitute(expr, env), concat.blocks))
-    )
+    # noinspection PyTypeChecker
+    return BlockConcatExpr(map(partial(substitute, env=env), concat.blocks))
 
 
 @substitute.register
 def _(pattern: PatternExpr, env: Dict[str, Expr]) -> Expr:
-    return PatternExpr(
-        list(map(lambda expr: substitute(expr, env), pattern.rows)),
-        pattern.params
-    )
+    # noinspection PyTypeChecker
+    return PatternExpr(map(partial(substitute, env=env), pattern.rows),
+                       pattern.params)
 
 
 @substitute.register
@@ -222,32 +225,32 @@ def _(stitch: StitchExpr) -> Expr:
 
 @flatten.register
 def _(repeat: FixedStitchRepeatExpr) -> Expr:
-    return FixedStitchRepeatExpr(list(map(flatten, repeat.stitches)),
-                                 repeat.count)
+    return FixedStitchRepeatExpr(map(flatten, repeat.stitches), repeat.count)
 
 
 @flatten.register
 def _(repeat: ExpandingStitchRepeatExpr) -> Expr:
-    return ExpandingStitchRepeatExpr(list(map(flatten, repeat.stitches)),
+    return ExpandingStitchRepeatExpr(map(flatten, repeat.stitches),
                                      repeat.to_last)
 
 
 @flatten.register
 def _(repeat: RowRepeatExpr) -> Expr:
-    return RowRepeatExpr(list(map(flatten, repeat.rows)), repeat.count)
+    return RowRepeatExpr(map(flatten, repeat.rows), repeat.count)
 
 
 @flatten.register
 def _(pattern: PatternExpr) -> Expr:
-    return PatternExpr(list(map(flatten, pattern.rows)), pattern.params)
+    return PatternExpr(map(flatten, pattern.rows), pattern.params)
 
 
 @flatten.register
 def _(concat: BlockConcatExpr) -> Expr:
     for block in concat.blocks:
         assert isinstance(block, PatternExpr)
-    rows = map(RowExpr, zip(*map(lambda pattern: pattern.rows, concat.blocks)))
-    return PatternExpr(list(rows))
+    return PatternExpr(
+        map(RowExpr, zip(*map(attrgetter("rows"), concat.blocks)))
+    )
 
 
 def _at_least(expected: int, actual: int) -> None:
