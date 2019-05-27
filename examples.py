@@ -1,4 +1,4 @@
-from knitscript.ast import BlockConcatExpr, CallExpr, \
+from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
     PatternExpr, RowExpr, RowRepeatExpr, StitchExpr
 

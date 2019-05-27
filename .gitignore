@@ -1,2 +1,7 @@
 __pycache__
 /.idea
+/build
+
+/knitscript.egg-info
+/knitscript/parser/*
+!/knitscript/parser/__init__.py

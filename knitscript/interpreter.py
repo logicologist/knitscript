@@ -4,7 +4,7 @@ from functools import partial, singledispatch
 from operator import attrgetter
 from typing import Dict, Tuple, Union
 
-from knitscript.ast import BlockConcatExpr, CallExpr, \
+from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
     NaturalLit, PatternExpr, RowRepeatExpr, StitchExpr, RowExpr
 

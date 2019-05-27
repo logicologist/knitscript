@@ -63,3 +63,16 @@ class Stitch(Enum):
     def reverse(self) -> Stitch:
         """This stitch's side-reversed stitch type."""
         return self._reverse()
+
+    @classmethod
+    def from_symbol(cls, symbol: str) -> Stitch:
+        """
+        Returns the stitch corresponding to a symbol.
+
+        :param symbol: the stitch's symbol
+        :return: the corresponding stitch for the symbol
+        """
+        for stitch in cls:
+            if stitch.symbol == symbol:
+                return stitch
+        raise ValueError("no such stitch")
