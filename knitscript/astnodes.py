@@ -172,8 +172,10 @@ class RowExpr(FixedStitchRepeatExpr):
         super().__init__(stitches, NaturalLit(1))
         self._rs = rs
 
-    def reverse_in_place(self):
-        pass
+    @property
+    def rs(self):
+        return self._rs
+    
 
 
 class RowRepeatExpr(Expr):

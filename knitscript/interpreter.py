@@ -264,3 +264,25 @@ def _exactly(expected: int, actual: int) -> None:
     _at_least(expected, actual)
     if expected < actual:
         raise Exception(f"{actual - expected} stitches left over")
+
+@singledispatch
+def reverse(expr: Expr) -> Expr:
+    """
+    Reverses the yarn direction of a pattern.
+
+    :param expr: the expression to reverse
+    :return: the reversed expression
+    """
+    raise TypeError(f"unsupported expression {type(expr).__name__}")
+
+@reverse.register
+def _(expr: RowExpr) -> Expr:
+    return RowExpr(map(reverse, reversed(expr.stitches)), !expr.rs)
+
+@reverse.register
+def _(expr: FixedStitchRepeatExpr) -> Expr:
+    return FixedStitchRepeatExpr(map(reverse, reversed(expr.stitches)), expr.count)
+
+@reverse.register
+def _(expr: StitchLit) -> Expr:
+    return StitchExpr(expr.stitch.reverse())
