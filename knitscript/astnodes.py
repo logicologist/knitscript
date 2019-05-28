@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Collection, Iterable, Optional
+from typing import Iterable, Sequence
 
 from knitscript.stitch import Stitch
 
@@ -23,7 +23,7 @@ class Document(Node):
         self._patterns = tuple(patterns)
 
     @property
-    def patterns(self) -> Collection[Node]:
+    def patterns(self) -> Sequence[Node]:
         """The patterns in the document."""
         return self._patterns
 
@@ -123,7 +123,7 @@ class FixedStitchRepeatExpr(KnitExpr):
         self._count = count
 
     @property
-    def stitches(self) -> Collection[Node]:
+    def stitches(self) -> Sequence[Node]:
         """The sequence of stitches to repeat."""
         return self._stitches
 
@@ -152,7 +152,7 @@ class ExpandingStitchRepeatExpr(KnitExpr):
         self._to_last = to_last
 
     @property
-    def stitches(self) -> Collection[Node]:
+    def stitches(self) -> Sequence[Node]:
         """The sequence of stitches to repeat."""
         return self._stitches
 
@@ -194,7 +194,7 @@ class RowRepeatExpr(KnitExpr):
         self._count = count
 
     @property
-    def rows(self) -> Collection[Node]:
+    def rows(self) -> Sequence[Node]:
         """The sequence of rows to repeat."""
         return self._rows
 
@@ -216,7 +216,7 @@ class BlockConcatExpr(KnitExpr):
         self._blocks = tuple(blocks)
 
     @property
-    def blocks(self) -> Collection[Node]:
+    def blocks(self) -> Sequence[Node]:
         """The blocks to concatenate."""
         return self._blocks
 
@@ -224,7 +224,7 @@ class BlockConcatExpr(KnitExpr):
 class PatternExpr(RowRepeatExpr):
     """An AST node representing a pattern."""
 
-    def __init__(self, rows: Iterable[Node], params: Collection[str] = ()) \
+    def __init__(self, rows: Iterable[Node], params: Sequence[str] = ()) \
             -> None:
         """
         Creates a new pattern expression.
@@ -236,7 +236,7 @@ class PatternExpr(RowRepeatExpr):
         self._params = tuple(params)
 
     @property
-    def params(self) -> Collection[str]:
+    def params(self) -> Sequence[str]:
         """The names of the parameters for the pattern."""
         return self._params
 
@@ -277,6 +277,6 @@ class CallExpr(Expr):
         return self._target
 
     @property
-    def args(self) -> Collection[Node]:
+    def args(self) -> Sequence[Node]:
         """The arguments to send to the target expression."""
         return self._args
