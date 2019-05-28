@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from functools import partial, singledispatch
+from itertools import accumulate, chain
 from operator import attrgetter
-from typing import Dict, Tuple, Union
+from typing import Dict, Mapping, NamedTuple, Tuple, Union
 
 from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
     NaturalLit, Node, PatternExpr, RowRepeatExpr, StitchLit, RowExpr
+
+
+class StitchCount(NamedTuple):
+    """The number of stitches consumed and produced by an AST node."""
+    consumes: int
+    produces: int
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -17,23 +24,19 @@ def is_valid_pattern(pattern: PatternExpr) -> bool:
     :param pattern: the pattern to validate
     :return: True if the pattern is valid and False otherwise
     """
-    return count_stitches(pattern, 0) == (0, 0)
+    return count_stitches(pattern, 0)[pattern] == (0, 0)
 
 
 # noinspection PyUnusedLocal
 @singledispatch
-def count_stitches(expr: Node, available: int) -> Tuple[int, int]:
+def count_stitches(expr: Node, available: int) -> Mapping[Node, StitchCount]:
     """
-    Counts the number of stitches used at the beginning and end of the
-    expression, and makes sure the expression does not use too many stitches or
-    not enough stitches at any point.
+    For each node, counts the number of stitches consumed from the current row
+    and produced for the next row.
 
     :param expr: the expression to count the stitches of
     :param available: the number of stitches remaining in the current row
-    :return:
-        a pair; the first is the number of stitches consumed from the current
-        row and the second is the number of stitches produced at the end of the
-        expression
+    :return: a mapping from each node in the AST to its stitch count
     :raise Exception:
         if the expression uses too many stitches or not enough stitches
     """
@@ -41,55 +44,55 @@ def count_stitches(expr: Node, available: int) -> Tuple[int, int]:
 
 
 @count_stitches.register
-def _(stitch: StitchLit, available: int) -> Tuple[int, int]:
-    _at_least(stitch.stitch.consumes, available)
-    stitch.stitch_input = stitch.stitch.consumes
-    stitch.stitch_output = stitch.stitch.produces
-    return stitch.stitch.consumes, stitch.stitch.produces
+def _(stitch: StitchLit, available: int) -> Mapping[Node, StitchCount]:
+    _at_least(stitch.value.consumes, available)
+    return {stitch: StitchCount(stitch.value.consumes,
+                                stitch.value.produces)}
 
 
 @count_stitches.register
-def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
+def _(repeat: FixedStitchRepeatExpr, available: int) \
+        -> Mapping[Node, StitchCount]:
     this_side = available
     next_side = 0
+    counts: Dict[Node, StitchCount] = {}
     assert isinstance(repeat.count, NaturalLit)
     for _ in range(repeat.count.value):
         for stitch in repeat.stitches:
-            consumed, produced = count_stitches(stitch, this_side)
-            _at_least(consumed, this_side)
-            this_side -= consumed
-            next_side += produced
-    repeat.stitch_input = available - this_side
-    repeat.stitch_output = next_side
-    return available - this_side, next_side
+            counts.update(count_stitches(stitch, this_side))
+            consumes, produces = counts[stitch]
+            _at_least(consumes, this_side)
+            this_side -= consumes
+            next_side += produces
+    counts[repeat] = StitchCount(available - this_side, next_side)
+    return counts
 
 
 @count_stitches.register
-def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
+def _(repeat: ExpandingStitchRepeatExpr, available: int) \
+        -> Mapping[Node, StitchCount]:
+    fixed = FixedStitchRepeatExpr(repeat.stitches, NaturalLit(1))
     assert isinstance(repeat.to_last, NaturalLit)
-    consumed, produced = count_stitches(
-        FixedStitchRepeatExpr(repeat.stitches, NaturalLit(1)),
-        available - repeat.to_last.value
-    )
-    n = (available - repeat.to_last.value) // consumed
-    _exactly(n * consumed, available - repeat.to_last.value)
-    repeat.stitch_input = n * consumed
-    repeat.stitch_output = n * produced
-    return n * consumed, n * produced
+    counts = count_stitches(fixed, available - repeat.to_last.value)
+    consumes, produces = counts[fixed]
+    n = (available - repeat.to_last.value) // consumes
+    _exactly(n * consumes, available - repeat.to_last.value)
+    return {**counts, repeat: StitchCount(n * consumes, n * produces)}
 
 
 @count_stitches.register
-def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
-    count = available
+def _(repeat: RowRepeatExpr, available: int) -> Mapping[Node, StitchCount]:
+    start = available
+    counts: Dict[Node, StitchCount] = {}
     assert isinstance(repeat.count, NaturalLit)
     for _ in range(repeat.count.value):
         for row in repeat.rows:
-            consumed, produced = count_stitches(row, count)
-            _exactly(consumed, count)
-            count = produced
-    repeat.stitch_input = available
-    repeat.stitch_output = count
-    return available, count
+            counts.update(count_stitches(row, available))
+            consumes, produces = counts[row]
+            _exactly(consumes, available)
+            available = produces
+    counts[repeat] = StitchCount(start, available)
+    return counts
 
 
 @singledispatch
@@ -106,7 +109,7 @@ def compile_text(expr: Node) -> str:
 
 @compile_text.register
 def _(stitch: StitchLit) -> str:
-    return stitch.stitch.symbol
+    return stitch.value.symbol
 
 
 @compile_text.register
@@ -261,6 +264,58 @@ def _(concat: BlockConcatExpr) -> Expr:
     )
 
 
+# noinspection PyUnusedLocal
+@singledispatch
+def reverse(expr: Node,
+            before: int,
+            counts: Mapping[Node, Tuple[int, int]]) -> Node:
+    """
+    Reverses the yarn direction of an expression.
+
+    :param expr: the expression to reverse
+    :param before:
+        the number of stitches made so far, before this expression, in the
+        current row
+    :param counts: the stitch counts for the AST
+    :return: the reversed expression
+    """
+    raise TypeError(f"unsupported node {type(expr).__name__}")
+
+
+# noinspection PyUnusedLocal
+@reverse.register
+def _(stitch: StitchLit,
+      before: int,
+      counts: Mapping[Node, StitchCount]) -> Node:
+    return StitchLit(stitch.value.reverse)
+
+
+@reverse.register
+def _(fixed: FixedStitchRepeatExpr,
+      before: int,
+      counts: Mapping[Node, StitchCount]) -> Node:
+    before_acc = accumulate(
+        chain([before],
+              map(lambda stitch: counts[stitch].consumes, fixed.stitches[:-1]))
+    )
+    # noinspection PyTypeChecker
+    return FixedStitchRepeatExpr(map(partial(reverse, counts=counts),
+                                     reversed(fixed.stitches),
+                                     reversed(list(before_acc))),
+                                 fixed.count)
+
+
+@reverse.register
+def _(expanding: ExpandingStitchRepeatExpr,
+      before: int,
+      counts: Mapping[Node, StitchCount]) -> Expr:
+    fixed = reverse(FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
+                    before,
+                    counts)
+    assert isinstance(fixed, FixedStitchRepeatExpr)
+    return ExpandingStitchRepeatExpr(fixed.stitches, NaturalLit(before))
+
+
 def _at_least(expected: int, actual: int) -> None:
     if expected > actual:
         raise Exception(
@@ -272,35 +327,3 @@ def _exactly(expected: int, actual: int) -> None:
     _at_least(expected, actual)
     if expected < actual:
         raise Exception(f"{actual - expected} stitches left over")
-
-
-@singledispatch
-def reverse(expr: Expr, stitches_before = 0) -> Expr:
-    """
-    Reverses the yarn direction of a pattern.
-
-    :param expr: the expression to reverse
-    :return: the reversed expression
-    """
-    raise TypeError(f"unsupported expression {type(expr).__name__}")
-
-@reverse.register
-def _(expr: RowExpr, stitches_before = 0) -> Expr:
-    consumed_list = [st.stitch_input for st in expr.stitches]
-    cumulative_consumed = len(consumed_list) * [0]
-    print
-    for i in range(1, len(consumed_list)):
-        cumulative_consumed[i] = consumed_list[i-1] + cumulative_consumed[i-1]
-    return RowExpr(map(reverse, reversed(expr.stitches), cumulative_consumed[::-1]), not expr.rs)
-
-@reverse.register
-def _(expr: FixedStitchRepeatExpr, stitches_before = 0) -> Expr:
-    return FixedStitchRepeatExpr(map(reverse, reversed(expr.stitches)), expr.count)
-
-@reverse.register
-def _(expr: ExpandingStitchRepeatExpr, stitches_before = 0) -> Expr:
-    return ExpandingStitchRepeatExpr(map(reverse, reversed(expr.stitches)), NaturalLit(stitches_before))
-
-@reverse.register
-def _(expr: StitchLit, stitches_before = 0) -> Expr:
-    return StitchLit(expr.stitch.reverse)

@@ -119,7 +119,7 @@ row_to_reverse = \
                                     NaturalLit(4)),
             FixedStitchRepeatExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
                                     NaturalLit(3))])
-count_stitches(row_to_reverse, 10)
+stitch_counts = count_stitches(row_to_reverse, 10)
 
 reversed_pattern = PatternExpr([
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
@@ -128,7 +128,7 @@ reversed_pattern = PatternExpr([
                                     NaturalLit(4)),
             FixedStitchRepeatExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
                                     NaturalLit(3))]),
-    reverse(row_to_reverse),
+    reverse(row_to_reverse, 0, stitch_counts),
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
   ], [])
 
@@ -148,7 +148,7 @@ row_to_reverse_2 = \
                                         NaturalLit(2)),
             FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
                                   NaturalLit(2))])
-count_stitches(row_to_reverse_2, 17)
+stitch_counts_2 = count_stitches(row_to_reverse_2, 17)
 
 reversed_pattern_2 = PatternExpr([
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
@@ -161,7 +161,7 @@ reversed_pattern_2 = PatternExpr([
                                         NaturalLit(2)),
             FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
                                   NaturalLit(2))]),
-    reverse(row_to_reverse_2),
+    reverse(row_to_reverse_2, 0, stitch_counts_2),
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
   ], [])
 

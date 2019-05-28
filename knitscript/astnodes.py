@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Iterable, Sequence
 
 from knitscript.stitch import Stitch
@@ -57,32 +57,6 @@ class Expr(Node):
     pass
 
 
-class KnitExpr(Expr):
-    """An AST node for a unit of knitting."""
-
-    @abstractmethod
-    def __init__(self):
-        self._stitch_input = None
-        self._stitch_output = None
-
-    @property
-    def stitch_input(self):
-        return self._stitch_input
-
-    @stitch_input.setter
-    def stitch_input(self, value):
-        self._stitch_input = value
-
-    @property
-    def stitch_output(self):
-        return self._stitch_output
-
-    @stitch_output.setter
-    def stitch_output(self, value):
-        self._stitch_output = value
-    
-
-
 class NaturalLit(Expr):
     """An AST node for a natural number (non-negative integer) literal."""
 
@@ -90,7 +64,7 @@ class NaturalLit(Expr):
         """
         Creates a new natural number literal.
 
-        :param value: the value of the literal
+        :param value: the value of this literal
         :raise ValueError: if the value is negative
         """
         if value < 0:
@@ -99,7 +73,7 @@ class NaturalLit(Expr):
 
     @property
     def value(self) -> int:
-        """The value of the literal."""
+        """The value of this literal."""
         return self._value
 
     def __str__(self) -> str:
@@ -109,25 +83,24 @@ class NaturalLit(Expr):
         return isinstance(other, NaturalLit) and self.value == other.value
 
 
-class StitchLit(KnitExpr):
+class StitchLit(Expr):
     """An AST node for a stitch literal."""
 
-    def __init__(self, stitch: Stitch) -> None:
+    def __init__(self, value: Stitch) -> None:
         """
         Creates a new stitch literal.
 
-        :param stitch: the stitch value of this literal
+        :param value: the value of this literal
         """
-        super().__init__()
-        self._stitch = stitch
+        self._value = value
 
     @property
-    def stitch(self) -> Stitch:
-        """The stitch value of this literal."""
-        return self._stitch
+    def value(self) -> Stitch:
+        """The value of this literal."""
+        return self._value
 
 
-class FixedStitchRepeatExpr(KnitExpr):
+class FixedStitchRepeatExpr(Expr):
     """
     An AST node for repeating a sequence of stitches a fixed number of times.
     """
@@ -139,7 +112,6 @@ class FixedStitchRepeatExpr(KnitExpr):
         :param stitches: the sequence of stitches to repeat
         :param count: the number of times to repeat the stitches
         """
-        super().__init__()
         self._stitches = tuple(stitches)
         self._count = count
 
@@ -154,7 +126,7 @@ class FixedStitchRepeatExpr(KnitExpr):
         return self._count
 
 
-class ExpandingStitchRepeatExpr(KnitExpr):
+class ExpandingStitchRepeatExpr(Expr):
     """
     An AST node for repeating a sequence of stitches an undetermined number of
     times.
@@ -169,7 +141,6 @@ class ExpandingStitchRepeatExpr(KnitExpr):
         :param stitches: the sequence of stitches to repeat
         :param to_last: the number of stitches to leave at the end of the row
         """
-        super().__init__()
         self._stitches = tuple(stitches)
         self._to_last = to_last
 
@@ -201,8 +172,7 @@ class RowExpr(FixedStitchRepeatExpr):
         return self._rs
     
 
-
-class RowRepeatExpr(KnitExpr):
+class RowRepeatExpr(Expr):
     """An AST node for repeating a sequence of rows a fixed number of times."""
 
     def __init__(self, rows: Iterable[Node], count: Node) -> None:
@@ -212,7 +182,6 @@ class RowRepeatExpr(KnitExpr):
         :param rows: the sequence of rows to repeat
         :param count: the number of times to repeat the rows
         """
-        super().__init__()
         self._rows = tuple(rows)
         self._count = count
 
@@ -227,7 +196,7 @@ class RowRepeatExpr(KnitExpr):
         return self._count
 
 
-class BlockConcatExpr(KnitExpr):
+class BlockConcatExpr(Expr):
     """An AST node representing horizontal concatenation of 2D blocks."""
 
     def __init__(self, blocks: Iterable[Node]) -> None:
@@ -236,7 +205,6 @@ class BlockConcatExpr(KnitExpr):
 
         :param blocks: the blocks to concatenate
         """
-        super().__init__()
         self._blocks = tuple(blocks)
 
     @property
