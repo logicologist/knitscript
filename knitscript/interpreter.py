@@ -275,7 +275,7 @@ def _exactly(expected: int, actual: int) -> None:
 
 
 @singledispatch
-def reverse(expr: Expr) -> Expr:
+def reverse(expr: Expr, stitches_before = 0) -> Expr:
     """
     Reverses the yarn direction of a pattern.
 
@@ -285,13 +285,22 @@ def reverse(expr: Expr) -> Expr:
     raise TypeError(f"unsupported expression {type(expr).__name__}")
 
 @reverse.register
-def _(expr: RowExpr) -> Expr:
-    return RowExpr(map(reverse, reversed(expr.stitches)), not expr.rs)
+def _(expr: RowExpr, stitches_before = 0) -> Expr:
+    consumed_list = [st.stitch_input for st in expr.stitches]
+    cumulative_consumed = len(consumed_list) * [0]
+    print
+    for i in range(1, len(consumed_list)):
+        cumulative_consumed[i] = consumed_list[i-1] + cumulative_consumed[i-1]
+    return RowExpr(map(reverse, reversed(expr.stitches), cumulative_consumed[::-1]), not expr.rs)
 
 @reverse.register
-def _(expr: FixedStitchRepeatExpr) -> Expr:
+def _(expr: FixedStitchRepeatExpr, stitches_before = 0) -> Expr:
     return FixedStitchRepeatExpr(map(reverse, reversed(expr.stitches)), expr.count)
 
 @reverse.register
-def _(expr: StitchLit) -> Expr:
+def _(expr: ExpandingStitchRepeatExpr, stitches_before = 0) -> Expr:
+    return ExpandingStitchRepeatExpr(map(reverse, reversed(expr.stitches)), NaturalLit(stitches_before))
+
+@reverse.register
+def _(expr: StitchLit, stitches_before = 0) -> Expr:
     return StitchLit(expr.stitch.reverse)
