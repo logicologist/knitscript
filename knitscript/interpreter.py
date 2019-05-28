@@ -3,11 +3,11 @@ from __future__ import annotations
 from functools import partial, singledispatch
 from itertools import accumulate, chain
 from operator import attrgetter
-from typing import Dict, Mapping, NamedTuple, Tuple, Union
+from typing import Dict, Mapping, NamedTuple, Union
 
 from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    NaturalLit, Node, PatternExpr, RowRepeatExpr, StitchLit, RowExpr
+    NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, StitchLit
 
 
 class StitchCount(NamedTuple):
@@ -266,9 +266,8 @@ def _(concat: BlockConcatExpr) -> Expr:
 
 # noinspection PyUnusedLocal
 @singledispatch
-def reverse(expr: Node,
-            before: int,
-            counts: Mapping[Node, Tuple[int, int]]) -> Node:
+def reverse(expr: Node, before: int, counts: Mapping[Node, StitchCount]) \
+        -> Node:
     """
     Reverses the yarn direction of an expression.
 
