@@ -59,9 +59,28 @@ class Expr(Node):
 
 class KnitExpr(Expr):
     """An AST node for a unit of knitting."""
+
     @abstractmethod
     def __init__(self):
         self._stitch_input = None
+        self._stitch_output = None
+
+    @property
+    def stitch_input(self):
+        return self._stitch_input
+
+    @stitch_input.setter
+    def stitch_input(self, value):
+        self._stitch_input = value
+
+    @property
+    def stitch_output(self):
+        return self._stitch_output
+
+    @stitch_output.setter
+    def stitch_output(self, value):
+        self._stitch_output = value
+    
 
 
 class NaturalLit(Expr):
@@ -99,6 +118,7 @@ class StitchLit(KnitExpr):
 
         :param stitch: the stitch value of this literal
         """
+        super().__init__()
         self._stitch = stitch
 
     @property
@@ -119,6 +139,7 @@ class FixedStitchRepeatExpr(KnitExpr):
         :param stitches: the sequence of stitches to repeat
         :param count: the number of times to repeat the stitches
         """
+        super().__init__()
         self._stitches = tuple(stitches)
         self._count = count
 
@@ -148,6 +169,7 @@ class ExpandingStitchRepeatExpr(KnitExpr):
         :param stitches: the sequence of stitches to repeat
         :param to_last: the number of stitches to leave at the end of the row
         """
+        super().__init__()
         self._stitches = tuple(stitches)
         self._to_last = to_last
 
@@ -190,6 +212,7 @@ class RowRepeatExpr(KnitExpr):
         :param rows: the sequence of rows to repeat
         :param count: the number of times to repeat the rows
         """
+        super().__init__()
         self._rows = tuple(rows)
         self._count = count
 
@@ -213,6 +236,7 @@ class BlockConcatExpr(KnitExpr):
 
         :param blocks: the blocks to concatenate
         """
+        super().__init__()
         self._blocks = tuple(blocks)
 
     @property

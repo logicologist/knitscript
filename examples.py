@@ -3,7 +3,7 @@ from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     PatternExpr, RowExpr, RowRepeatExpr, StitchLit
 
 from knitscript.interpreter import compile_text, flatten, is_valid_pattern, \
-    substitute
+    substitute, reverse
 from knitscript.stitch import Stitch
 
 simple = PatternExpr(
@@ -112,3 +112,24 @@ assert isinstance(processed, PatternExpr)
 print()
 print(is_valid_pattern(processed))
 print(compile_text(processed))
+
+
+
+reversed_pattern = PatternExpr([
+    RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
+                                    NaturalLit(10))]),
+    RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
+                                    NaturalLit(4)),
+            FixedStitchRepeatExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
+                                    NaturalLit(3))]),
+    reverse(RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
+                                    NaturalLit(4)),
+            FixedStitchRepeatExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
+                                    NaturalLit(3))])),
+    RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
+  ], [])
+
+
+print()
+print(is_valid_pattern(reversed_pattern))
+print(compile_text(reversed_pattern))

@@ -43,6 +43,8 @@ def count_stitches(expr: Node, available: int) -> Tuple[int, int]:
 @count_stitches.register
 def _(stitch: StitchLit, available: int) -> Tuple[int, int]:
     _at_least(stitch.stitch.consumes, available)
+    stitch.stitch_input = stitch.stitch.consumes
+    stitch.stitch_output = stitch.stitch.produces
     return stitch.stitch.consumes, stitch.stitch.produces
 
 
@@ -57,6 +59,8 @@ def _(repeat: FixedStitchRepeatExpr, available: int) -> Tuple[int, int]:
             _at_least(consumed, this_side)
             this_side -= consumed
             next_side += produced
+    repeat.stitch_input = available - this_side
+    repeat.stitch_output = next_side
     return available - this_side, next_side
 
 
@@ -69,6 +73,8 @@ def _(repeat: ExpandingStitchRepeatExpr, available: int) -> Tuple[int, int]:
     )
     n = (available - repeat.to_last.value) // consumed
     _exactly(n * consumed, available - repeat.to_last.value)
+    repeat.stitch_input = n * consumed
+    repeat.stitch_output = n * produced
     return n * consumed, n * produced
 
 
@@ -81,6 +87,8 @@ def _(repeat: RowRepeatExpr, available: int) -> Tuple[int, int]:
             consumed, produced = count_stitches(row, count)
             _exactly(consumed, count)
             count = produced
+    repeat.stitch_input = available
+    repeat.stitch_output = count
     return available, count
 
 
@@ -286,4 +294,4 @@ def _(expr: FixedStitchRepeatExpr) -> Expr:
 
 @reverse.register
 def _(expr: StitchLit) -> Expr:
-    return StitchExpr(expr.stitch.reverse())
+    return StitchLit(expr.stitch.reverse)
