@@ -1,9 +1,24 @@
 from __future__ import annotations
 
 from abc import ABC
-from typing import Iterable, Sequence
+from enum import Enum, auto
+from typing import Iterable, Optional, Sequence
 
 from knitscript.stitch import Stitch
+
+
+class Side(Enum):
+    """The side of the fabric, either right side (RS) or wrong side (WS)."""
+    Right = auto()
+    Wrong = auto()
+
+    def flip(self) -> Side:
+        """
+        Flips to the opposite side.
+
+        :return: the side opposite to this one
+        """
+        return Side.Wrong if self == Side.Right else Side.Right
 
 
 class Node(ABC):
@@ -158,19 +173,26 @@ class ExpandingStitchRepeatExpr(Expr):
 class RowExpr(FixedStitchRepeatExpr):
     """An AST node representing a row."""
 
-    def __init__(self, stitches: Iterable[Node], rs=True):
+    def __init__(self, stitches: Iterable[Node], side: Optional[Side] = None):
         """
         Creates a new row expression.
 
         :param stitches: the stitches in the row
+        :param side:
+            the side of the fabric (RS or WS) this row is intended to be
+            knitted on, if known
         """
         super().__init__(stitches, NaturalLit(1))
-        self._rs = rs
+        self._side = side
 
     @property
-    def rs(self):
-        return self._rs
-    
+    def side(self) -> Optional[Side]:
+        """
+        The side of the fabric (RS or WS) this row is intended to be knitted
+        on, if known.
+        """
+        return self._side
+
 
 class RowRepeatExpr(Expr):
     """An AST node for repeating a sequence of rows a fixed number of times."""

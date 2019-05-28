@@ -308,12 +308,19 @@ def _(fixed: FixedStitchRepeatExpr,
 @reverse.register
 def _(expanding: ExpandingStitchRepeatExpr,
       before: int,
-      counts: Mapping[Node, StitchCount]) -> Expr:
+      counts: Mapping[Node, StitchCount]) -> Node:
     fixed = reverse(FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
-                    before,
-                    counts)
+                    before, counts)
     assert isinstance(fixed, FixedStitchRepeatExpr)
     return ExpandingStitchRepeatExpr(fixed.stitches, NaturalLit(before))
+
+
+@reverse.register
+def _(row: RowExpr, before: int, counts: Mapping[Node, StitchCount]) -> Node:
+    fixed = reverse(FixedStitchRepeatExpr(row.stitches, row.count),
+                    before, counts)
+    assert isinstance(fixed, FixedStitchRepeatExpr)
+    return RowExpr(fixed.stitches, row.side.flip() if row.side else None)
 
 
 def _at_least(expected: int, actual: int) -> None:

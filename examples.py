@@ -1,6 +1,6 @@
 from knitscript.astnodes import BlockConcatExpr, CallExpr, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
-    PatternExpr, RowExpr, RowRepeatExpr, StitchLit
+    PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
 
 from knitscript.interpreter import compile_text, flatten, is_valid_pattern, \
     substitute, reverse, count_stitches
@@ -147,7 +147,8 @@ row_to_reverse_2 = \
                                         StitchLit(Stitch.PURL)],
                                         NaturalLit(2)),
             FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                  NaturalLit(2))])
+                                  NaturalLit(2))],
+            Side.Right)
 stitch_counts_2 = count_stitches(row_to_reverse_2, 17)
 
 reversed_pattern_2 = PatternExpr([
