@@ -144,7 +144,7 @@ def _(repeat: RowRepeatExpr) -> str:
 
 # noinspection PyUnusedLocal
 @singledispatch
-def substitute(node: Node, env: Dict[str, Node]) -> Node:
+def substitute(node: Node, env: Mapping[str, Node]) -> Node:
     """
     Substitutes all variables and calls in the AST with their equivalent
     expressions.
@@ -160,12 +160,12 @@ def substitute(node: Node, env: Dict[str, Node]) -> Node:
 # noinspection PyUnusedLocal
 @substitute.register(StitchLit)
 @substitute.register(NaturalLit)
-def _(lit: Union[StitchLit, NaturalLit], env: Dict[str, Node]) -> Node:
+def _(lit: Union[StitchLit, NaturalLit], env: Mapping[str, Node]) -> Node:
     return lit
 
 
 @substitute.register
-def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Node]) -> Node:
+def _(repeat: FixedStitchRepeatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return FixedStitchRepeatExpr(
         map(partial(substitute, env=env), repeat.stitches),
@@ -174,7 +174,7 @@ def _(repeat: FixedStitchRepeatExpr, env: Dict[str, Node]) -> Node:
 
 
 @substitute.register
-def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Node]) -> Node:
+def _(repeat: ExpandingStitchRepeatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return ExpandingStitchRepeatExpr(
         map(partial(substitute, env=env), repeat.stitches),
@@ -183,32 +183,32 @@ def _(repeat: ExpandingStitchRepeatExpr, env: Dict[str, Node]) -> Node:
 
 
 @substitute.register
-def _(repeat: RowRepeatExpr, env: Dict[str, Node]) -> Node:
+def _(repeat: RowRepeatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return RowRepeatExpr(map(partial(substitute, env=env), repeat.rows),
                          substitute(repeat.count, env))
 
 
 @substitute.register
-def _(concat: BlockConcatExpr, env: Dict[str, Node]) -> Node:
+def _(concat: BlockConcatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return BlockConcatExpr(map(partial(substitute, env=env), concat.blocks))
 
 
 @substitute.register
-def _(pattern: PatternExpr, env: Dict[str, Node]) -> Node:
+def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return PatternExpr(map(partial(substitute, env=env), pattern.rows),
                        pattern.params)
 
 
 @substitute.register
-def _(get: GetExpr, env: Dict[str, Node]) -> Node:
+def _(get: GetExpr, env: Mapping[str, Node]) -> Node:
     return env[get.name]
 
 
 @substitute.register
-def _(call: CallExpr, env: Dict[str, Node]) -> Node:
+def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
     target = call.target
     if isinstance(target, GetExpr):
         target = substitute(target, env)
@@ -284,9 +284,8 @@ def reverse(expr: Node,
 
 # noinspection PyUnusedLocal
 @reverse.register
-def _(stitch: StitchLit,
-      before: int,
-      counts: Mapping[Node, StitchCount]) -> Node:
+def _(stitch: StitchLit, before: int, counts: Mapping[Node, StitchCount]) \
+        -> Node:
     return StitchLit(stitch.value.reverse)
 
 
