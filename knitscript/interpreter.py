@@ -5,9 +5,10 @@ from itertools import accumulate, chain
 from operator import attrgetter
 from typing import Dict, Mapping, NamedTuple, Union
 
-from knitscript.astnodes import BlockConcatExpr, CallExpr, \
+from knitscript.astnodes import BlockConcatExpr, CallExpr, Document, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, StitchLit
+    NaturalLit, Node, PatternDef, PatternExpr, RowExpr, RowRepeatExpr, \
+    StitchLit
 
 
 class StitchCount(NamedTuple):
@@ -200,6 +201,16 @@ def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return PatternExpr(map(partial(substitute, env=env), pattern.rows),
                        pattern.params)
+
+
+@substitute.register
+def _(document: Document, env: Mapping[str, Node]) -> Node:
+    defs = {}
+    for def_ in document.patterns:
+        assert isinstance(def_, PatternDef)
+        defs[def_.name] = substitute(def_.pattern, {**env, **defs})
+    return Document(map(lambda name, pattern: PatternDef(name, pattern),
+                        defs.keys(), defs.values()))
 
 
 @substitute.register

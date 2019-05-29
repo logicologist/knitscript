@@ -1,10 +1,9 @@
 from functools import singledispatch
-from operator import attrgetter
 from typing import Collection, Union
 
-from knitscript.astnodes import Document, ExpandingStitchRepeatExpr, \
-    FixedStitchRepeatExpr, NaturalLit, Node, PatternDef, PatternExpr, \
-    RowExpr, StitchLit
+from knitscript.astnodes import BlockConcatExpr, CallExpr, Document, \
+    ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
+    Node, PatternDef, PatternExpr, RowExpr, StitchLit
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
     ParserRuleContext
 from knitscript.stitch import Stitch
@@ -28,11 +27,23 @@ def _(document: KnitScriptParser.DocumentContext) -> Node:
 
 @build_ast.register
 def _(pattern: KnitScriptParser.PatternDefContext) -> Node:
-    params = (map(attrgetter("text"), pattern.paramList().params)
-              if pattern.paramList()
-              else [])
     return PatternDef(pattern.ID().getText(),
-                      PatternExpr(map(build_ast, pattern.rows), params))
+                      PatternExpr(map(build_ast, pattern.lines), []))
+
+
+@build_ast.register
+def _(line: KnitScriptParser.LineContext) -> Node:
+    return build_ast(line.row() or line.block())
+
+
+@build_ast.register
+def _(block: KnitScriptParser.BlockContext) -> Node:
+    return BlockConcatExpr(map(build_ast, block.calls))
+
+
+@build_ast.register
+def _(call: KnitScriptParser.CallContext) -> Node:
+    return CallExpr(GetExpr(call.ID().getText()), [])
 
 
 @build_ast.register
