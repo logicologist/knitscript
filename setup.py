@@ -1,14 +1,15 @@
+from distutils.spawn import find_executable, spawn
 from setuptools import find_packages, setup
 from setuptools.command.build_py import build_py
-import subprocess
 
 
 class KnitScriptBuildPy(build_py):
     def run(self) -> None:
-        subprocess.run(["antlr4",
-                        "-o", "knitscript/parser",
-                        "-Dlanguage=Python3",
-                        "KnitScript.g4"])
+        antlr = find_executable("antlr4") or find_executable("antlr")
+        spawn([antlr,
+               "-o", "knitscript/parser",
+               "-Dlanguage=Python3",
+               "KnitScript.g4"])
         super().run()
 
 
