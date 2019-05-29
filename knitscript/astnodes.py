@@ -98,7 +98,23 @@ class NaturalLit(Expr):
         return isinstance(other, NaturalLit) and self.value == other.value
 
 
-class StitchLit(Expr):
+class KnitExpr(Expr):
+    def __init__(self,
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) -> None:
+        self._consumes = consumes
+        self._produces = produces
+
+    @property
+    def consumes(self) -> Optional[int]:
+        return self._consumes
+
+    @property
+    def produces(self) -> Optional[int]:
+        return self._produces
+
+
+class StitchLit(KnitExpr):
     """An AST node for a stitch literal."""
 
     def __init__(self, value: Stitch) -> None:
@@ -107,6 +123,7 @@ class StitchLit(Expr):
 
         :param value: the value of this literal
         """
+        super().__init__(value.consumes, value.produces)
         self._value = value
 
     @property
@@ -115,18 +132,23 @@ class StitchLit(Expr):
         return self._value
 
 
-class FixedStitchRepeatExpr(Expr):
+class FixedStitchRepeatExpr(KnitExpr):
     """
     An AST node for repeating a sequence of stitches a fixed number of times.
     """
 
-    def __init__(self, stitches: Iterable[Node], count: Node) -> None:
+    def __init__(self,
+                 stitches: Iterable[Node],
+                 count: Node,
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) -> None:
         """
         Creates a new fixed stitch repeat expression.
 
         :param stitches: the sequence of stitches to repeat
         :param count: the number of times to repeat the stitches
         """
+        super().__init__(consumes, produces)
         self._stitches = tuple(stitches)
         self._count = count
 
@@ -141,7 +163,7 @@ class FixedStitchRepeatExpr(Expr):
         return self._count
 
 
-class ExpandingStitchRepeatExpr(Expr):
+class ExpandingStitchRepeatExpr(KnitExpr):
     """
     An AST node for repeating a sequence of stitches an undetermined number of
     times.
@@ -149,13 +171,16 @@ class ExpandingStitchRepeatExpr(Expr):
 
     def __init__(self,
                  stitches: Iterable[Node],
-                 to_last: Node = NaturalLit(0)) -> None:
+                 to_last: Node = NaturalLit(0),
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) -> None:
         """
         Creates a new expanding stitch repeat expression.
 
         :param stitches: the sequence of stitches to repeat
         :param to_last: the number of stitches to leave at the end of the row
         """
+        super().__init__(consumes, produces)
         self._stitches = tuple(stitches)
         self._to_last = to_last
 
@@ -173,7 +198,11 @@ class ExpandingStitchRepeatExpr(Expr):
 class RowExpr(FixedStitchRepeatExpr):
     """An AST node representing a row."""
 
-    def __init__(self, stitches: Iterable[Node], side: Optional[Side] = None):
+    def __init__(self,
+                 stitches: Iterable[Node],
+                 side: Optional[Side] = None,
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) -> None:
         """
         Creates a new row expression.
 
@@ -182,7 +211,7 @@ class RowExpr(FixedStitchRepeatExpr):
             the side of the fabric (RS or WS) this row is intended to be
             knitted on, if known
         """
-        super().__init__(stitches, NaturalLit(1))
+        super().__init__(stitches, NaturalLit(1), consumes, produces)
         self._side = side
 
     @property
@@ -194,16 +223,21 @@ class RowExpr(FixedStitchRepeatExpr):
         return self._side
 
 
-class RowRepeatExpr(Expr):
+class RowRepeatExpr(KnitExpr):
     """An AST node for repeating a sequence of rows a fixed number of times."""
 
-    def __init__(self, rows: Iterable[Node], count: Node) -> None:
+    def __init__(self,
+                 rows: Iterable[Node],
+                 count: Node,
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) -> None:
         """
         Creates a new row repeat expression.
 
         :param rows: the sequence of rows to repeat
         :param count: the number of times to repeat the rows
         """
+        super().__init__(consumes, produces)
         self._rows = tuple(rows)
         self._count = count
 
@@ -218,15 +252,19 @@ class RowRepeatExpr(Expr):
         return self._count
 
 
-class BlockExpr(Expr):
+class BlockExpr(KnitExpr):
     """An AST node representing horizontal concatenation of 2D blocks."""
 
-    def __init__(self, blocks: Iterable[Node]) -> None:
+    def __init__(self,
+                 blocks: Iterable[Node],
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) -> None:
         """
         Creates a new block concatenation expression.
 
         :param blocks: the blocks to concatenate
         """
+        super().__init__(consumes, produces)
         self._blocks = tuple(blocks)
 
     @property
@@ -238,7 +276,11 @@ class BlockExpr(Expr):
 class PatternExpr(RowRepeatExpr):
     """An AST node representing a pattern."""
 
-    def __init__(self, rows: Iterable[Node], params: Iterable[str] = ()) \
+    def __init__(self,
+                 rows: Iterable[Node],
+                 params: Iterable[str] = (),
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) \
             -> None:
         """
         Creates a new pattern expression.
@@ -246,7 +288,7 @@ class PatternExpr(RowRepeatExpr):
         :param rows: the sequence of rows in the pattern
         :param params: the names of the parameters for the pattern
         """
-        super().__init__(rows, NaturalLit(1))
+        super().__init__(rows, NaturalLit(1), consumes, produces)
         self._params = tuple(params)
 
     @property
