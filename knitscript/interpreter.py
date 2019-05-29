@@ -213,7 +213,12 @@ def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
     if isinstance(target, GetExpr):
         target = substitute(target, env)
     assert isinstance(target, PatternExpr)
-    return substitute(target, {**env, **dict(zip(target.params, call.args))})
+    # noinspection PyTypeChecker
+    return substitute(
+        target,
+        {**env, **dict(zip(target.params,
+                           map(partial(substitute, env=env), call.args)))}
+    )
 
 
 @singledispatch
@@ -258,7 +263,8 @@ def _(concat: BlockExpr) -> Expr:
     for block in concat.blocks:
         assert isinstance(block, PatternExpr)
     return PatternExpr(
-        map(RowExpr, zip(*map(attrgetter("rows"), concat.blocks)))
+        map(RowExpr,
+            zip(*map(attrgetter("rows"), map(flatten, concat.blocks))))
     )
 
 
