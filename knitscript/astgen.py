@@ -32,12 +32,12 @@ def _(pattern: KnitScriptParser.PatternDefContext) -> Node:
               if pattern.paramList()
               else [])
     return PatternDef(pattern.ID().getText(),
-                      PatternExpr(map(build_ast, pattern.lines), params))
+                      PatternExpr(map(build_ast, pattern.items), params))
 
 
 @build_ast.register
-def _(line: KnitScriptParser.LineContext) -> Node:
-    return build_ast(line.row() or line.block() or line.rowRepeat())
+def _(item: KnitScriptParser.ItemContext) -> Node:
+    return build_ast(item.row() or item.block() or item.rowRepeat())
 
 
 @build_ast.register
@@ -55,7 +55,7 @@ def _(call: KnitScriptParser.CallContext) -> Node:
 
 @build_ast.register
 def _(repeat: KnitScriptParser.RowRepeatContext) -> Node:
-    return RowRepeatExpr(map(build_ast, repeat.lines), build_ast(repeat.count))
+    return RowRepeatExpr(map(build_ast, repeat.items), build_ast(repeat.count))
 
 
 @build_ast.register

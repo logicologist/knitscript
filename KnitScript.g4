@@ -2,15 +2,15 @@ grammar KnitScript;
 
 document: patterns+=patternDef* EOF;
 
-patternDef: 'pattern' ID ('(' paramList ')')? lines+=line+ 'end';
+patternDef: 'pattern' ID ('(' paramList ')')? items+=item+ 'end';
 paramList: params+=ID (',' params+=ID)*;
 
-line
+item
     : (row | block) '.'
     | rowRepeat;
 
 row: 'row:' stitchList;
-rowRepeat: 'repeat' count=expr lines+=line+ 'end';
+rowRepeat: 'repeat' count=expr items+=item+ 'end';
 
 block: calls+=call (',' calls+=call)*;
 call: ID ('(' argList ')')?;
