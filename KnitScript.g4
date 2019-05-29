@@ -2,16 +2,19 @@ grammar KnitScript;
 
 document: patterns+=patternDef* EOF;
 
-patternDef: 'pattern' ID ('(' paramList ')')? ':' lines+=line+;
+patternDef: 'pattern' ID ('(' paramList ')')? lines+=line+ 'end';
 paramList: params+=ID (',' params+=ID)*;
 
-line: (row | block) '.';
+line
+    : (row | block) '.'
+    | rowRepeat;
+
+row: 'row:' stitchList;
+rowRepeat: 'repeat' count=expr lines+=line+ 'end';
 
 block: calls+=call (',' calls+=call)*;
 call: ID ('(' argList ')')?;
 argList: args+=expr (',' args+=expr)*;
-
-row: 'row:' stitchList;
 
 stitchRepeat: fixedStitchRepeat | expandingStitchRepeat | stitch;
 fixedStitchRepeat
