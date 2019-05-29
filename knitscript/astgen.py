@@ -1,7 +1,8 @@
 from functools import singledispatch
+from operator import attrgetter
 from typing import Collection, Union
 
-from knitscript.astnodes import BlockConcatExpr, CallExpr, Document, \
+from knitscript.astnodes import BlockExpr, CallExpr, Document, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
     Node, PatternDef, PatternExpr, RowExpr, StitchLit
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
@@ -27,8 +28,11 @@ def _(document: KnitScriptParser.DocumentContext) -> Node:
 
 @build_ast.register
 def _(pattern: KnitScriptParser.PatternDefContext) -> Node:
+    params = (map(attrgetter("text"), pattern.paramList().params)
+              if pattern.paramList()
+              else [])
     return PatternDef(pattern.ID().getText(),
-                      PatternExpr(map(build_ast, pattern.lines), []))
+                      PatternExpr(map(build_ast, pattern.lines), params))
 
 
 @build_ast.register
@@ -38,12 +42,15 @@ def _(line: KnitScriptParser.LineContext) -> Node:
 
 @build_ast.register
 def _(block: KnitScriptParser.BlockContext) -> Node:
-    return BlockConcatExpr(map(build_ast, block.calls))
+    return BlockExpr(map(build_ast, block.calls))
 
 
 @build_ast.register
 def _(call: KnitScriptParser.CallContext) -> Node:
-    return CallExpr(GetExpr(call.ID().getText()), [])
+    return CallExpr(
+        GetExpr(call.ID().getText()),
+        map(build_ast, call.argList().args) if call.argList() else []
+    )
 
 
 @build_ast.register
@@ -60,20 +67,36 @@ def _(repeat: KnitScriptParser.StitchRepeatContext) -> Node:
 
 @build_ast.register
 def _(fixed: KnitScriptParser.FixedStitchRepeatContext) -> Node:
-    count = NaturalLit(int(fixed.count.text))
-    return FixedStitchRepeatExpr(map(build_ast, _stitches(fixed)), count)
+    return FixedStitchRepeatExpr(map(build_ast, _stitches(fixed)),
+                                 build_ast(fixed.count))
 
 
 @build_ast.register
 def _(expanding: KnitScriptParser.ExpandingStitchRepeatContext) -> Node:
-    to_last = NaturalLit(int(expanding.toLast.text) if expanding.toLast else 0)
-    return ExpandingStitchRepeatExpr(map(build_ast, _stitches(expanding)),
-                                     to_last)
+    return ExpandingStitchRepeatExpr(
+        map(build_ast, _stitches(expanding)),
+        build_ast(expanding.toLast) if expanding.toLast else NaturalLit(0)
+    )
 
 
 @build_ast.register
 def _(stitch: KnitScriptParser.StitchContext) -> Node:
     return StitchLit(Stitch.from_symbol(stitch.ID().getText()))
+
+
+@build_ast.register
+def _(expr: KnitScriptParser.ExprContext) -> Node:
+    return build_ast(expr.variable() or expr.natural())
+
+
+@build_ast.register
+def _(variable: KnitScriptParser.VariableContext) -> Node:
+    return GetExpr(variable.ID().getText())
+
+
+@build_ast.register
+def _(natural: KnitScriptParser.NaturalContext) -> Node:
+    return NaturalLit(int(natural.getText()))
 
 
 def _stitches(ctx: Union[KnitScriptParser.FixedStitchRepeatContext,

@@ -1,4 +1,4 @@
-from knitscript.astnodes import BlockConcatExpr, CallExpr, \
+from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
     PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
 
@@ -101,8 +101,8 @@ seed = PatternExpr([
 first_class_patterns_omg = PatternExpr([
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
                                    NaturalLit(4))]),
-    BlockConcatExpr([GetExpr("stitch"), GetExpr("stitch")]),
-    BlockConcatExpr([GetExpr("stitch"), GetExpr("stitch")]),
+    BlockExpr([GetExpr("stitch"), GetExpr("stitch")]),
+    BlockExpr([GetExpr("stitch"), GetExpr("stitch")]),
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
 ], ["stitch"])
 

@@ -1,7 +1,7 @@
 from antlr4 import CommonTokenStream, StdinStream
 
 from knitscript.astgen import build_ast
-from knitscript.astnodes import Document, PatternDef, PatternExpr
+from knitscript.astnodes import Document, PatternDef
 from knitscript.interpreter import compile_text, flatten, substitute
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
@@ -14,15 +14,15 @@ def main() -> None:
     """
     lexer = KnitScriptLexer(StdinStream())
     parser = KnitScriptParser(CommonTokenStream(lexer))
-    document = substitute(build_ast(parser.document()), {})
+    document = build_ast(parser.document())
 
     assert isinstance(document, Document)
-    for pattern in document.patterns:
-        assert isinstance(pattern, PatternDef)
-        assert isinstance(pattern.pattern, PatternExpr)
-        print(pattern.name, pattern.pattern.params)
-        print(compile_text(flatten(pattern.pattern)))
-        print()
+    global_env = {}
+    for def_ in document.patterns:
+        assert isinstance(def_, PatternDef)
+        global_env[def_.name] = def_.pattern
+
+    print(compile_text(flatten(substitute(global_env["main"], global_env))))
 
 
 if __name__ == "__main__":

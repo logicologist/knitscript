@@ -5,10 +5,9 @@ from itertools import accumulate, chain
 from operator import attrgetter
 from typing import Dict, Mapping, NamedTuple, Union
 
-from knitscript.astnodes import BlockConcatExpr, CallExpr, Document, \
+from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    NaturalLit, Node, PatternDef, PatternExpr, RowExpr, RowRepeatExpr, \
-    StitchLit
+    NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, StitchLit
 
 
 class StitchCount(NamedTuple):
@@ -191,9 +190,9 @@ def _(repeat: RowRepeatExpr, env: Mapping[str, Node]) -> Node:
 
 
 @substitute.register
-def _(concat: BlockConcatExpr, env: Mapping[str, Node]) -> Node:
+def _(concat: BlockExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
-    return BlockConcatExpr(map(partial(substitute, env=env), concat.blocks))
+    return BlockExpr(map(partial(substitute, env=env), concat.blocks))
 
 
 @substitute.register
@@ -201,16 +200,6 @@ def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return PatternExpr(map(partial(substitute, env=env), pattern.rows),
                        pattern.params)
-
-
-@substitute.register
-def _(document: Document, env: Mapping[str, Node]) -> Node:
-    defs = {}
-    for def_ in document.patterns:
-        assert isinstance(def_, PatternDef)
-        defs[def_.name] = substitute(def_.pattern, {**env, **defs})
-    return Document(map(lambda name, pattern: PatternDef(name, pattern),
-                        defs.keys(), defs.values()))
 
 
 @substitute.register
@@ -223,10 +212,8 @@ def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
     target = call.target
     if isinstance(target, GetExpr):
         target = substitute(target, env)
-
     assert isinstance(target, PatternExpr)
-    return substitute(call.target,
-                      {**env, **dict(zip(target.params, call.args))})
+    return substitute(target, {**env, **dict(zip(target.params, call.args))})
 
 
 @singledispatch
@@ -267,7 +254,7 @@ def _(pattern: PatternExpr) -> Expr:
 
 
 @flatten.register
-def _(concat: BlockConcatExpr) -> Expr:
+def _(concat: BlockExpr) -> Expr:
     for block in concat.blocks:
         assert isinstance(block, PatternExpr)
     return PatternExpr(

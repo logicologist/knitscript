@@ -218,7 +218,7 @@ class RowRepeatExpr(Expr):
         return self._count
 
 
-class BlockConcatExpr(Expr):
+class BlockExpr(Expr):
     """An AST node representing horizontal concatenation of 2D blocks."""
 
     def __init__(self, blocks: Iterable[Node]) -> None:
@@ -238,7 +238,7 @@ class BlockConcatExpr(Expr):
 class PatternExpr(RowRepeatExpr):
     """An AST node representing a pattern."""
 
-    def __init__(self, rows: Iterable[Node], params: Sequence[str] = ()) \
+    def __init__(self, rows: Iterable[Node], params: Iterable[str] = ()) \
             -> None:
         """
         Creates a new pattern expression.
