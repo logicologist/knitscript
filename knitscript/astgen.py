@@ -55,7 +55,7 @@ def _(call: KnitScriptParser.CallContext) -> Node:
 
 @build_ast.register
 def _(repeat: KnitScriptParser.RowRepeatContext) -> Node:
-    return RowRepeatExpr(map(build_ast, repeat.items), build_ast(repeat.count))
+    return RowRepeatExpr(map(build_ast, repeat.items), build_ast(repeat.times))
 
 
 @build_ast.register
@@ -73,7 +73,7 @@ def _(repeat: KnitScriptParser.StitchRepeatContext) -> Node:
 @build_ast.register
 def _(fixed: KnitScriptParser.FixedStitchRepeatContext) -> Node:
     return FixedStitchRepeatExpr(map(build_ast, _stitches(fixed)),
-                                 build_ast(fixed.count))
+                                 build_ast(fixed.times))
 
 
 @build_ast.register

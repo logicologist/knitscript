@@ -155,14 +155,14 @@ class FixedStitchRepeatExpr(KnitExpr):
 
     def __init__(self,
                  stitches: Iterable[Node],
-                 count: Node,
+                 times: Node,
                  consumes: Optional[int] = None,
                  produces: Optional[int] = None) -> None:
         """
         Creates a new fixed stitch repeat expression.
 
         :param stitches: the sequence of stitches to repeat
-        :param count: the number of times to repeat the stitches
+        :param times: the number of times to repeat the stitches
         :param consumes:
             the number of stitches this expression consumes, if known
         :param produces:
@@ -170,7 +170,7 @@ class FixedStitchRepeatExpr(KnitExpr):
         """
         super().__init__(consumes, produces)
         self._stitches = tuple(stitches)
-        self._count = count
+        self._times = times
 
     @property
     def stitches(self) -> Sequence[Node]:
@@ -178,9 +178,9 @@ class FixedStitchRepeatExpr(KnitExpr):
         return self._stitches
 
     @property
-    def count(self) -> Node:
+    def times(self) -> Node:
         """The number of times to repeat the stitches."""
-        return self._count
+        return self._times
 
 
 class ExpandingStitchRepeatExpr(KnitExpr):
@@ -256,14 +256,14 @@ class RowRepeatExpr(KnitExpr):
 
     def __init__(self,
                  rows: Iterable[Node],
-                 count: Node,
+                 times: Node,
                  consumes: Optional[int] = None,
                  produces: Optional[int] = None) -> None:
         """
         Creates a new row repeat expression.
 
         :param rows: the sequence of rows to repeat
-        :param count: the number of times to repeat the rows
+        :param times: the number of times to repeat the rows
         :param consumes:
             the number of stitches this expression consumes, if known
         :param produces:
@@ -271,7 +271,7 @@ class RowRepeatExpr(KnitExpr):
         """
         super().__init__(consumes, produces)
         self._rows = tuple(rows)
-        self._count = count
+        self._times = times
 
     @property
     def rows(self) -> Sequence[Node]:
@@ -279,9 +279,9 @@ class RowRepeatExpr(KnitExpr):
         return self._rows
 
     @property
-    def count(self) -> Node:
+    def times(self) -> Node:
         """The number of times to repeat the rows."""
-        return self._count
+        return self._times
 
 
 class BlockExpr(KnitExpr):

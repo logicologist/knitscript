@@ -10,7 +10,7 @@ item
     | rowRepeat;
 
 row: 'row:' stitchList;
-rowRepeat: 'repeat' count=expr items+=item+ 'end';
+rowRepeat: 'repeat' times=expr items+=item+ 'end';
 
 block: calls+=call (',' calls+=call)*;
 call: ID ('(' argList ')')?;
@@ -18,8 +18,8 @@ argList: args+=expr (',' args+=expr)*;
 
 stitchRepeat: fixedStitchRepeat | expandingStitchRepeat | stitch;
 fixedStitchRepeat
-    : stitch count=expr
-    | '(' stitchList ')' count=expr;
+    : stitch times=expr
+    | '(' stitchList ')' times=expr;
 expandingStitchRepeat
     : (stitch | '(' stitchList ')') 'to end'
     | (stitch | '(' stitchList ')') 'to last' toLast=expr;

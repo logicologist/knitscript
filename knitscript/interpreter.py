@@ -57,11 +57,11 @@ def _(fixed: FixedStitchRepeatExpr, available: int) -> Node:
         _at_least(stitch.consumes, available - consumes)
         consumes += stitch.consumes
         produces += stitch.produces
-    _at_least(fixed.count.value * consumes, available)
+    _at_least(fixed.times.value * consumes, available)
     return FixedStitchRepeatExpr(counted,
-                                 fixed.count,
-                                 fixed.count.value * consumes,
-                                 fixed.count.value * produces)
+                                 fixed.times,
+                                 fixed.times.value * consumes,
+                                 fixed.times.value * produces)
 
 
 @count_stitches.register
@@ -97,7 +97,7 @@ def _(repeat: RowRepeatExpr, available: int) -> Node:
         _exactly(row.consumes, available)
         available = row.produces
     _exactly(start, available)
-    return RowRepeatExpr(counted, repeat.count, start, available)
+    return RowRepeatExpr(counted, repeat.times, start, available)
 
 
 @count_stitches.register
@@ -127,12 +127,12 @@ def _(stitch: StitchLit) -> str:
 @compile_text.register
 def _(repeat: FixedStitchRepeatExpr) -> str:
     stitches = ", ".join(map(compile_text, repeat.stitches))
-    if repeat.count == NaturalLit(1):
+    if repeat.times == NaturalLit(1):
         return stitches
     elif len(repeat.stitches) == 1:
-        return f"{stitches} {repeat.count}"
+        return f"{stitches} {repeat.times}"
     else:
-        return f"[{stitches}] {repeat.count}"
+        return f"[{stitches}] {repeat.times}"
 
 
 @compile_text.register
@@ -148,10 +148,10 @@ def _(repeat: ExpandingStitchRepeatExpr) -> str:
 @compile_text.register
 def _(repeat: RowRepeatExpr) -> str:
     rows = ".\n".join(map(compile_text, repeat.rows)) + "."
-    if repeat.count == NaturalLit(1):
+    if repeat.times == NaturalLit(1):
         return rows
     else:
-        return f"**\n{rows}\nrep from ** {repeat.count} times"
+        return f"**\n{rows}\nrep from ** {repeat.times} times"
 
 
 # noinspection PyUnusedLocal
@@ -181,7 +181,7 @@ def _(repeat: FixedStitchRepeatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return FixedStitchRepeatExpr(
         map(partial(substitute, env=env), repeat.stitches),
-        substitute(repeat.count, env)
+        substitute(repeat.times, env)
     )
 
 
@@ -198,7 +198,7 @@ def _(repeat: ExpandingStitchRepeatExpr, env: Mapping[str, Node]) -> Node:
 def _(repeat: RowRepeatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return RowRepeatExpr(map(partial(substitute, env=env), repeat.rows),
-                         substitute(repeat.count, env))
+                         substitute(repeat.times, env))
 
 
 @substitute.register
@@ -251,7 +251,7 @@ def _(stitch: StitchLit) -> Expr:
 
 @flatten.register
 def _(repeat: FixedStitchRepeatExpr) -> Expr:
-    return FixedStitchRepeatExpr(map(flatten, repeat.stitches), repeat.count)
+    return FixedStitchRepeatExpr(map(flatten, repeat.stitches), repeat.times)
 
 
 @flatten.register
@@ -262,7 +262,7 @@ def _(repeat: ExpandingStitchRepeatExpr) -> Expr:
 
 @flatten.register
 def _(repeat: RowRepeatExpr) -> Expr:
-    return RowRepeatExpr(map(flatten, repeat.rows), repeat.count)
+    return RowRepeatExpr(map(flatten, repeat.rows), repeat.times)
 
 
 @flatten.register
@@ -305,7 +305,7 @@ def _(fixed: FixedStitchRepeatExpr, before: int) -> Node:
     return FixedStitchRepeatExpr(map(reverse,
                                      reversed(fixed.stitches),
                                      reversed(list(before_acc))),
-                                 fixed.count)
+                                 fixed.times)
 
 
 # noinspection PyUnusedLocal
@@ -324,7 +324,7 @@ def _(expanding: ExpandingStitchRepeatExpr, before: int) -> Node:
 
 @reverse.register
 def _(row: RowExpr, before: int) -> Node:
-    fixed = reverse(FixedStitchRepeatExpr(row.stitches, row.count), before)
+    fixed = reverse(FixedStitchRepeatExpr(row.stitches, row.times), before)
     assert isinstance(fixed, FixedStitchRepeatExpr)
     return RowExpr(fixed.stitches, row.side.flip() if row.side else None)
 
