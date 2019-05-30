@@ -99,18 +99,34 @@ class NaturalLit(Expr):
 
 
 class KnitExpr(Expr):
+    """An AST node representing a knitting action."""
+
     def __init__(self,
                  consumes: Optional[int] = None,
                  produces: Optional[int] = None) -> None:
+        """
+        Creates a new knitting action expression.
+
+        :param consumes:
+            the number of stitches this expression consumes from the current
+            row, if known
+        :param produces:
+            the number of stitches this expression produces for the next row,
+            if known
+        """
         self._consumes = consumes
         self._produces = produces
 
     @property
     def consumes(self) -> Optional[int]:
+        """
+        The number of stitches this expression consumes from the current row.
+        """
         return self._consumes
 
     @property
     def produces(self) -> Optional[int]:
+        """The number of stitches this expression produces for the next row."""
         return self._produces
 
 
@@ -147,6 +163,10 @@ class FixedStitchRepeatExpr(KnitExpr):
 
         :param stitches: the sequence of stitches to repeat
         :param count: the number of times to repeat the stitches
+        :param consumes:
+            the number of stitches this expression consumes, if known
+        :param produces:
+            the number of stitches this expression produces, if known
         """
         super().__init__(consumes, produces)
         self._stitches = tuple(stitches)
@@ -179,6 +199,10 @@ class ExpandingStitchRepeatExpr(KnitExpr):
 
         :param stitches: the sequence of stitches to repeat
         :param to_last: the number of stitches to leave at the end of the row
+        :param consumes:
+            the number of stitches this expression consumes, if known
+        :param produces:
+            the number of stitches this expression produces, if known
         """
         super().__init__(consumes, produces)
         self._stitches = tuple(stitches)
@@ -210,6 +234,10 @@ class RowExpr(FixedStitchRepeatExpr):
         :param side:
             the side of the fabric (RS or WS) this row is intended to be
             knitted on, if known
+        :param consumes:
+            the number of stitches this expression consumes, if known
+        :param produces:
+            the number of stitches this expression produces, if known
         """
         super().__init__(stitches, NaturalLit(1), consumes, produces)
         self._side = side
@@ -236,6 +264,10 @@ class RowRepeatExpr(KnitExpr):
 
         :param rows: the sequence of rows to repeat
         :param count: the number of times to repeat the rows
+        :param consumes:
+            the number of stitches this expression consumes, if known
+        :param produces:
+            the number of stitches this expression produces, if known
         """
         super().__init__(consumes, produces)
         self._rows = tuple(rows)
@@ -263,6 +295,10 @@ class BlockExpr(KnitExpr):
         Creates a new block concatenation expression.
 
         :param blocks: the blocks to concatenate
+        :param consumes:
+            the number of stitches this expression consumes, if known
+        :param produces:
+            the number of stitches this expression produces, if known
         """
         super().__init__(consumes, produces)
         self._blocks = tuple(blocks)
@@ -287,6 +323,10 @@ class PatternExpr(RowRepeatExpr):
 
         :param rows: the sequence of rows in the pattern
         :param params: the names of the parameters for the pattern
+        :param consumes:
+            the number of stitches this expression consumes, if known
+        :param produces:
+            the number of stitches this expression produces, if known
         """
         super().__init__(rows, NaturalLit(1), consumes, produces)
         self._params = tuple(params)

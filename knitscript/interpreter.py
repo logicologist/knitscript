@@ -30,9 +30,9 @@ def count_stitches(expr: Node, available: int) -> Node:
     For each node, counts the number of stitches consumed from the current row
     and produced for the next row.
 
-    :param expr: the expression to count the stitches of
+    :param expr: the AST to count the stitches in
     :param available: the number of stitches remaining in the current row
-    :return: a mapping from each node in the AST to its stitch count
+    :return: an AST with all stitch counts (consumes and produces) filled in
     :raise Exception:
         if the expression uses too many stitches or not enough stitches
     """
@@ -73,12 +73,10 @@ def _(expanding: ExpandingStitchRepeatExpr, available: int) -> Node:
     assert isinstance(fixed, FixedStitchRepeatExpr)
     n = (available - expanding.to_last.value) // fixed.consumes
     _exactly(n * fixed.consumes, available - expanding.to_last.value)
-    return ExpandingStitchRepeatExpr(
-        fixed.stitches,
-        expanding.to_last,
-        n * fixed.consumes,
-        n * fixed.produces
-    )
+    return ExpandingStitchRepeatExpr(fixed.stitches,
+                                     expanding.to_last,
+                                     n * fixed.consumes,
+                                     n * fixed.produces)
 
 
 @count_stitches.register
@@ -286,13 +284,13 @@ def _(concat: BlockExpr) -> Expr:
 @singledispatch
 def reverse(expr: Node, before: int) -> Node:
     """
-    Reverses the yarn direction of an expression.
+    Reverses the yarn direction of an expression. Assumes the AST has had
+    stitches counted.
 
     :param expr: the expression to reverse
     :param before:
         the number of stitches made so far, before this expression, in the
         current row
-    :param counts: the stitch counts for the AST
     :return: the reversed expression
     """
     raise TypeError(f"unsupported node {type(expr).__name__}")
