@@ -322,12 +322,37 @@ def _(pattern: PatternExpr) -> Expr:
 
 @flatten.register
 def _(concat: BlockExpr) -> Expr:
+    return _merge_across(*map(flatten, concat.blocks))
+
+
+@singledispatch
+def _merge_across(*exprs: Expr) -> Expr:
+    raise TypeError(f"unsupported expression {type(exprs[0]).__name__}")
+
+
+@_merge_across.register
+def _(*patterns: PatternExpr) -> Expr:
+    return PatternExpr(_merge_across.dispatch(RowRepeatExpr)(*patterns).rows)
+
+
+@_merge_across.register
+def _(*repeats: RowRepeatExpr) -> Expr:
     rows = []
-    for line in zip(*map(attrgetter("rows"), map(flatten, concat.blocks))):
-        rows.append(
-            RowExpr(chain.from_iterable(map(attrgetter("stitches"), line)))
-        )
-    return PatternExpr(rows)
+    for line in zip(*map(attrgetter("rows"), repeats)):
+        rows.append(_merge_across(*line))
+    # TODO: Check that all row repeats have the same number of repetitions.
+    return RowRepeatExpr(rows, repeats[0].times)
+
+
+@_merge_across.register
+def _(*rows: RowExpr) -> Expr:
+    # Pick the side from the first row in the line.
+    # TODO:
+    #  We need to check if the rows have different sides and reverse them if
+    #  they do.
+    side = rows[0].side
+    return RowExpr(chain.from_iterable(map(attrgetter("stitches"), rows)),
+                   side)
 
 
 # noinspection PyUnusedLocal
