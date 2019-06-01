@@ -7,7 +7,8 @@ from typing import Mapping, Union
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, StitchLit
+    KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, Side, \
+    StitchLit, alternate_sides
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -376,6 +377,48 @@ def _(row: RowExpr, before: int) -> Node:
     fixed = reverse(FixedStitchRepeatExpr(row.stitches, row.times), before)
     assert isinstance(fixed, FixedStitchRepeatExpr)
     return RowExpr(fixed.stitches, row.side.flip() if row.side else None)
+
+
+# noinspection PyUnusedLocal
+@singledispatch
+def infer_sides(node: Node, side: Side = Side.Right) -> Node:
+    """
+    Infers the side of each row, assuming that:
+     1. Patterns start on RS.
+     2. Rows alternate between RS and WS.
+
+    Rows that have an explicit side already are unchanged.
+
+    :param node: the AST to infer sides in
+    :param side: the starting side for the next row
+    :return: an AST with row sides filled in
+    """
+    raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+# noinspection PyUnusedLocal
+@infer_sides.register
+def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
+    return PatternExpr(
+        map(infer_sides, pattern.rows, alternate_sides(Side.Right)),
+        pattern.params
+    )
+
+
+@infer_sides.register
+def _(block: BlockExpr, side: Side = Side.Right) -> Node:
+    return BlockExpr(map(infer_sides, block.blocks, alternate_sides(side)))
+
+
+@infer_sides.register
+def _(repeat: RowRepeatExpr, side: Side = Side.Right) -> Node:
+    return RowRepeatExpr(map(infer_sides, repeat.rows, alternate_sides(side)),
+                         repeat.times)
+
+
+@infer_sides.register
+def _(row: RowExpr, side: Side = Side.Right) -> Node:
+    return RowExpr(row.stitches, side if row.side is None else row.side)
 
 
 def _at_least(expected: int, actual: int) -> None:

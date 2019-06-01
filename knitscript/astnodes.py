@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from enum import Enum, auto
 from functools import singledispatch
-from typing import Iterable, Optional, Sequence
+from typing import Generator, Iterable, Optional, Sequence
 
 from knitscript.stitch import Stitch
 
@@ -20,6 +20,20 @@ class Side(Enum):
         :return: the side opposite to this one
         """
         return Side.Wrong if self == Side.Right else Side.Right
+
+
+def alternate_sides(start: Side) -> Generator[Side]:
+    """
+    Creates an infinite generator that alternates back and forth between sides,
+    starting from the given side.
+
+    :param start: the side to start alternating from
+    :return:
+        a generator for the infinite series: start, start.flip(),
+        start.flip().flip(), ...
+    """
+    yield start
+    yield from alternate_sides(start.flip())
 
 
 class Node(ABC):
