@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch, reduce
+from functools import partial, singledispatch
 from itertools import accumulate, chain
 from operator import attrgetter
 from typing import Mapping, Union
@@ -225,6 +225,13 @@ def _(repeat: ExpandingStitchRepeatExpr, env: Mapping[str, Node]) -> Node:
 
 
 @substitute.register
+def _(row: RowExpr, env: Mapping[str, Node]) -> Node:
+    substituted = substitute.dispatch(FixedStitchRepeatExpr)(row, env)
+    assert isinstance(substituted, FixedStitchRepeatExpr)
+    return RowExpr(substituted.stitches, row.side)
+
+
+@substitute.register
 def _(repeat: RowRepeatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return RowRepeatExpr(map(partial(substitute, env=env), repeat.rows),
@@ -266,10 +273,11 @@ def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
 @singledispatch
 def flatten(node: Node) -> Expr:
     """
-    Flattens each block concatenation expression into a single pattern.
+    Flattens each block concatenation expression and nested pattern expression
+    into a single pattern.
 
     :param node: the AST to transform
-    :return: the transformed expression after flattening block concatenations
+    :return: the flattened AST
     """
     raise TypeError(f"unsupported node {type(node).__name__}")
 
@@ -291,23 +299,34 @@ def _(repeat: ExpandingStitchRepeatExpr) -> Expr:
 
 
 @flatten.register
+def _(row: RowExpr) -> Expr:
+    return RowExpr(map(flatten, row.stitches), row.side)
+
+
+@flatten.register
 def _(repeat: RowRepeatExpr) -> Expr:
     return RowRepeatExpr(map(flatten, repeat.rows), repeat.times)
 
 
 @flatten.register
 def _(pattern: PatternExpr) -> Expr:
-    return PatternExpr(map(flatten, pattern.rows), pattern.params)
+    rows = []
+    for row in map(flatten, pattern.rows):
+        if isinstance(row, PatternExpr):
+            rows.extend(row.rows)
+        else:
+            rows.append(row)
+    return PatternExpr(rows)
 
 
 @flatten.register
 def _(concat: BlockExpr) -> Expr:
-    for block in concat.blocks:
-        assert isinstance(block, PatternExpr)
-    return PatternExpr(
-        map(RowExpr,
-            zip(*map(attrgetter("rows"), map(flatten, concat.blocks))))
-    )
+    rows = []
+    for line in zip(*map(attrgetter("rows"), map(flatten, concat.blocks))):
+        rows.append(
+            RowExpr(chain.from_iterable(map(attrgetter("stitches"), line)))
+        )
+    return PatternExpr(rows)
 
 
 # noinspection PyUnusedLocal
