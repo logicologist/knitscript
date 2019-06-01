@@ -23,15 +23,15 @@ def main() -> None:
         assert isinstance(def_, PatternDef)
         global_env[def_.name] = def_.pattern
 
-    document = substitute(global_env["main"], global_env)
-    document = infer_sides(document)
-    document = infer_counts(document)
-    pretty_print(document)
+    pattern = substitute(global_env["main"], global_env)
+    pattern = infer_sides(pattern)
+    pattern = infer_counts(pattern)
+    pretty_print(pattern)
     print()
-    document = flatten(document)
-    pretty_print(document)
+    pattern = flatten(pattern)
+    pretty_print(pattern)
     print()
-    print(compile_text(document))
+    print(compile_text(pattern))
 
 
 if __name__ == "__main__":

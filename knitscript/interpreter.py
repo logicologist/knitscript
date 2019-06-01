@@ -19,96 +19,12 @@ def is_valid_pattern(pattern: PatternExpr) -> bool:
     :param pattern: the pattern to validate
     :return: True if the pattern is valid and False otherwise
     """
-    pattern = count_stitches(pattern, 0)
-    assert isinstance(pattern, PatternExpr)
+    pattern = infer_counts(pattern, 0)
+    verify_counts(pattern, 0)
+    assert isinstance(pattern, KnitExpr)
     return pattern.consumes == 0 and pattern.produces == 0
 
 
-# noinspection PyUnusedLocal
-@singledispatch
-def count_stitches(expr: Node, available: int) -> Node:
-    """
-    For each node, counts the number of stitches consumed from the current row
-    and produced for the next row.
-
-    :param expr: the AST to count the stitches in
-    :param available: the number of stitches remaining in the current row
-    :return: an AST with all stitch counts (consumes and produces) filled in
-    :raise Exception:
-        if the expression uses too many stitches or not enough stitches
-    """
-    raise TypeError(f"unsupported node {type(expr).__name__}")
-
-
-@count_stitches.register
-def _(stitch: StitchLit, available: int) -> Node:
-    _at_least(stitch.value.consumes, available)
-    return stitch
-
-
-@count_stitches.register
-def _(fixed: FixedStitchRepeatExpr, available: int) -> Node:
-    counted = []
-    consumes = 0
-    produces = 0
-    for stitch in fixed.stitches:
-        stitch = count_stitches(stitch, available - consumes)
-        counted.append(stitch)
-        assert isinstance(stitch, KnitExpr)
-        _at_least(stitch.consumes, available - consumes)
-        consumes += stitch.consumes
-        produces += stitch.produces
-    _at_least(fixed.times.value * consumes, available)
-    return FixedStitchRepeatExpr(counted,
-                                 fixed.times,
-                                 fixed.times.value * consumes,
-                                 fixed.times.value * produces)
-
-
-@count_stitches.register
-def _(expanding: ExpandingStitchRepeatExpr, available: int) -> Node:
-    fixed = count_stitches(
-        FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
-        available - expanding.to_last.value
-    )
-    assert isinstance(fixed, FixedStitchRepeatExpr)
-    n = (available - expanding.to_last.value) // fixed.consumes
-    _exactly(n * fixed.consumes, available - expanding.to_last.value)
-    return ExpandingStitchRepeatExpr(fixed.stitches,
-                                     expanding.to_last,
-                                     n * fixed.consumes,
-                                     n * fixed.produces)
-
-
-@count_stitches.register
-def _(row: RowExpr, available: int) -> Node:
-    counted = count_stitches.dispatch(FixedStitchRepeatExpr)(row, available)
-    return RowExpr(counted.stitches, row.side,
-                   counted.consumes, counted.produces)
-
-
-@count_stitches.register
-def _(repeat: RowRepeatExpr, available: int) -> Node:
-    start = available
-    counted = []
-    for row in repeat.rows:
-        row = count_stitches(row, available)
-        counted.append(row)
-        assert isinstance(row, KnitExpr)
-        _exactly(row.consumes, available)
-        available = row.produces
-    _exactly(start, available)
-    return RowRepeatExpr(counted, repeat.times, start, available)
-
-
-@count_stitches.register
-def _(pattern: PatternExpr, available: int) -> Node:
-    counted = count_stitches.dispatch(RowRepeatExpr)(pattern, available)
-    return PatternExpr(counted.rows, pattern.params,
-                       counted.consumes, counted.produces)
-
-
-# TODO: Clean up the duplicated code between infer_counts and count_stitches.
 # noinspection PyUnusedLocal
 @singledispatch
 def infer_counts(expr: Node, available: Optional[int] = None) -> Node:
@@ -182,20 +98,22 @@ def _(row: RowExpr, available: Optional[int] = None) -> Node:
 
 @infer_counts.register
 def _(repeat: RowRepeatExpr, available: Optional[int] = None) -> Node:
-    start = available
     counted = []
     for row in repeat.rows:
         row = infer_counts(row, available)
-        counted.append(row)
         assert isinstance(row, KnitExpr)
+        counted.append(row)
         available = row.produces
-    return RowRepeatExpr(counted, repeat.times, start, available)
+    return RowRepeatExpr(counted, repeat.times, counted[0].consumes, available)
 
 
 # noinspection PyUnusedLocal
 @infer_counts.register
 def _(block: BlockExpr, available: Optional[int] = None) -> Node:
-    return BlockExpr(map(infer_counts, block.blocks))
+    counted = list(map(infer_counts, block.blocks))
+    return BlockExpr(counted,
+                     sum(map(attrgetter("consumes"), counted)),
+                     sum(map(attrgetter("produces"), counted)))
 
 
 @infer_counts.register
@@ -203,6 +121,59 @@ def _(pattern: PatternExpr, available: Optional[int] = None) -> Node:
     counted = infer_counts.dispatch(RowRepeatExpr)(pattern, available)
     return PatternExpr(counted.rows, pattern.params,
                        counted.consumes, counted.produces)
+
+
+# noinspection PyUnusedLocal
+@singledispatch
+def verify_counts(node: Node, available: int) -> None:
+    """
+    Checks stitch counts for consistency, and verifies that every row has
+    enough stitches available and doesn't leave any stitches left over.
+
+    :param node: the AST to verify the stitch counts of
+    :param available: the number of stitches remaining in the current row
+    :raise Exception: if the AST has invalid or inconsistent stitch counts
+    """
+    raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+@verify_counts.register
+def _(stitch: StitchLit, available: int) -> None:
+    _at_least(stitch.value.consumes, available)
+
+
+@verify_counts.register
+def _(fixed: FixedStitchRepeatExpr, available: int) -> None:
+    consumes = 0
+    produces = 0
+    for stitch in fixed.stitches:
+        verify_counts(stitch, available - consumes)
+        assert isinstance(stitch, KnitExpr)
+        _at_least(stitch.consumes, available - consumes)
+        consumes += stitch.consumes
+        produces += stitch.produces
+    _at_least(fixed.times.value * consumes, available)
+
+
+@verify_counts.register
+def _(expanding: ExpandingStitchRepeatExpr, available: int) -> None:
+    verify_counts(
+        FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
+        available - expanding.to_last.value
+    )
+    n = (available - expanding.to_last.value) // expanding.consumes
+    _exactly(n * expanding.consumes, available - expanding.to_last.value)
+
+
+@verify_counts.register
+def _(repeat: RowRepeatExpr, available: int) -> None:
+    start = available
+    for row in repeat.rows:
+        verify_counts(row, available)
+        assert isinstance(row, KnitExpr)
+        _exactly(row.consumes, available)
+        available = row.produces
+    _exactly(start, available)
 
 
 @singledispatch

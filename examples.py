@@ -3,7 +3,7 @@ from knitscript.astnodes import BlockExpr, CallExpr, \
     PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
 
 from knitscript.interpreter import compile_text, flatten, is_valid_pattern, \
-    substitute, reverse, count_stitches
+    substitute, reverse, infer_counts, infer_sides
 from knitscript.stitch import Stitch
 
 simple = PatternExpr(
@@ -106,38 +106,38 @@ first_class_patterns_omg = PatternExpr([
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
 ], ["stitch"])
 
-processed = flatten(substitute(CallExpr(first_class_patterns_omg, [seed]), {}))
+processed = flatten(infer_counts(
+    infer_sides(substitute(CallExpr(first_class_patterns_omg, [seed]), {}))
+))
 assert isinstance(processed, PatternExpr)
 
 print()
 print(is_valid_pattern(processed))
 print(compile_text(processed))
 
-
 row_to_reverse = \
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                    NaturalLit(4)),
-            FixedStitchRepeatExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
-                                    NaturalLit(3))])
-row_to_reverse = count_stitches(row_to_reverse, 10)
+                                   NaturalLit(4)),
+             FixedStitchRepeatExpr(
+                 [StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
+                 NaturalLit(3))])
+row_to_reverse = infer_counts(row_to_reverse, 10)
 
 reversed_pattern = PatternExpr([
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
-                                    NaturalLit(10))]),
+                                   NaturalLit(10))]),
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                    NaturalLit(4)),
-            FixedStitchRepeatExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
-                                    NaturalLit(3))]),
+                                   NaturalLit(4)),
+             FixedStitchRepeatExpr(
+                 [StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)],
+                 NaturalLit(3))]),
     reverse(row_to_reverse, 0),
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
-  ], [])
+], [])
 
 print()
 print(is_valid_pattern(reversed_pattern))
 print(compile_text(reversed_pattern))
-
-
-
 
 row_to_reverse_2 = \
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.KNIT),
@@ -145,26 +145,26 @@ row_to_reverse_2 = \
                                         StitchLit(Stitch.PURL),
                                         StitchLit(Stitch.KNIT),
                                         StitchLit(Stitch.PURL)],
-                                        NaturalLit(2)),
-            FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                  NaturalLit(2))],
+                                       NaturalLit(2)),
+             FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
+                                   NaturalLit(2))],
             Side.Right)
-row_to_reverse_2 = count_stitches(row_to_reverse_2, 17)
+row_to_reverse_2 = infer_counts(row_to_reverse_2, 17)
 
 reversed_pattern_2 = PatternExpr([
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
-                                    NaturalLit(17))]),
+                                   NaturalLit(17))]),
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.KNIT),
                                         StitchLit(Stitch.KNIT),
                                         StitchLit(Stitch.PURL),
                                         StitchLit(Stitch.KNIT),
                                         StitchLit(Stitch.PURL)],
-                                        NaturalLit(2)),
-            FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                  NaturalLit(2))]),
+                                       NaturalLit(2)),
+             FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
+                                   NaturalLit(2))]),
     reverse(row_to_reverse_2, 0),
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
-  ], [])
+], [])
 
 print()
 print(is_valid_pattern(reversed_pattern_2))
