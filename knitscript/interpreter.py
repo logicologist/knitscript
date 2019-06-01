@@ -305,18 +305,18 @@ def _(row: RowExpr) -> Expr:
 
 @flatten.register
 def _(repeat: RowRepeatExpr) -> Expr:
-    return RowRepeatExpr(map(flatten, repeat.rows), repeat.times)
-
-
-@flatten.register
-def _(pattern: PatternExpr) -> Expr:
     rows = []
-    for row in map(flatten, pattern.rows):
+    for row in map(flatten, repeat.rows):
         if isinstance(row, PatternExpr):
             rows.extend(row.rows)
         else:
             rows.append(row)
-    return PatternExpr(rows)
+    return RowRepeatExpr(rows, repeat.times)
+
+
+@flatten.register
+def _(pattern: PatternExpr) -> Expr:
+    return PatternExpr(flatten.dispatch(RowRepeatExpr)(pattern).rows)
 
 
 @flatten.register
