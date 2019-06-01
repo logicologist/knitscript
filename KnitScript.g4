@@ -9,8 +9,9 @@ item
     : (row | block) '.'
     | rowRepeat;
 
-row: 'row:' stitchList;
 rowRepeat: 'repeat' times=expr items+=item+ 'end';
+row: 'row' side ':' stitchList;
+side: 'RS' | 'WS';
 
 block: calls+=call (',' calls+=call)*;
 call: ID ('(' argList ')')?;

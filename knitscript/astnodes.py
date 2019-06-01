@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC
-from enum import Enum, auto
+from enum import Enum
 from functools import singledispatch
 from typing import Generator, Iterable, Optional, Sequence
 
@@ -10,8 +10,8 @@ from knitscript.stitch import Stitch
 
 class Side(Enum):
     """The side of the fabric, either right side (RS) or wrong side (WS)."""
-    Right = auto()
-    Wrong = auto()
+    Right = "RS"
+    Wrong = "WS"
 
     def flip(self) -> Side:
         """
