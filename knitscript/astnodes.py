@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from enum import Enum, auto
+from functools import singledispatch
 from typing import Iterable, Optional, Sequence
 
 from knitscript.stitch import Stitch
@@ -146,6 +147,9 @@ class StitchLit(KnitExpr):
     def value(self) -> Stitch:
         """The value of this literal."""
         return self._value
+
+    def __repr__(self) -> str:
+        return f"StitchLit({self.value})"
 
 
 class FixedStitchRepeatExpr(KnitExpr):
@@ -353,6 +357,9 @@ class GetExpr(Expr):
         """The name of the variable to lookup."""
         return self._name
 
+    def __repr__(self) -> str:
+        return f"GetExpr({repr(self.name)})"
+
 
 class CallExpr(Expr):
     """An AST node representing a call to a pattern or texture."""
@@ -376,3 +383,64 @@ class CallExpr(Expr):
     def args(self) -> Sequence[Node]:
         """The arguments to send to the target expression."""
         return self._args
+
+    def __repr__(self) -> str:
+        return f"CallExpr({repr(self.target)}, {repr(self.args)})"
+
+
+@singledispatch
+def pretty_print(node: Node, level: int) -> None:
+    """
+    Prints the AST with human-readable newlines and indentation.
+
+    :param node: the AST to pretty print
+    :param level: the current level of indentation
+    """
+    print("  " * level + repr(node))
+
+
+@pretty_print.register
+def _(pattern: PatternExpr, level: int) -> None:
+    _print_parent("PatternExpr",
+                  pattern.rows,
+                  (pattern.params, pattern.consumes, pattern.produces),
+                  level)
+
+
+@pretty_print.register
+def _(block: BlockExpr, level: int) -> None:
+    _print_parent("BlockExpr",
+                  block.blocks,
+                  (block.consumes, block.produces),
+                  level)
+
+
+@pretty_print.register
+def _(row: RowExpr, level: int) -> None:
+    _print_parent("RowExpr",
+                  row.stitches,
+                  (row.side, row.consumes, row.produces),
+                  level)
+
+
+@pretty_print.register
+def _(fixed: FixedStitchRepeatExpr, level: int) -> None:
+    _print_parent("FixedStitchRepeatExpr",
+                  fixed.stitches,
+                  (fixed.times, fixed.produces, fixed.consumes),
+                  level)
+
+
+@pretty_print.register
+def _(fixed: ExpandingStitchRepeatExpr, level: int) -> None:
+    _print_parent("ExpandingStitchRepeatExpr",
+                  fixed.stitches,
+                  (fixed.to_last, fixed.produces, fixed.consumes),
+                  level)
+
+
+def _print_parent(name, children, args, level):
+    print("  " * level + name + "([")
+    for child in children:
+        pretty_print(child, level + 1)
+    print("  " * level + "], " + ", ".join(map(str, args)) + ")")
