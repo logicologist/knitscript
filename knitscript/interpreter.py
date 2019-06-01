@@ -3,7 +3,7 @@ from __future__ import annotations
 from functools import partial, singledispatch
 from itertools import accumulate, chain
 from operator import attrgetter
-from typing import Mapping, Union
+from typing import Mapping, Optional, Union
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
@@ -134,6 +134,103 @@ def _(repeat: RowRepeatExpr, available: int) -> Node:
 @count_stitches.register
 def _(pattern: PatternExpr, available: int) -> Node:
     counted = count_stitches.dispatch(RowRepeatExpr)(pattern, available)
+    return PatternExpr(counted.rows, pattern.params,
+                       counted.consumes, counted.produces)
+
+
+# TODO: Clean up the duplicated code between infer_counts and count_stitches.
+# noinspection PyUnusedLocal
+@singledispatch
+def infer_counts(expr: Node, available: Optional[int] = None) -> Node:
+    """
+    Tries to count the number of stitches that each node consumes and produces.
+    If not enough information is available for a particular node, its stitch
+    counts are not updated.
+
+    :param expr: the AST to count stitches in
+    :param available:
+        the number of stitches remaining in the current row, if known
+    :return:
+        an AST with as many stitch counts (consumes and produces) as possible
+        filled in
+    """
+    raise TypeError(f"unsupported node {type(expr).__name__}")
+
+
+# noinspection PyUnusedLocal
+@infer_counts.register
+def _(stitch: StitchLit, available: Optional[int] = None) -> Node:
+    return stitch
+
+
+@infer_counts.register
+def _(fixed: FixedStitchRepeatExpr, available: Optional[int] = None) -> Node:
+    counted = []
+    consumes = 0
+    produces = 0
+    for stitch in fixed.stitches:
+        stitch = infer_counts(
+            stitch,
+            available - consumes if available is not None else None
+        )
+        counted.append(stitch)
+        try:
+            assert isinstance(stitch, KnitExpr)
+            consumes += stitch.consumes
+            produces += stitch.produces
+        except TypeError:
+            consumes = produces = None
+
+    try:
+        return FixedStitchRepeatExpr(counted, fixed.times,
+                                     fixed.times.value * consumes,
+                                     fixed.times.value * produces)
+    except TypeError:
+        return FixedStitchRepeatExpr(counted, fixed.times)
+
+
+@infer_counts.register
+def _(expanding: ExpandingStitchRepeatExpr, available: Optional[int] = None) \
+        -> Node:
+    fixed = infer_counts(
+        FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
+        available - expanding.to_last.value
+    )
+    assert isinstance(fixed, FixedStitchRepeatExpr)
+    n = (available - expanding.to_last.value) // fixed.consumes
+    _exactly(n * fixed.consumes, available - expanding.to_last.value)
+    return ExpandingStitchRepeatExpr(fixed.stitches, expanding.to_last,
+                                     n * fixed.consumes, n * fixed.produces)
+
+
+@infer_counts.register
+def _(row: RowExpr, available: Optional[int] = None) -> Node:
+    counted = infer_counts.dispatch(FixedStitchRepeatExpr)(row, available)
+    return RowExpr(counted.stitches, row.side,
+                   counted.consumes, counted.produces)
+
+
+@infer_counts.register
+def _(repeat: RowRepeatExpr, available: Optional[int] = None) -> Node:
+    start = available
+    counted = []
+    for row in repeat.rows:
+        row = infer_counts(row, available)
+        counted.append(row)
+        assert isinstance(row, KnitExpr)
+        available = row.produces
+    return RowRepeatExpr(counted, repeat.times, start, available)
+
+
+# noinspection PyUnusedLocal
+@infer_counts.register
+def _(block: BlockExpr, available: Optional[int] = None) -> Node:
+    return BlockExpr(map(infer_counts, block.blocks))
+
+
+@infer_counts.register
+def _(pattern: PatternExpr, available: Optional[int] = None) -> Node:
+    counted = infer_counts.dispatch(RowRepeatExpr)(pattern, available)
     return PatternExpr(counted.rows, pattern.params,
                        counted.consumes, counted.produces)
 

@@ -2,8 +2,8 @@ from antlr4 import CommonTokenStream, StdinStream
 
 from knitscript.astgen import build_ast
 from knitscript.astnodes import Document, PatternDef, pretty_print
-from knitscript.interpreter import compile_text, flatten, substitute, \
-    infer_sides
+from knitscript.interpreter import compile_text, flatten, infer_counts, \
+    infer_sides, substitute
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 
@@ -23,11 +23,15 @@ def main() -> None:
         assert isinstance(def_, PatternDef)
         global_env[def_.name] = def_.pattern
 
-    processed = flatten(infer_sides(substitute(global_env["main"],
-                                               global_env)))
-    pretty_print(processed)
+    document = substitute(global_env["main"], global_env)
+    document = infer_sides(document)
+    document = infer_counts(document)
+    pretty_print(document)
     print()
-    print(compile_text(processed))
+    document = flatten(document)
+    pretty_print(document)
+    print()
+    print(compile_text(document))
 
 
 if __name__ == "__main__":
