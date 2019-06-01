@@ -389,58 +389,80 @@ class CallExpr(Expr):
 
 
 @singledispatch
-def pretty_print(node: Node, level: int) -> None:
+def pretty_print(node: Node, level: int = 0, end: str = "\n") -> None:
     """
     Prints the AST with human-readable newlines and indentation.
 
     :param node: the AST to pretty print
     :param level: the current level of indentation
+    :param end: the string to append to the end of the printed AST
     """
-    print("  " * level + repr(node))
+    print("  " * level + repr(node), end=end)
 
 
 @pretty_print.register
-def _(pattern: PatternExpr, level: int) -> None:
+def _(pattern: PatternExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("PatternExpr",
                   pattern.rows,
                   (pattern.params, pattern.consumes, pattern.produces),
-                  level)
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(block: BlockExpr, level: int) -> None:
+def _(block: BlockExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("BlockExpr",
                   block.blocks,
                   (block.consumes, block.produces),
-                  level)
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(row: RowExpr, level: int) -> None:
+def _(repeat: RowRepeatExpr, level: int = 0, end: str = "\n") -> None:
+    _print_parent("RowRepeatExpr",
+                  repeat.rows,
+                  (repeat.times, repeat.consumes, repeat.produces),
+                  level,
+                  end)
+
+
+@pretty_print.register
+def _(row: RowExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("RowExpr",
                   row.stitches,
                   (row.side, row.consumes, row.produces),
-                  level)
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(fixed: FixedStitchRepeatExpr, level: int) -> None:
+def _(fixed: FixedStitchRepeatExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("FixedStitchRepeatExpr",
                   fixed.stitches,
                   (fixed.times, fixed.produces, fixed.consumes),
-                  level)
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(fixed: ExpandingStitchRepeatExpr, level: int) -> None:
+def _(expanding: ExpandingStitchRepeatExpr, level: int = 0, end: str = "\n") \
+        -> None:
     _print_parent("ExpandingStitchRepeatExpr",
-                  fixed.stitches,
-                  (fixed.to_last, fixed.produces, fixed.consumes),
-                  level)
+                  expanding.stitches,
+                  (expanding.to_last, expanding.produces, expanding.consumes),
+                  level,
+                  end)
 
 
-def _print_parent(name, children, args, level):
+def _print_parent(name: str,
+                  children: Sequence[Node],
+                  args: Iterable[object],
+                  level: int,
+                  end: str) -> None:
     print("  " * level + name + "([")
-    for child in children:
-        pretty_print(child, level + 1)
-    print("  " * level + "], " + ", ".join(map(str, args)) + ")")
+    for i, child in enumerate(children):
+        pretty_print(child,
+                     level + 1,
+                     ",\n" if i < len(children) - 1 else "\n")
+    print("  " * level + "], " + ", ".join(map(str, args)) + ")", end=end)

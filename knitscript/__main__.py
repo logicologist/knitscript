@@ -23,7 +23,7 @@ def main() -> None:
         global_env[def_.name] = def_.pattern
 
     processed = flatten(substitute(global_env["main"], global_env))
-    pretty_print(processed, 0)
+    pretty_print(processed)
     print()
     print(compile_text(processed))
 
