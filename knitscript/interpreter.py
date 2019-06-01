@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
+from functools import partial, singledispatch, reduce
 from itertools import accumulate, chain
 from operator import attrgetter
 from typing import Mapping, Union
@@ -21,6 +21,36 @@ def is_valid_pattern(pattern: PatternExpr) -> bool:
     pattern = count_stitches(pattern, 0)
     assert isinstance(pattern, PatternExpr)
     return pattern.consumes == 0 and pattern.produces == 0
+
+
+# noinspection PyUnusedLocal
+@singledispatch
+def count_fixed_stitches(expr: Node) -> Node:
+    """
+    For a fixed sequence of nodes, counts the number of stitches expected and produced
+    by that sequence of stitches.
+
+    :param expr: the AST node for the fixed set of stitches
+    :return: an AST node with all stitch counts (consumes and produces) filled in
+    """
+    raise TypeError(f"unsupported node {type(expr).__name__}")
+
+@count_fixed_stitches.register
+def _(stitch: StitchLit) -> Node:
+    return StitchLit(stitch.value)
+
+@count_fixed_stitches.register
+def _(fixed: FixedStitchRepeatExpr) -> Node:
+    consumes = sum(map(lambda stitch: stitch.value.consumes, fixed.stitches)) * fixed.times
+    produces = sum(map(lambda stitch: stitch.value.produces, fixed.stitches)) * fixed.times
+    return FixedStitchRepeatExpr(fixed.stitches, fixed.times, consumes, produces)
+
+@count_fixed_stitches.register
+def _(row: RowExpr) -> Node:
+    counted_stitches = map(lambda stitch: count_fixed_stitches(stitch))
+    consumes = sum(map(lambda stitch: stitch.consumes, counted_stitches))
+    produces = sum(map(lambda stitch: stitch.produces, counted_stitches))
+    return RowExpr(counted_stitches, row.side, consumes, produces)
 
 
 # noinspection PyUnusedLocal
