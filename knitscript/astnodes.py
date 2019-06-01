@@ -148,6 +148,9 @@ class StitchLit(KnitExpr):
         """The value of this literal."""
         return self._value
 
+    def __repr__(self) -> str:
+        return f"StitchLit({self.value})"
+
 
 class FixedStitchRepeatExpr(KnitExpr):
     """
@@ -354,6 +357,9 @@ class GetExpr(Expr):
         """The name of the variable to lookup."""
         return self._name
 
+    def __repr__(self) -> str:
+        return f"GetExpr({repr(self.name)})"
+
 
 class CallExpr(Expr):
     """An AST node representing a call to a pattern or texture."""
@@ -378,8 +384,10 @@ class CallExpr(Expr):
         """The arguments to send to the target expression."""
         return self._args
 
+    def __repr__(self) -> str:
+        return f"CallExpr({repr(self.target)}, {repr(self.args)})"
 
-# noinspection PyUnusedLocal
+
 @singledispatch
 def pretty_print(node: Node, level: int) -> None:
     """
@@ -388,7 +396,7 @@ def pretty_print(node: Node, level: int) -> None:
     :param node: the AST to pretty print
     :param level: the current level of indentation
     """
-    raise TypeError(f"unsupported node {type(node).__name__}")
+    print("  " * level + repr(node))
 
 
 @pretty_print.register
@@ -396,6 +404,14 @@ def _(pattern: PatternExpr, level: int) -> None:
     _print_parent("PatternExpr",
                   pattern.rows,
                   (pattern.params, pattern.consumes, pattern.produces),
+                  level)
+
+
+@pretty_print.register
+def _(block: BlockExpr, level: int) -> None:
+    _print_parent("BlockExpr",
+                  block.blocks,
+                  (block.consumes, block.produces),
                   level)
 
 
@@ -421,11 +437,6 @@ def _(fixed: ExpandingStitchRepeatExpr, level: int) -> None:
                   fixed.stitches,
                   (fixed.to_last, fixed.produces, fixed.consumes),
                   level)
-
-
-@pretty_print.register
-def _(stitch: StitchLit, level: int) -> None:
-    print("  " * level + f"StitchLit({stitch.value})")
 
 
 def _print_parent(name, children, args, level):
