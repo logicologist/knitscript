@@ -475,7 +475,7 @@ def _(expanding: ExpandingStitchRepeatExpr, before: int) -> Node:
                     before)
     assert isinstance(fixed, FixedStitchRepeatExpr)
     return ExpandingStitchRepeatExpr(fixed.stitches, NaturalLit(before),
-                                     fixed.consumes, fixed.produces)
+                                     expanding.consumes, expanding.produces)
 
 
 @reverse.register
