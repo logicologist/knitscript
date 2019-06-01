@@ -426,10 +426,8 @@ def _(*rows: RowExpr) -> KnitExpr:
     # in the list. We reverse the other rows before combining them if they
     # have a different side.
     side = rows[0].side
-    before_acc = accumulate(chain([0], map(attrgetter("consumes"), rows)))
-    rows = list(map(lambda row, before:
-                    row if row.side == side else reverse(row, before),
-                    rows, before_acc))
+    rows = list(map(lambda row: row if row.side == side else reverse(row, 0),
+                    rows))
     return RowExpr(
         chain.from_iterable(map(attrgetter("stitches"), rows)), side,
         sum(map(attrgetter("consumes"), rows)),
