@@ -454,7 +454,7 @@ def _(row: RowExpr, level: int = 0, end: str = "\n") -> None:
 def _(fixed: FixedStitchRepeatExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("FixedStitchRepeatExpr",
                   fixed.stitches,
-                  (fixed.times, fixed.produces, fixed.consumes),
+                  (fixed.times, fixed.consumes, fixed.produces),
                   level,
                   end)
 
@@ -464,7 +464,7 @@ def _(expanding: ExpandingStitchRepeatExpr, level: int = 0, end: str = "\n") \
         -> None:
     _print_parent("ExpandingStitchRepeatExpr",
                   expanding.stitches,
-                  (expanding.to_last, expanding.produces, expanding.consumes),
+                  (expanding.to_last, expanding.consumes, expanding.produces),
                   level,
                   end)
 
