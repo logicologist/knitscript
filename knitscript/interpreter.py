@@ -8,7 +8,7 @@ from typing import Mapping, Optional
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
     KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, Side, \
-    StitchLit, alternate_sides, ast_map
+    StitchLit, ast_map
 
 
 @singledispatch
@@ -293,25 +293,58 @@ def infer_sides(node: Node, side: Side = Side.Right) -> Node:
 @infer_sides.register
 def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
     return PatternExpr(
-        map(infer_sides, pattern.rows, alternate_sides(Side.Right)),
+        map(infer_sides, pattern.rows, Side.Right.alternate()),
         pattern.params
     )
 
 
 @infer_sides.register
 def _(block: BlockExpr, side: Side = Side.Right) -> Node:
-    return BlockExpr(map(infer_sides, block.blocks, alternate_sides(side)))
+    return BlockExpr(map(infer_sides, block.blocks, side.alternate()))
 
 
 @infer_sides.register
 def _(repeat: RowRepeatExpr, side: Side = Side.Right) -> Node:
-    return RowRepeatExpr(map(infer_sides, repeat.rows, alternate_sides(side)),
+    return RowRepeatExpr(map(infer_sides, repeat.rows, side.alternate()),
                          repeat.times)
 
 
 @infer_sides.register
 def _(row: RowExpr, side: Side = Side.Right) -> Node:
     return RowExpr(row.stitches, side if row.side is None else row.side)
+
+
+@singledispatch
+def alternate_sides(node: Node, side: Side = Side.Right) -> Node:
+    """
+    Ensures that every row alternates between right and wrong side, starting
+    from the given side.
+
+    :param node: the AST to alternate the sides of
+    :param side: the side of the first row
+    :return: the AST with every row alternating sides
+    """
+    # noinspection PyTypeChecker
+    return ast_map(node, partial(alternate_sides, side=side))
+
+
+@alternate_sides.register
+def _(row: RowExpr, side: Side = Side.Right) -> Node:
+    return row if row.side == side else reverse(row, 0)
+
+
+@alternate_sides.register
+def _(repeat: RowRepeatExpr, side: Side = Side.Right) -> Node:
+    return RowRepeatExpr(map(alternate_sides, repeat.rows, side.alternate()),
+                         repeat.times, repeat.consumes, repeat.produces)
+
+
+@alternate_sides.register
+def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
+    return PatternExpr(
+        alternate_sides.dispatch(RowRepeatExpr)(pattern, side).rows,
+        pattern.params, pattern.consumes, pattern.produces
+    )
 
 
 @singledispatch

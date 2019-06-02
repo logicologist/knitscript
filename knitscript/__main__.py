@@ -3,8 +3,8 @@ from antlr4 import CommonTokenStream, StdinStream
 from knitscript.astgen import build_ast
 from knitscript.astnodes import Document, PatternDef, PatternExpr, \
     pretty_print
-from knitscript.interpreter import compile_text, flatten, infer_counts, \
-    infer_sides, substitute
+from knitscript.interpreter import alternate_sides, compile_text, flatten, \
+    infer_counts, infer_sides, substitute
 from knitscript.verifiers import verify_pattern
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
@@ -31,6 +31,7 @@ def main() -> None:
     pretty_print(pattern)
     print()
     pattern = flatten(pattern)
+    pattern = alternate_sides(pattern)
     pretty_print(pattern)
     print()
     print(compile_text(pattern))

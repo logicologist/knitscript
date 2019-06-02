@@ -21,19 +21,17 @@ class Side(Enum):
         """
         return Side.Wrong if self == Side.Right else Side.Right
 
+    def alternate(self) -> Generator[Side]:
+        """
+        Creates an infinite generator that alternates back and forth between
+        sides, starting from this side.
 
-def alternate_sides(start: Side) -> Generator[Side]:
-    """
-    Creates an infinite generator that alternates back and forth between sides,
-    starting from the given side.
-
-    :param start: the side to start alternating from
-    :return:
-        a generator for the infinite series: start, start.flip(),
-        start.flip().flip(), ...
-    """
-    yield start
-    yield from alternate_sides(start.flip())
+        :return:
+            a generator for the infinite series: self, self.flip(),
+            self.flip().flip(), ...
+        """
+        yield self
+        yield from self.flip().alternate()
 
 
 class Node(ABC):
