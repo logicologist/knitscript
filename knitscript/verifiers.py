@@ -36,17 +36,22 @@ class KnitError:
 
 def verify_pattern(pattern: PatternExpr) -> Generator[KnitError, None, None]:
     """
-    Checks the knitability of a pattern.
+    Checks the correctness of stitch counts in the pattern.
 
     :param pattern: the pattern to verify
-    :return: the knitability of the pattern (good or bad)
+    :return: a generator producing all of the errors in the pattern, if any
     """
     pattern = infer_counts(pattern, 0)
     yield from verify_counts(pattern, 0)
     assert isinstance(pattern, KnitExpr)
-    if pattern.consumes != 0 or pattern.produces != 0:
-        yield KnitError("patterns should not consume or produce any stitches",
-                        pattern)
+    if pattern.consumes != 0:
+        yield KnitError(
+            f"expected {pattern.consumes} stitches to be cast on", pattern
+        )
+    if pattern.produces != 0:
+        yield KnitError(
+            f"expected {pattern.produces} stitches to be bound off", pattern
+        )
 
 
 # noinspection PyUnusedLocal
@@ -59,7 +64,7 @@ def verify_counts(node: Node, available: int) \
 
     :param node: the AST to verify the stitch counts of
     :param available: the number of stitches remaining in the current row
-    :return: the knitability of the AST
+    :return: a generator producing all of the errors in the pattern, if any
     """
     raise TypeError(f"unsupported node {type(node).__name__}")
 
@@ -113,7 +118,9 @@ def _at_least(expected: int, actual: int, node: Node) \
         -> Generator[KnitError, None, None]:
     if expected > actual:
         yield KnitError(
-            f"expected {expected} stitches, but only {actual} are available",
+            f"expected {expected} stitches, but only {actual} are available"
+            if actual > 0
+            else f"expected {expected} stitches, but none are available",
             node
         )
 
