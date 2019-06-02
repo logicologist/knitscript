@@ -1,96 +1,11 @@
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
-    PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
+    PatternExpr, RowExpr, Side, StitchLit
 
-from knitscript.interpreter import compile_text, flatten, substitute, reverse, infer_counts, infer_sides
+from knitscript.interpreter import compile_text, flatten, infer_counts, \
+    substitute, reverse, infer_sides
 from knitscript.verifiers import verify_pattern
 from knitscript.stitch import Stitch
-
-simple = PatternExpr(
-    [RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
-                                    NaturalLit(3))]),
-     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.KNIT)])]),
-     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)],
-                                    NaturalLit(3))])])
-print(*verify_pattern(simple), sep="\n")
-
-kpk = RowExpr([StitchLit(Stitch.KNIT),
-               ExpandingStitchRepeatExpr([StitchLit(Stitch.PURL)],
-                                         NaturalLit(1)),
-               StitchLit(Stitch.KNIT)])
-
-basic_scarf = PatternExpr([
-    RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
-                                   NaturalLit(41))]),
-    RowRepeatExpr(
-        [RowExpr([StitchLit(Stitch.KNIT),
-                  ExpandingStitchRepeatExpr([
-                      StitchLit(Stitch.YARN_OVER),
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(3)),
-                      StitchLit(Stitch.SLIP),
-                      StitchLit(Stitch.KNIT2TOG),
-                      StitchLit(Stitch.PSSO),
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(3)),
-                      StitchLit(Stitch.YARN_OVER),
-                      StitchLit(Stitch.KNIT)
-                  ])]),
-         kpk,
-         RowExpr([StitchLit(Stitch.KNIT),
-                  ExpandingStitchRepeatExpr([
-                      StitchLit(Stitch.KNIT),
-                      StitchLit(Stitch.YARN_OVER),
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(2)),
-                      StitchLit(Stitch.SLIP),
-                      StitchLit(Stitch.KNIT2TOG),
-                      StitchLit(Stitch.PSSO),
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(2)),
-                      StitchLit(Stitch.YARN_OVER),
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(2))
-                  ])]),
-         kpk,
-         RowExpr([StitchLit(Stitch.KNIT),
-                  ExpandingStitchRepeatExpr([
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(2)),
-                      StitchLit(Stitch.YARN_OVER),
-                      StitchLit(Stitch.KNIT),
-                      StitchLit(Stitch.SLIP),
-                      StitchLit(Stitch.KNIT2TOG),
-                      StitchLit(Stitch.PSSO),
-                      StitchLit(Stitch.KNIT),
-                      StitchLit(Stitch.YARN_OVER),
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(3))
-                  ])]),
-         kpk,
-         RowExpr([StitchLit(Stitch.KNIT),
-                  ExpandingStitchRepeatExpr([
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(3)),
-                      StitchLit(Stitch.YARN_OVER),
-                      StitchLit(Stitch.SLIP),
-                      StitchLit(Stitch.KNIT2TOG),
-                      StitchLit(Stitch.PSSO),
-                      StitchLit(Stitch.YARN_OVER),
-                      FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
-                                            NaturalLit(4))
-                  ])]),
-         kpk],
-        GetExpr("n")
-    ),
-    RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
-], ["n"])
-
-basic_scarf5 = substitute(CallExpr(basic_scarf, [NaturalLit(5)]), {})
-assert isinstance(basic_scarf5, PatternExpr)
-
-print(*verify_pattern(basic_scarf5), sep="\n")
-print(compile_text(basic_scarf5))
 
 seed = PatternExpr([
     RowExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)]),
