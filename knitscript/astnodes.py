@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from enum import Enum
 from functools import singledispatch
-from typing import Generator, Iterable, Optional, Sequence
+from typing import Callable, Generator, Iterable, Optional, Sequence
 
 from knitscript.stitch import Stitch
 
@@ -400,6 +400,63 @@ class CallExpr(Expr):
 
     def __repr__(self) -> str:
         return f"CallExpr({repr(self.target)}, {repr(self.args)})"
+
+
+# noinspection PyUnusedLocal
+@singledispatch
+def ast_map(node: Node, function: Callable[[Node], Node]) -> Node:
+    """
+    Calls the mapping function on each of the node's children.
+
+    :param node: the AST to map
+    :param function: the mapping function
+    :return:
+    """
+    return node
+
+
+@ast_map.register
+def _(fixed: FixedStitchRepeatExpr, function: Callable[[Node], Node]) -> Node:
+    return FixedStitchRepeatExpr(map(function, fixed.stitches),
+                                 function(fixed.times),
+                                 fixed.consumes, fixed.produces)
+
+
+@ast_map.register
+def _(expanding: ExpandingStitchRepeatExpr, function: Callable[[Node], Node]) \
+        -> Node:
+    return ExpandingStitchRepeatExpr(map(function, expanding.stitches),
+                                     function(expanding.to_last),
+                                     expanding.consumes, expanding.produces)
+
+
+@ast_map.register
+def _(row: RowExpr, function: Callable[[Node], Node]) -> Node:
+    return RowExpr(map(function, row.stitches), row.side,
+                   row.consumes, row.produces)
+
+
+@ast_map.register
+def _(repeat: RowRepeatExpr, function: Callable[[Node], Node]) -> Node:
+    return RowRepeatExpr(map(function, repeat.rows), function(repeat.times),
+                         repeat.consumes, repeat.produces)
+
+
+@ast_map.register
+def _(block: BlockExpr, function: Callable[[Node], Node]) -> Node:
+    return BlockExpr(map(function, block.blocks),
+                     block.consumes, block.produces)
+
+
+@ast_map.register
+def _(pattern: PatternExpr, function: Callable[[Node], Node]) -> Node:
+    return PatternExpr(map(function, pattern.rows), pattern.params,
+                       pattern.consumes, pattern.produces)
+
+
+@ast_map.register
+def _(call: CallExpr, function: Callable[[Node], Node]) -> Node:
+    return CallExpr(function(call.target), map(function, call.args))
 
 
 @singledispatch

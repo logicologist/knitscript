@@ -3,36 +3,30 @@ from __future__ import annotations
 from functools import partial, singledispatch
 from itertools import accumulate, chain
 from operator import attrgetter
-from typing import Mapping, Optional, Union
+from typing import Mapping, Optional
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
     KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, Side, \
-    StitchLit, alternate_sides
+    StitchLit, alternate_sides, ast_map
 
 
-# noinspection PyUnusedLocal
 @singledispatch
-def infer_counts(expr: Node, available: Optional[int] = None) -> Node:
+def infer_counts(node: Node, available: Optional[int] = None) -> Node:
     """
     Tries to count the number of stitches that each node consumes and produces.
     If not enough information is available for a particular node, its stitch
     counts are not updated.
 
-    :param expr: the AST to count stitches in
+    :param node: the AST to count stitches in
     :param available:
         the number of stitches remaining in the current row, if known
     :return:
         an AST with as many stitch counts (consumes and produces) as possible
         filled in
     """
-    raise TypeError(f"unsupported node {type(expr).__name__}")
-
-
-# noinspection PyUnusedLocal
-@infer_counts.register
-def _(stitch: StitchLit, available: Optional[int] = None) -> Node:
-    return stitch
+    # noinspection PyTypeChecker
+    return ast_map(node, partial(infer_counts, available=available))
 
 
 @infer_counts.register
@@ -155,7 +149,6 @@ def _(repeat: RowRepeatExpr) -> str:
         return f"**\n{rows}\nrep from ** {repeat.times} times"
 
 
-# noinspection PyUnusedLocal
 @singledispatch
 def substitute(node: Node, env: Mapping[str, Node]) -> Node:
     """
@@ -167,59 +160,8 @@ def substitute(node: Node, env: Mapping[str, Node]) -> Node:
     :return:
         the transformed expression with all variables and calls substituted out
     """
-    raise TypeError(f"unsupported node {type(node).__name__}")
-
-
-# noinspection PyUnusedLocal
-@substitute.register(StitchLit)
-@substitute.register(NaturalLit)
-def _(lit: Union[StitchLit, NaturalLit], env: Mapping[str, Node]) -> Node:
-    return lit
-
-
-@substitute.register
-def _(repeat: FixedStitchRepeatExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
-    return FixedStitchRepeatExpr(
-        map(partial(substitute, env=env), repeat.stitches),
-        substitute(repeat.times, env)
-    )
-
-
-@substitute.register
-def _(repeat: ExpandingStitchRepeatExpr, env: Mapping[str, Node]) -> Node:
-    # noinspection PyTypeChecker
-    return ExpandingStitchRepeatExpr(
-        map(partial(substitute, env=env), repeat.stitches),
-        substitute(repeat.to_last, env)
-    )
-
-
-@substitute.register
-def _(row: RowExpr, env: Mapping[str, Node]) -> Node:
-    substituted = substitute.dispatch(FixedStitchRepeatExpr)(row, env)
-    assert isinstance(substituted, FixedStitchRepeatExpr)
-    return RowExpr(substituted.stitches, row.side)
-
-
-@substitute.register
-def _(repeat: RowRepeatExpr, env: Mapping[str, Node]) -> Node:
-    # noinspection PyTypeChecker
-    return RowRepeatExpr(map(partial(substitute, env=env), repeat.rows),
-                         substitute(repeat.times, env))
-
-
-@substitute.register
-def _(concat: BlockExpr, env: Mapping[str, Node]) -> Node:
-    # noinspection PyTypeChecker
-    return BlockExpr(map(partial(substitute, env=env), concat.blocks))
-
-
-@substitute.register
-def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
-    # noinspection PyTypeChecker
-    return PatternExpr(map(partial(substitute, env=env), pattern.rows),
-                       pattern.params)
+    return ast_map(node, partial(substitute, env=env))
 
 
 @substitute.register
@@ -242,7 +184,7 @@ def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
 
 
 @singledispatch
-def flatten(node: Node) -> KnitExpr:
+def flatten(node: Node) -> Node:
     """
     Flattens each block concatenation expression and nested pattern expression
     into a single pattern.
@@ -250,36 +192,11 @@ def flatten(node: Node) -> KnitExpr:
     :param node: the AST to transform
     :return: the flattened AST
     """
-    raise TypeError(f"unsupported node {type(node).__name__}")
+    return ast_map(node, flatten)
 
 
 @flatten.register
-def _(stitch: StitchLit) -> KnitExpr:
-    return stitch
-
-
-@flatten.register
-def _(repeat: FixedStitchRepeatExpr) -> KnitExpr:
-    return FixedStitchRepeatExpr(map(flatten, repeat.stitches), repeat.times,
-                                 repeat.consumes, repeat.produces)
-
-
-@flatten.register
-def _(repeat: ExpandingStitchRepeatExpr) -> KnitExpr:
-    return ExpandingStitchRepeatExpr(
-        map(flatten, repeat.stitches), repeat.to_last,
-        repeat.consumes, repeat.produces
-    )
-
-
-@flatten.register
-def _(row: RowExpr) -> KnitExpr:
-    return RowExpr(map(flatten, row.stitches), row.side,
-                   row.consumes, row.produces)
-
-
-@flatten.register
-def _(repeat: RowRepeatExpr) -> KnitExpr:
+def _(repeat: RowRepeatExpr) -> Node:
     rows = []
     for row in map(flatten, repeat.rows):
         if isinstance(row, PatternExpr):
@@ -291,14 +208,14 @@ def _(repeat: RowRepeatExpr) -> KnitExpr:
 
 
 @flatten.register
-def _(pattern: PatternExpr) -> KnitExpr:
+def _(pattern: PatternExpr) -> Node:
     flattened = flatten.dispatch(RowRepeatExpr)(pattern)
     return PatternExpr(flattened.rows, pattern.params,
                        flattened.consumes, flattened.produces)
 
 
 @flatten.register
-def _(concat: BlockExpr) -> KnitExpr:
+def _(concat: BlockExpr) -> Node:
     return _merge_across(*map(flatten, concat.blocks))
 
 
