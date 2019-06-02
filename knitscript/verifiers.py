@@ -10,20 +10,20 @@ from knitscript.interpreter import infer_counts
 class KnitError:
     """Describes a knitting error in a pattern."""
 
-    def __init__(self, problem: str, node: Node) -> None:
+    def __init__(self, message: str, node: Node) -> None:
         """
         Creates a new description of a knitting error in a pattern.
 
-        :param problem: a message describing the error
+        :param message: a message describing the error
         :param node: the node the error occurred at
         """
-        self._problem = problem
+        self._message = message
         self._node = node
 
     @property
-    def problem(self) -> str:
+    def message(self) -> str:
         """A message describing the error."""
-        return self._problem
+        return self._message
 
     @property
     def node(self) -> Node:
@@ -31,7 +31,7 @@ class KnitError:
         return self._node
 
     def __str__(self) -> str:
-        return f"<KnitError: {self.problem} at {self.node}>"
+        return f"{self.message} at {self.node}"
 
 
 def verify_pattern(pattern: PatternExpr) -> Generator[KnitError, None, None]:
