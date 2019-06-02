@@ -1,9 +1,10 @@
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
-    PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
+    PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit, \
+    pretty_print
 
 from knitscript.interpreter import compile_text, flatten, is_valid_pattern, \
-    substitute, reverse, count_stitches
+    substitute, reverse, count_stitches, count_fixed_stitches
 from knitscript.stitch import Stitch
 
 simple = PatternExpr(
@@ -169,3 +170,33 @@ reversed_pattern_2 = PatternExpr([
 print()
 print(is_valid_pattern(reversed_pattern_2))
 print(compile_text(reversed_pattern_2))
+
+
+
+
+fixed_row = RowExpr([
+    StitchLit(Stitch.KNIT),
+    FixedStitchRepeatExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)], NaturalLit(4)),
+    StitchLit(Stitch.KNIT)
+  ])
+
+pretty_print(count_fixed_stitches(fixed_row), 0)
+
+
+
+
+# # This example should eventually fail
+
+# bad_block_concat = PatternExpr([
+#     BlockExpr([
+#       PatternExpr([
+#           RowExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL), StitchLit(Stitch.KNIT), StitchLit(Stitch.KNIT)])
+#         ], []),
+#       PatternExpr([
+#           RowExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)]),
+#           RowExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)])
+#         ], [])])
+#   ], [])
+
+# print(is_valid_pattern(bad_block_concat))
+

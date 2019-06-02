@@ -7,7 +7,8 @@ from typing import Mapping, Union
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, StitchLit
+    KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, StitchLit, \
+    pretty_print
 
 
 def is_valid_pattern(pattern: PatternExpr) -> bool:
@@ -41,15 +42,18 @@ def _(stitch: StitchLit) -> Node:
 
 @count_fixed_stitches.register
 def _(fixed: FixedStitchRepeatExpr) -> Node:
-    consumes = sum(map(lambda stitch: stitch.value.consumes, fixed.stitches)) * fixed.times
-    produces = sum(map(lambda stitch: stitch.value.produces, fixed.stitches)) * fixed.times
+    consumes = sum(map(lambda stitch: stitch.value.consumes, fixed.stitches)) * fixed.times.value
+    produces = sum(map(lambda stitch: stitch.value.produces, fixed.stitches)) * fixed.times.value
     return FixedStitchRepeatExpr(fixed.stitches, fixed.times, consumes, produces)
 
 @count_fixed_stitches.register
 def _(row: RowExpr) -> Node:
-    counted_stitches = map(lambda stitch: count_fixed_stitches(stitch))
+    counted_stitches = map(lambda stitch: count_fixed_stitches(stitch), row.stitches)
+    list(map(lambda stitch: pretty_print(stitch, 0), counted_stitches))
     consumes = sum(map(lambda stitch: stitch.consumes, counted_stitches))
+    print(consumes)
     produces = sum(map(lambda stitch: stitch.produces, counted_stitches))
+    print(produces)
     return RowExpr(counted_stitches, row.side, consumes, produces)
 
 
