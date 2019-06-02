@@ -8,7 +8,7 @@ from typing import Mapping, Optional
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
     KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, Side, \
-    StitchLit, ast_map
+    StitchLit, ast_map, pretty_print
 
 
 class InterpretError(Exception):
