@@ -1,9 +1,10 @@
 from antlr4 import CommonTokenStream, StdinStream
 
 from knitscript.astgen import build_ast
-from knitscript.astnodes import Document, PatternDef, pretty_print
+from knitscript.astnodes import Document, PatternDef, PatternExpr, \
+    pretty_print
 from knitscript.interpreter import compile_text, flatten, infer_counts, \
-    infer_sides, substitute
+    infer_sides, substitute, verify_pattern
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 
@@ -32,6 +33,9 @@ def main() -> None:
     pretty_print(pattern)
     print()
     print(compile_text(pattern))
+    print()
+    assert isinstance(pattern, PatternExpr)
+    print(verify_pattern(pattern))
 
 
 if __name__ == "__main__":

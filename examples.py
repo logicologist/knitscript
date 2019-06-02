@@ -2,7 +2,7 @@ from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
     PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
 
-from knitscript.interpreter import compile_text, flatten, is_valid_pattern, \
+from knitscript.interpreter import compile_text, flatten, verify_pattern, \
     substitute, reverse, infer_counts, infer_sides
 from knitscript.stitch import Stitch
 
@@ -12,7 +12,7 @@ simple = PatternExpr(
      RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.KNIT)])]),
      RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)],
                                     NaturalLit(3))])])
-print(is_valid_pattern(simple))
+print(verify_pattern(simple))
 
 kpk = RowExpr([StitchLit(Stitch.KNIT),
                ExpandingStitchRepeatExpr([StitchLit(Stitch.PURL)],
@@ -89,7 +89,7 @@ basic_scarf = PatternExpr([
 basic_scarf5 = substitute(CallExpr(basic_scarf, [NaturalLit(5)]), {})
 assert isinstance(basic_scarf5, PatternExpr)
 
-print(is_valid_pattern(basic_scarf5))
+print(verify_pattern(basic_scarf5))
 print()
 print(compile_text(basic_scarf5))
 
@@ -112,7 +112,7 @@ processed = flatten(infer_counts(
 assert isinstance(processed, PatternExpr)
 
 print()
-print(is_valid_pattern(processed))
+print(verify_pattern(processed))
 print(compile_text(processed))
 
 row_to_reverse = \
@@ -136,7 +136,7 @@ reversed_pattern = PatternExpr([
 ], [])
 
 print()
-print(is_valid_pattern(reversed_pattern))
+print(verify_pattern(reversed_pattern))
 print(compile_text(reversed_pattern))
 
 row_to_reverse_2 = \
@@ -167,5 +167,5 @@ reversed_pattern_2 = PatternExpr([
 ], [])
 
 print()
-print(is_valid_pattern(reversed_pattern_2))
+print(verify_pattern(reversed_pattern_2))
 print(compile_text(reversed_pattern_2))

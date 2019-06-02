@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
+from abc import ABC
+from functools import partial, singledispatch, wraps
 from itertools import accumulate, chain
 from operator import attrgetter
-from typing import Mapping, Optional, Union
+from typing import Callable, Mapping, Optional, Union
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
@@ -11,18 +12,73 @@ from knitscript.astnodes import BlockExpr, CallExpr, \
     StitchLit, alternate_sides
 
 
-def is_valid_pattern(pattern: PatternExpr) -> bool:
-    """
-    Checks if the pattern is valid. A valid pattern has the right number of
-    stitches in each row.
+class Knitability(ABC):
+    """Represents the knitability of a pattern after verification."""
+    pass
 
-    :param pattern: the pattern to validate
-    :return: True if the pattern is valid and False otherwise
+
+class Good(Knitability):
+    """Describes a pattern that doesn't contain any known errors."""
+
+    def __str__(self) -> str:
+        return "<Good Knitability>"
+
+
+class Bad(Knitability):
+    """Describes an error in a pattern.."""
+
+    def __init__(self, problem: str, node: Node) -> None:
+        """
+        Creates a new description of an error in a pattern.
+
+        :param problem: a message describing the error
+        :param node: the node the error occurred at
+        """
+        self._problem = problem
+        self._node = node
+
+    @property
+    def problem(self) -> str:
+        """A message describing the error."""
+        return self._problem
+
+    @property
+    def node(self) -> Node:
+        """The node the error occurred at."""
+        return self._node
+
+    def __str__(self) -> str:
+        return f"<Bad Knitability: {self.problem} at {self.node}>"
+
+
+def _verifier(function: Callable) -> Callable:
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        for knitability in function(*args, **kwargs):
+            if not isinstance(knitability, Knitability):
+                raise TypeError(
+                    "expected knitability from verification function"
+                )
+            if isinstance(knitability, Bad):
+                return knitability
+        return Good()
+    return wrapper
+
+
+@_verifier
+def verify_pattern(pattern: PatternExpr) -> Knitability:
+    """
+    Checks the knitability of a pattern.
+
+    :param pattern: the pattern to verify
+    :return: the knitability of the pattern (good or bad)
     """
     pattern = infer_counts(pattern, 0)
-    verify_counts(pattern, 0)
+    yield verify_counts(pattern, 0)
     assert isinstance(pattern, KnitExpr)
-    return pattern.consumes == 0 and pattern.produces == 0
+    if pattern.consumes != 0 or pattern.produces != 0:
+        yield Bad("patterns should not consume or produce any stitches",
+                  pattern)
 
 
 # noinspection PyUnusedLocal
@@ -84,7 +140,6 @@ def _(expanding: ExpandingStitchRepeatExpr, available: Optional[int] = None) \
     )
     assert isinstance(fixed, FixedStitchRepeatExpr)
     n = (available - expanding.to_last.value) // fixed.consumes
-    _exactly(n * fixed.consumes, available - expanding.to_last.value)
     return ExpandingStitchRepeatExpr(fixed.stitches, expanding.to_last,
                                      n * fixed.consumes, n * fixed.produces)
 
@@ -125,55 +180,61 @@ def _(pattern: PatternExpr, available: Optional[int] = None) -> Node:
 
 # noinspection PyUnusedLocal
 @singledispatch
-def verify_counts(node: Node, available: int) -> None:
+def verify_counts(node: Node, available: int) -> Knitability:
     """
     Checks stitch counts for consistency, and verifies that every row has
     enough stitches available and doesn't leave any stitches left over.
 
     :param node: the AST to verify the stitch counts of
     :param available: the number of stitches remaining in the current row
-    :raise Exception: if the AST has invalid or inconsistent stitch counts
+    :return: the knitability of the AST
     """
     raise TypeError(f"unsupported node {type(node).__name__}")
 
 
 @verify_counts.register
-def _(stitch: StitchLit, available: int) -> None:
-    _at_least(stitch.value.consumes, available)
+@_verifier
+def _(stitch: StitchLit, available: int) -> Knitability:
+    yield _at_least(stitch.value.consumes, available, stitch)
 
 
 @verify_counts.register
-def _(fixed: FixedStitchRepeatExpr, available: int) -> None:
+@_verifier
+def _(fixed: FixedStitchRepeatExpr, available: int) -> Knitability:
     consumes = 0
     produces = 0
     for stitch in fixed.stitches:
-        verify_counts(stitch, available - consumes)
+        yield verify_counts(stitch, available - consumes)
         assert isinstance(stitch, KnitExpr)
-        _at_least(stitch.consumes, available - consumes)
+        yield _at_least(stitch.consumes, available - consumes, stitch)
         consumes += stitch.consumes
         produces += stitch.produces
-    _at_least(fixed.times.value * consumes, available)
+    yield _at_least(fixed.times.value * consumes, available, fixed)
 
 
 @verify_counts.register
-def _(expanding: ExpandingStitchRepeatExpr, available: int) -> None:
-    verify_counts(
+@_verifier
+def _(expanding: ExpandingStitchRepeatExpr, available: int) -> Knitability:
+    yield verify_counts(
         FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
         available - expanding.to_last.value
     )
     n = (available - expanding.to_last.value) // expanding.consumes
-    _exactly(n * expanding.consumes, available - expanding.to_last.value)
+    yield _exactly(n * expanding.consumes,
+                   available - expanding.to_last.value,
+                   expanding)
 
 
 @verify_counts.register
-def _(repeat: RowRepeatExpr, available: int) -> None:
+@_verifier
+def _(repeat: RowRepeatExpr, available: int) -> Knitability:
     start = available
     for row in repeat.rows:
-        verify_counts(row, available)
+        yield verify_counts(row, available)
         assert isinstance(row, KnitExpr)
-        _exactly(row.consumes, available)
+        yield _exactly(row.consumes, available, row)
         available = row.produces
-    _exactly(start, available)
+    yield _exactly(start, available, repeat)
 
 
 @singledispatch
@@ -370,42 +431,6 @@ def _(concat: BlockExpr) -> KnitExpr:
     return _merge_across(*map(flatten, concat.blocks))
 
 
-@singledispatch
-def _merge_across(*exprs: Expr) -> KnitExpr:
-    raise TypeError(f"unsupported expression {type(exprs[0]).__name__}")
-
-
-@_merge_across.register
-def _(*patterns: PatternExpr) -> KnitExpr:
-    repeat = _merge_across.dispatch(RowRepeatExpr)(*patterns)
-    return PatternExpr(repeat.rows, (), repeat.consumes, repeat.produces)
-
-
-@_merge_across.register
-def _(*repeats: RowRepeatExpr) -> KnitExpr:
-    rows = []
-    for line in zip(*map(attrgetter("rows"), repeats)):
-        rows.append(_merge_across(*line))
-    # TODO: Check that all row repeats have the same number of repetitions.
-    return RowRepeatExpr(rows, repeats[0].times,
-                         rows[0].consumes, rows[-1].produces)
-
-
-@_merge_across.register
-def _(*rows: RowExpr) -> KnitExpr:
-    # The side of the combined row is the same as the side of the first row
-    # in the list. We reverse the other rows before combining them if they
-    # have a different side.
-    side = rows[0].side
-    rows = list(map(lambda row: row if row.side == side else reverse(row, 0),
-                    rows))
-    return RowExpr(
-        chain.from_iterable(map(attrgetter("stitches"), rows)), side,
-        sum(map(attrgetter("consumes"), rows)),
-        sum(map(attrgetter("produces"), rows))
-    )
-
-
 # noinspection PyUnusedLocal
 @singledispatch
 def reverse(expr: Node, before: int) -> Node:
@@ -501,14 +526,53 @@ def _(row: RowExpr, side: Side = Side.Right) -> Node:
     return RowExpr(row.stitches, side if row.side is None else row.side)
 
 
-def _at_least(expected: int, actual: int) -> None:
+@singledispatch
+def _merge_across(*exprs: Expr) -> KnitExpr:
+    raise TypeError(f"unsupported expression {type(exprs[0]).__name__}")
+
+
+@_merge_across.register
+def _(*patterns: PatternExpr) -> KnitExpr:
+    repeat = _merge_across.dispatch(RowRepeatExpr)(*patterns)
+    return PatternExpr(repeat.rows, (), repeat.consumes, repeat.produces)
+
+
+@_merge_across.register
+def _(*repeats: RowRepeatExpr) -> KnitExpr:
+    rows = []
+    for line in zip(*map(attrgetter("rows"), repeats)):
+        rows.append(_merge_across(*line))
+    # TODO: Check that all row repeats have the same number of repetitions.
+    return RowRepeatExpr(rows, repeats[0].times,
+                         rows[0].consumes, rows[-1].produces)
+
+
+@_merge_across.register
+def _(*rows: RowExpr) -> KnitExpr:
+    # The side of the combined row is the same as the side of the first row
+    # in the list. We reverse the other rows before combining them if they
+    # have a different side.
+    side = rows[0].side
+    rows = list(map(lambda row: row if row.side == side else reverse(row, 0),
+                    rows))
+    return RowExpr(
+        chain.from_iterable(map(attrgetter("stitches"), rows)), side,
+        sum(map(attrgetter("consumes"), rows)),
+        sum(map(attrgetter("produces"), rows))
+    )
+
+
+@_verifier
+def _at_least(expected: int, actual: int, node: Node) -> Knitability:
     if expected > actual:
-        raise Exception(
-            f"expected {expected} stitches, but only {actual} are available"
+        yield Bad(
+            f"expected {expected} stitches, but only {actual} are available",
+            node
         )
 
 
-def _exactly(expected: int, actual: int) -> None:
-    _at_least(expected, actual)
+@_verifier
+def _exactly(expected: int, actual: int, node: Node) -> Knitability:
+    yield _at_least(expected, actual, node)
     if expected < actual:
-        raise Exception(f"{actual - expected} stitches left over")
+        yield Bad(f"{actual - expected} stitches left over", node)
