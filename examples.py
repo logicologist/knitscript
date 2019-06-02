@@ -1,32 +1,10 @@
-from knitscript.astnodes import BlockExpr, CallExpr, \
-    ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
+from knitscript.astnodes import ExpandingStitchRepeatExpr, \
+    FixedStitchRepeatExpr, NaturalLit, \
     PatternExpr, RowExpr, Side, StitchLit
-
-from knitscript.interpreter import compile_text, flatten, infer_counts, \
-    substitute, reverse, infer_sides
-from knitscript.verifiers import verify_pattern
+from knitscript.interpreter import compile_text, infer_counts, \
+    reverse
 from knitscript.stitch import Stitch
-
-seed = PatternExpr([
-    RowExpr([StitchLit(Stitch.KNIT), StitchLit(Stitch.PURL)]),
-    RowExpr([StitchLit(Stitch.PURL), StitchLit(Stitch.KNIT)])
-])
-
-first_class_patterns_omg = PatternExpr([
-    RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.CAST_ON)],
-                                   NaturalLit(4))]),
-    BlockExpr([GetExpr("stitch"), GetExpr("stitch")]),
-    BlockExpr([GetExpr("stitch"), GetExpr("stitch")]),
-    RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
-], ["stitch"])
-
-processed = flatten(infer_counts(
-    infer_sides(substitute(CallExpr(first_class_patterns_omg, [seed]), {}))
-))
-assert isinstance(processed, PatternExpr)
-
-print(*verify_pattern(processed), sep="\n")
-print(compile_text(processed))
+from knitscript.verifiers import verify_pattern
 
 row_to_reverse = \
     RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.KNIT)],
