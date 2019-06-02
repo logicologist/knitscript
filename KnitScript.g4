@@ -35,3 +35,4 @@ natural: NATURAL;
 ID: [A-Za-z] [A-Za-z0-9]*;
 NATURAL: [1-9] [0-9]*;
 WHITESPACE: [ \r\n] -> skip;
+COMMENT: '--' ~[\r\n]* -> skip;
