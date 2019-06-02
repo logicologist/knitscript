@@ -10,7 +10,7 @@ item
     | rowRepeat;
 
 rowRepeat: 'repeat' times=expr items+=item+ 'end';
-row: 'row' side? ':' stitchList;
+row: 'row' side? ':' (stitchList | 'empty');
 side: 'RS' | 'WS';
 
 block: calls+=call (',' calls+=call)*;

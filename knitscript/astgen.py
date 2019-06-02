@@ -61,7 +61,8 @@ def _(repeat: KnitScriptParser.RowRepeatContext) -> Node:
 @build_ast.register
 def _(row: KnitScriptParser.RowContext) -> Node:
     return RowExpr(
-        map(build_ast, row.stitchList().stitches),
+        map(build_ast,
+            row.stitchList().stitches if row.stitchList() is not None else ()),
         Side(row.side().getText()) if row.side() is not None else None
     )
 
