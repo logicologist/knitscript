@@ -37,7 +37,7 @@ def main() -> None:
     print(compile_text(pattern))
     print()
     assert isinstance(pattern, PatternExpr)
-    print(verify_pattern(pattern))
+    print(*verify_pattern(pattern), sep="\n")
 
 
 if __name__ == "__main__":

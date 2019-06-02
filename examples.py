@@ -12,7 +12,7 @@ simple = PatternExpr(
      RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.KNIT)])]),
      RowExpr([FixedStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)],
                                     NaturalLit(3))])])
-print(verify_pattern(simple))
+print(*verify_pattern(simple), sep="\n")
 
 kpk = RowExpr([StitchLit(Stitch.KNIT),
                ExpandingStitchRepeatExpr([StitchLit(Stitch.PURL)],
@@ -89,8 +89,7 @@ basic_scarf = PatternExpr([
 basic_scarf5 = substitute(CallExpr(basic_scarf, [NaturalLit(5)]), {})
 assert isinstance(basic_scarf5, PatternExpr)
 
-print(verify_pattern(basic_scarf5))
-print()
+print(*verify_pattern(basic_scarf5), sep="\n")
 print(compile_text(basic_scarf5))
 
 seed = PatternExpr([
@@ -111,8 +110,7 @@ processed = flatten(infer_counts(
 ))
 assert isinstance(processed, PatternExpr)
 
-print()
-print(verify_pattern(processed))
+print(*verify_pattern(processed), sep="\n")
 print(compile_text(processed))
 
 row_to_reverse = \
@@ -135,8 +133,7 @@ reversed_pattern = PatternExpr([
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
 ], [])
 
-print()
-print(verify_pattern(reversed_pattern))
+print(*verify_pattern(reversed_pattern), sep="\n")
 print(compile_text(reversed_pattern))
 
 row_to_reverse_2 = \
@@ -166,6 +163,5 @@ reversed_pattern_2 = PatternExpr([
     RowExpr([ExpandingStitchRepeatExpr([StitchLit(Stitch.BIND_OFF)])])
 ], [])
 
-print()
-print(verify_pattern(reversed_pattern_2))
+print(*verify_pattern(reversed_pattern_2), sep="\n")
 print(compile_text(reversed_pattern_2))
