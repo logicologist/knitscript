@@ -1,4 +1,7 @@
-from antlr4 import CommonTokenStream, StdinStream
+import sys
+from typing import Optional
+
+from antlr4 import CommonTokenStream, FileStream, StdinStream
 
 from knitscript.astgen import build_ast
 from knitscript.astnodes import Document, PatternDef, PatternExpr, \
@@ -10,28 +13,29 @@ from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 
 
-def main() -> None:
+def main(filename: Optional[str] = None) -> None:
     """
     Prints the knitting instructions for a KnitScript pattern which is read
-    from stdin.
+    from the filename or stdin if no filename is provided.
+
+    :param filename: the filename of the KnitScript pattern to run
     """
-    lexer = KnitScriptLexer(StdinStream())
+    lexer = KnitScriptLexer(
+        FileStream(filename) if filename is not None else StdinStream()
+    )
     parser = KnitScriptParser(CommonTokenStream(lexer))
     document = build_ast(parser.document())
 
     assert isinstance(document, Document)
-    global_env = {}
+    env = {}
     for def_ in document.patterns:
         assert isinstance(def_, PatternDef)
-        global_env[def_.name] = def_.pattern
+        env[def_.name] = def_.pattern
 
-    pattern = substitute(global_env["main"], global_env)
-    pattern = infer_sides(pattern)
-    pattern = infer_counts(pattern)
+    pattern = infer_counts(infer_sides(substitute(env["main"], env)))
     pretty_print(pattern)
     print()
-    pattern = flatten(pattern)
-    pattern = alternate_sides(pattern)
+    pattern = alternate_sides(flatten(pattern))
     pretty_print(pattern)
     print()
     print(compile_text(pattern))
@@ -41,4 +45,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    main(*sys.argv[1:])
