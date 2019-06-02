@@ -11,6 +11,35 @@ from knitscript.astnodes import BlockExpr, CallExpr, \
     StitchLit, ast_map
 
 
+class InterpretError(Exception):
+    """
+    An error in a KnitScript document that prevents it from being interpreted.
+    """
+
+    def __init__(self, message: str, node: Node) -> None:
+        """
+        Creates a new interpretation error.
+
+        :param message: a message describing the error
+        :param node: the node the error happened at
+        """
+        self._message = message
+        self._node = node
+
+    @property
+    def message(self) -> str:
+        """A message describing the error."""
+        return self._message
+
+    @property
+    def node(self) -> Node:
+        """The node the error happened at."""
+        return self._node
+
+    def __str__(self) -> str:
+        return f"{self.message} at {self.node}"
+
+
 @singledispatch
 def infer_counts(node: Node, available: Optional[int] = None) -> Node:
     """
@@ -58,6 +87,9 @@ def _(fixed: FixedStitchRepeatExpr, available: Optional[int] = None) -> Node:
 @infer_counts.register
 def _(expanding: ExpandingStitchRepeatExpr, available: Optional[int] = None) \
         -> Node:
+    if available is None:
+        raise InterpretError("ambiguous use of expanding stitch repeat",
+                             expanding)
     fixed = infer_counts(
         FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
         available - expanding.to_last.value
@@ -89,7 +121,10 @@ def _(repeat: RowRepeatExpr, available: Optional[int] = None) -> Node:
 # noinspection PyUnusedLocal
 @infer_counts.register
 def _(block: BlockExpr, available: Optional[int] = None) -> Node:
-    counted = list(map(infer_counts, block.blocks))
+    if len(block.blocks) == 1:
+        counted = [infer_counts(block.blocks[0], available)]
+    else:
+        counted = list(map(infer_counts, block.blocks))
     return BlockExpr(counted,
                      sum(map(attrgetter("consumes"), counted)),
                      sum(map(attrgetter("produces"), counted)))
