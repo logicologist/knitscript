@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial, singledispatch
-from itertools import accumulate, chain
+from itertools import accumulate, chain, repeat
 from operator import attrgetter
 from typing import Mapping, Optional
 
@@ -219,39 +219,54 @@ def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
 
 
 @singledispatch
-def flatten(node: Node) -> Node:
+def flatten(node: Node, unroll: bool = False) -> Node:
     """
     Flattens each block concatenation expression and nested pattern expression
     into a single pattern.
 
     :param node: the AST to transform
+    :param unroll:
+        whether to unroll row repeat expressions into a sequence of repeated
+        rows
     :return: the flattened AST
     """
-    return ast_map(node, flatten)
+    # noinspection PyTypeChecker
+    return ast_map(node, partial(flatten, unroll=unroll))
 
 
 @flatten.register
-def _(repeat: RowRepeatExpr) -> Node:
+def _(row_repeat: RowRepeatExpr, unroll: bool = False) -> Node:
     rows = []
-    for row in map(flatten, repeat.rows):
-        if isinstance(row, PatternExpr):
-            rows.extend(row.rows)
+    # noinspection PyTypeChecker
+    for row in map(partial(flatten, unroll=unroll), row_repeat.rows):
+        if isinstance(row, RowRepeatExpr) and (unroll or row.times.value <= 1):
+            rows.extend(chain.from_iterable(repeat(row.rows, row.times.value)))
         else:
             rows.append(row)
-    return RowRepeatExpr(rows, repeat.times,
-                         rows[0].consumes, rows[-1].produces)
+    return RowRepeatExpr(rows, row_repeat.times,
+                         rows[0].consumes if rows else 0,
+                         rows[-1].produces if rows else 0)
 
 
 @flatten.register
-def _(pattern: PatternExpr) -> Node:
-    flattened = flatten.dispatch(RowRepeatExpr)(pattern)
+def _(pattern: PatternExpr, unroll: bool = False) -> Node:
+    flattened = flatten.dispatch(RowRepeatExpr)(pattern, unroll)
     return PatternExpr(flattened.rows, pattern.params,
                        flattened.consumes, flattened.produces)
 
 
 @flatten.register
-def _(concat: BlockExpr) -> Node:
-    return _merge_across(*map(flatten, concat.blocks))
+def _(concat: BlockExpr, unroll: bool = False) -> Node:
+    if len(concat.blocks) > 1:
+        # Unroll row repeats if there is more than one pattern in this block.
+        # This makes merging across rows much simpler.
+        # noinspection PyTypeChecker
+        return _merge_across(*map(partial(flatten, unroll=True),
+                                  concat.blocks))
+    else:
+        # noinspection PyTypeChecker
+        return _merge_across(*map(partial(flatten, unroll=unroll),
+                                  concat.blocks))
 
 
 # noinspection PyUnusedLocal
