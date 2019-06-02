@@ -2,8 +2,8 @@ from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
     PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
 
-from knitscript.interpreter import compile_text, flatten, verify_pattern, \
-    substitute, reverse, infer_counts, infer_sides
+from knitscript.interpreter import compile_text, flatten, substitute, reverse, infer_counts, infer_sides
+from knitscript.verifiers import verify_pattern
 from knitscript.stitch import Stitch
 
 simple = PatternExpr(
