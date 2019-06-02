@@ -1,6 +1,6 @@
 from abc import ABC
 from functools import singledispatch, wraps
-from typing import Callable
+from typing import Any, Callable, Iterable
 
 from knitscript.astnodes import ExpandingStitchRepeatExpr, \
     FixedStitchRepeatExpr, KnitExpr, NaturalLit, Node, PatternExpr, \
@@ -47,9 +47,10 @@ class Bad(Knitability):
         return f"<Bad Knitability: {self.problem} at {self.node}>"
 
 
-def _verifier(function: Callable) -> Callable:
+def _verifier(function: Callable[..., Iterable[Knitability]]) \
+        -> Callable[..., Iterable[Knitability]]:
     @wraps(function)
-    def wrapper(*args, **kwargs):
+    def wrapper(*args: Any, **kwargs: Any) -> Knitability:
         for knitability in function(*args, **kwargs):
             if not isinstance(knitability, Knitability):
                 raise TypeError(
@@ -59,6 +60,7 @@ def _verifier(function: Callable) -> Callable:
                 return knitability
         return Good()
 
+    # noinspection PyTypeChecker
     return wrapper
 
 
