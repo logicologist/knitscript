@@ -9,8 +9,9 @@ item
     : (row | block) '.'
     | rowRepeat;
 
-row: 'row:' stitchList;
 rowRepeat: 'repeat' times=expr items+=item+ 'end';
+row: 'row' side? ':' stitchList;
+side: 'RS' | 'WS';
 
 block: calls+=call (',' calls+=call)*;
 call: ID ('(' argList ')')?;
@@ -34,3 +35,4 @@ natural: NATURAL;
 ID: [A-Za-z] [A-Za-z0-9]*;
 NATURAL: [1-9] [0-9]*;
 WHITESPACE: [ \r\n] -> skip;
+COMMENT: '--' ~[\r\n]* -> skip;

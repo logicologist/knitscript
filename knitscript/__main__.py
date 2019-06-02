@@ -1,32 +1,48 @@
-from antlr4 import CommonTokenStream, StdinStream
+import sys
+from typing import Optional
+
+from antlr4 import CommonTokenStream, FileStream, StdinStream
 
 from knitscript.astgen import build_ast
-from knitscript.astnodes import Document, PatternDef, pretty_print
-from knitscript.interpreter import compile_text, flatten, substitute
+from knitscript.astnodes import Document, PatternDef, PatternExpr, \
+    pretty_print
+from knitscript.interpreter import alternate_sides, compile_text, flatten, \
+    infer_counts, infer_sides, substitute
+from knitscript.verifiers import verify_pattern
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 
 
-def main() -> None:
+def main(filename: Optional[str] = None) -> None:
     """
     Prints the knitting instructions for a KnitScript pattern which is read
-    from stdin.
+    from the filename or stdin if no filename is provided.
+
+    :param filename: the filename of the KnitScript pattern to run
     """
-    lexer = KnitScriptLexer(StdinStream())
+    lexer = KnitScriptLexer(
+        FileStream(filename) if filename is not None else StdinStream()
+    )
     parser = KnitScriptParser(CommonTokenStream(lexer))
     document = build_ast(parser.document())
 
     assert isinstance(document, Document)
-    global_env = {}
+    env = {}
     for def_ in document.patterns:
         assert isinstance(def_, PatternDef)
-        global_env[def_.name] = def_.pattern
+        env[def_.name] = def_.pattern
 
-    processed = flatten(substitute(global_env["main"], global_env))
-    pretty_print(processed, 0)
+    pattern = infer_counts(infer_sides(substitute(env["main"], env)))
+    pretty_print(pattern)
     print()
-    print(compile_text(processed))
+    pattern = alternate_sides(flatten(pattern))
+    pretty_print(pattern)
+    print()
+    print(compile_text(pattern))
+    print()
+    assert isinstance(pattern, PatternExpr)
+    print(*verify_pattern(pattern), sep="\n")
 
 
 if __name__ == "__main__":
-    main()
+    main(*sys.argv[1:])

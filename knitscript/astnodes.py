@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 from abc import ABC
-from enum import Enum, auto
+from enum import Enum
 from functools import singledispatch
-from typing import Iterable, Optional, Sequence
+from typing import Callable, Generator, Iterable, Optional, Sequence
 
 from knitscript.stitch import Stitch
 
 
 class Side(Enum):
     """The side of the fabric, either right side (RS) or wrong side (WS)."""
-    Right = auto()
-    Wrong = auto()
+    Right = "RS"
+    Wrong = "WS"
 
     def flip(self) -> Side:
         """
@@ -20,6 +20,18 @@ class Side(Enum):
         :return: the side opposite to this one
         """
         return Side.Wrong if self == Side.Right else Side.Right
+
+    def alternate(self) -> Generator[Side]:
+        """
+        Creates an infinite generator that alternates back and forth between
+        sides, starting from this side.
+
+        :return:
+            a generator for the infinite series: self, self.flip(),
+            self.flip().flip(), ...
+        """
+        yield self
+        yield from self.flip().alternate()
 
 
 class Node(ABC):
@@ -388,59 +400,138 @@ class CallExpr(Expr):
         return f"CallExpr({repr(self.target)}, {repr(self.args)})"
 
 
+# noinspection PyUnusedLocal
 @singledispatch
-def pretty_print(node: Node, level: int) -> None:
+def ast_map(node: Node, function: Callable[[Node], Node]) -> Node:
+    """
+    Calls the mapping function on each of the node's children.
+
+    :param node: the AST to map
+    :param function: the mapping function
+    :return:
+    """
+    return node
+
+
+@ast_map.register
+def _(fixed: FixedStitchRepeatExpr, function: Callable[[Node], Node]) -> Node:
+    return FixedStitchRepeatExpr(map(function, fixed.stitches),
+                                 function(fixed.times),
+                                 fixed.consumes, fixed.produces)
+
+
+@ast_map.register
+def _(expanding: ExpandingStitchRepeatExpr, function: Callable[[Node], Node]) \
+        -> Node:
+    return ExpandingStitchRepeatExpr(map(function, expanding.stitches),
+                                     function(expanding.to_last),
+                                     expanding.consumes, expanding.produces)
+
+
+@ast_map.register
+def _(row: RowExpr, function: Callable[[Node], Node]) -> Node:
+    return RowExpr(map(function, row.stitches), row.side,
+                   row.consumes, row.produces)
+
+
+@ast_map.register
+def _(repeat: RowRepeatExpr, function: Callable[[Node], Node]) -> Node:
+    return RowRepeatExpr(map(function, repeat.rows), function(repeat.times),
+                         repeat.consumes, repeat.produces)
+
+
+@ast_map.register
+def _(block: BlockExpr, function: Callable[[Node], Node]) -> Node:
+    return BlockExpr(map(function, block.blocks),
+                     block.consumes, block.produces)
+
+
+@ast_map.register
+def _(pattern: PatternExpr, function: Callable[[Node], Node]) -> Node:
+    return PatternExpr(map(function, pattern.rows), pattern.params,
+                       pattern.consumes, pattern.produces)
+
+
+@ast_map.register
+def _(call: CallExpr, function: Callable[[Node], Node]) -> Node:
+    return CallExpr(function(call.target), map(function, call.args))
+
+
+@singledispatch
+def pretty_print(node: Node, level: int = 0, end: str = "\n") -> None:
     """
     Prints the AST with human-readable newlines and indentation.
 
     :param node: the AST to pretty print
     :param level: the current level of indentation
+    :param end: the string to append to the end of the printed AST
     """
-    print("  " * level + repr(node))
+    print("  " * level + repr(node), end=end)
 
 
 @pretty_print.register
-def _(pattern: PatternExpr, level: int) -> None:
+def _(pattern: PatternExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("PatternExpr",
                   pattern.rows,
                   (pattern.params, pattern.consumes, pattern.produces),
-                  level)
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(block: BlockExpr, level: int) -> None:
+def _(block: BlockExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("BlockExpr",
                   block.blocks,
                   (block.consumes, block.produces),
-                  level)
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(row: RowExpr, level: int) -> None:
+def _(repeat: RowRepeatExpr, level: int = 0, end: str = "\n") -> None:
+    _print_parent("RowRepeatExpr",
+                  repeat.rows,
+                  (repeat.times, repeat.consumes, repeat.produces),
+                  level,
+                  end)
+
+
+@pretty_print.register
+def _(row: RowExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("RowExpr",
                   row.stitches,
                   (row.side, row.consumes, row.produces),
-                  level)
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(fixed: FixedStitchRepeatExpr, level: int) -> None:
+def _(fixed: FixedStitchRepeatExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("FixedStitchRepeatExpr",
                   fixed.stitches,
-                  (fixed.times, fixed.produces, fixed.consumes),
-                  level)
+                  (fixed.times, fixed.consumes, fixed.produces),
+                  level,
+                  end)
 
 
 @pretty_print.register
-def _(fixed: ExpandingStitchRepeatExpr, level: int) -> None:
+def _(expanding: ExpandingStitchRepeatExpr, level: int = 0, end: str = "\n") \
+        -> None:
     _print_parent("ExpandingStitchRepeatExpr",
-                  fixed.stitches,
-                  (fixed.to_last, fixed.produces, fixed.consumes),
-                  level)
+                  expanding.stitches,
+                  (expanding.to_last, expanding.consumes, expanding.produces),
+                  level,
+                  end)
 
 
-def _print_parent(name, children, args, level):
+def _print_parent(name: str,
+                  children: Sequence[Node],
+                  args: Iterable[object],
+                  level: int,
+                  end: str) -> None:
     print("  " * level + name + "([")
-    for child in children:
-        pretty_print(child, level + 1)
-    print("  " * level + "], " + ", ".join(map(str, args)) + ")")
+    for i, child in enumerate(children):
+        pretty_print(child,
+                     level + 1,
+                     ",\n" if i < len(children) - 1 else "\n")
+    print("  " * level + "], " + ", ".join(map(str, args)) + ")", end=end)

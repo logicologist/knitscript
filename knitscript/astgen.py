@@ -4,7 +4,7 @@ from typing import Collection, Union
 
 from knitscript.astnodes import BlockExpr, CallExpr, Document, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
-    Node, PatternDef, PatternExpr, RowExpr, RowRepeatExpr, StitchLit
+    Node, PatternDef, PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
     ParserRuleContext
 from knitscript.stitch import Stitch
@@ -60,7 +60,10 @@ def _(repeat: KnitScriptParser.RowRepeatContext) -> Node:
 
 @build_ast.register
 def _(row: KnitScriptParser.RowContext) -> Node:
-    return RowExpr(map(build_ast, row.stitchList().stitches))
+    return RowExpr(
+        map(build_ast, row.stitchList().stitches),
+        Side(row.side().getText()) if row.side() is not None else None
+    )
 
 
 @build_ast.register
