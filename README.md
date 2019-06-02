@@ -12,3 +12,5 @@ Our design doc: https://docs.google.com/document/d/1bXGWBJ_lnPc5Xc-QCefcFH5KNZkc
 
 This project requires Python version 3.7 or higher.
 
+This project also requires ANTLR4 for Python. See [here](antlr.org/download.html) for instructions. As of June 2019, the easiest install option is `pip install antlr4-python3-runtime`.
+
