@@ -436,6 +436,21 @@ def _(*rows: RowExpr) -> KnitExpr:
     # If we're reading RS rows, we need to read the list right-to-left instead of left-to-right.
     if side == Side.Right:
         rows.reverse()
+    # If there's an ExpandingStitchRepeatExpr in the row, we need to update its to_last.
+    consumed_after_expanding_row = 0
+    found_expanding = False
+    for row in rows:
+        if found_expanding:
+            consumed_after_expanding_row += row.consumes
+        elif _contains_expanding_repeat(row):
+            found_expanding = True
+    if found_expanding:
+        updated_rows = []
+        for row in rows:
+            if not _contains_expanding_repeat(row):
+                updated_rows.append(row)
+            else:
+                updated_rows.append(_add_to_expander_tolast(row, consumed_after_expanding_row))
     return RowExpr(
         chain.from_iterable(map(attrgetter("stitches"), rows)), side,
         sum(map(attrgetter("consumes"), rows)),
@@ -446,3 +461,16 @@ def _unroll_repeat_n_times(repeat: RowRepeatExpr, n: int):
     for i in range(n):
         for row in repeat.rows:
             yield row
+
+def _contains_expanding_repeat(row: RowExpr):
+    for stitch in row.stitches:
+        if isinstance(stitch, ExpandingStitchRepeatExpr):
+            return True
+
+def _add_to_expander_tolast(row: RowExpr, n: int):
+    return RowExpr( \
+        map(lambda stitch: stitch \
+            if not isinstance(stitch, ExpandingStitchRepeatExpr) \
+            else ExpandingStitchRepeatExpr(stitch.stitches, NaturalLit(stitch.to_last.value + n), stitch.consumes, stitch.produces), \
+            row.stitches), \
+        row.side, row.consumes, row.produces)
