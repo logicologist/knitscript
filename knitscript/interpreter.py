@@ -138,53 +138,6 @@ def _(pattern: PatternExpr, available: Optional[int] = None) -> Node:
 
 
 @singledispatch
-def compile_text(expr: Node) -> str:
-    """
-    Compiles the expression to human-readable knitting instructions in plain
-    text.
-
-    :param expr: the expression to compile
-    :return: the instructions for the expression
-    """
-    raise TypeError(f"unsupported node {type(expr).__name__}")
-
-
-@compile_text.register
-def _(stitch: StitchLit) -> str:
-    return stitch.value.symbol
-
-
-@compile_text.register
-def _(repeat: FixedStitchRepeatExpr) -> str:
-    stitches = ", ".join(map(compile_text, repeat.stitches))
-    if repeat.times == NaturalLit(1):
-        return stitches
-    elif len(repeat.stitches) == 1:
-        return f"{stitches} {repeat.times}"
-    else:
-        return f"[{stitches}] {repeat.times}"
-
-
-@compile_text.register
-def _(repeat: ExpandingStitchRepeatExpr) -> str:
-    stitches = compile_text(FixedStitchRepeatExpr(repeat.stitches,
-                                                  NaturalLit(1)))
-    if repeat.to_last == NaturalLit(0):
-        return f"*{stitches}; rep from * to end"
-    else:
-        return f"*{stitches}; rep from * to last {repeat.to_last}"
-
-
-@compile_text.register
-def _(repeat: RowRepeatExpr) -> str:
-    rows = ".\n".join(map(compile_text, repeat.rows)) + "."
-    if repeat.times == NaturalLit(1):
-        return rows
-    else:
-        return f"**\n{rows}\nrep from ** {repeat.times} times"
-
-
-@singledispatch
 def substitute(node: Node, env: Mapping[str, Node]) -> Node:
     """
     Substitutes all variables and calls in the AST with their equivalent
