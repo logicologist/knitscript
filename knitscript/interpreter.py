@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
+from functools import partial, singledispatch, reduce
 from itertools import accumulate, chain, repeat
 from operator import attrgetter
 from typing import Mapping, Optional
+from math import gcd
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
@@ -405,16 +406,22 @@ def _merge_across(*exprs: Expr) -> KnitExpr:
 @_merge_across.register
 def _(*patterns: PatternExpr) -> KnitExpr:
     repeat = _merge_across.dispatch(RowRepeatExpr)(*patterns)
+    # TODO should the params from each pattern be combined for the new PatternExpr below, rather than just ()?
     return PatternExpr(repeat.rows, (), repeat.consumes, repeat.produces)
 
 
 @_merge_across.register
 def _(*repeats: RowRepeatExpr) -> KnitExpr:
+    # Check that the number of rows in total for each RowRepeatExpr is the same
+    num_rows = map(lambda repeat: sum(1 for _ in repeat.rows) * repeat.times.value, repeats)
+    # print(len(set(num_rows)) == 1)
+    # assert (len(set(num_rows)) == 1)
+    lcm = reduce(lambda x, y: (x*y)//gcd(x,y), map(lambda repeat: sum(1 for _ in repeat.rows), repeats), 1)
+    # Merge each row
     rows = []
-    for line in zip(*map(attrgetter("rows"), repeats)):
+    for line in zip(*map(lambda repeat: _unroll_repeat_n_times(repeat, lcm//sum(1 for _ in repeat.rows)), repeats)):
         rows.append(_merge_across(*line))
-    # TODO: Check that all row repeats have the same number of repetitions.
-    return RowRepeatExpr(rows, repeats[0].times,
+    return RowRepeatExpr(rows, NaturalLit(next(num_rows)//lcm),
                          rows[0].consumes, rows[-1].produces)
 
 
@@ -431,3 +438,8 @@ def _(*rows: RowExpr) -> KnitExpr:
         sum(map(attrgetter("consumes"), rows)),
         sum(map(attrgetter("produces"), rows))
     )
+
+def _unroll_repeat_n_times(repeat: RowRepeatExpr, n: int):
+    for i in range(n):
+        for row in repeat.rows:
+            yield row
