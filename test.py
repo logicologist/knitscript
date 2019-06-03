@@ -55,13 +55,21 @@ def verify_error(filename: str) -> bool:
 	# We can also do more checking of the specific errors... not sure what the right format is, though
 	return len(errors) >= 1
 
+def test(callback, desc: str):
+    try:
+        assert(callback())
+    except AssertionError:
+        print("TEST FAILED: " + desc)
+    else:
+        print("√")
 
 
-assert(verify_error("test/too-many-stitches.ks"))
-assert(verify_error("test/too-few-stitches.ks"))
-assert(check_output("test/just-right.ks", "CO 12.\nK 12.\n*BO; rep from * to end."))
 
-print("All tests passed")
+test(lambda: verify_error("test/too-many-stitches.ks"), "Should catch expedted stitches greater than available")
+test(lambda: verify_error("test/too-few-stitches.ks"), "Should catch expected stitches smaller than available")
+test(lambda: check_output("test/just-right.ks", "CO 12.\nK 12.\n*BO; rep from * to end."), "Should compile simple pattern")
+test(lambda: verify_error("test/double-expanding-repeat-2.ks"), "Should catch bad double expanding repeat")
+test(lambda: not verify_error("test/double-expanding-repeat.ks"), "Should allow okay double expanding repeat") # technically legit even though but nobody writes patterns this way
 
 
 
