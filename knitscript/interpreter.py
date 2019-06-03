@@ -412,9 +412,6 @@ def _(*patterns: PatternExpr) -> KnitExpr:
 
 @_merge_across.register
 def _(*repeats: RowRepeatExpr) -> KnitExpr:
-    print("****")
-    list(map(pretty_print, repeats))
-    print("****")
     # Check that the number of rows in total for each RowRepeatExpr is the same
     num_rows = map(lambda repeat: sum(1 for _ in repeat.rows) * repeat.times.value, repeats)
     # print(len(set(num_rows)) == 1)
@@ -423,9 +420,6 @@ def _(*repeats: RowRepeatExpr) -> KnitExpr:
     # Merge each row
     rows = []
     for line in zip(*map(lambda repeat: _unroll_repeat_n_times(repeat, lcm//sum(1 for _ in repeat.rows)), repeats)):
-        print("-----")
-        list(map(pretty_print, line))
-        print("-----")
         rows.append(_merge_across(*line))
     return RowRepeatExpr(rows, NaturalLit(next(num_rows)//lcm),
                          rows[0].consumes, rows[-1].produces)
