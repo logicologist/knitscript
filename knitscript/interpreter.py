@@ -218,8 +218,7 @@ def _(concat: BlockExpr, unroll: bool = False) -> Node:
                                   concat.blocks))
     else:
         # noinspection PyTypeChecker
-        return _merge_across(*map(partial(flatten, unroll=unroll),
-                                  concat.blocks))
+        return flatten(concat.blocks[0], unroll)
 
 
 # noinspection PyUnusedLocal
