@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-<<<<<<< HEAD
-from functools import partial, singledispatch, reduce
-from itertools import accumulate, chain, repeat, zip_longest
-=======
 from functools import partial, singledispatch
 from itertools import accumulate, chain, repeat
->>>>>>> bf79ccb2d324f30176dbf699cf946b0138354406
 from operator import attrgetter
 from typing import Mapping, Optional
 
