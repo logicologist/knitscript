@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial, singledispatch
-from itertools import accumulate, chain, repeat
+from itertools import accumulate, chain, repeat, starmap, zip_longest
 from operator import attrgetter
 from typing import Mapping, Optional
 
@@ -404,7 +404,9 @@ def _merge_across(*exprs: Expr) -> KnitExpr:
 
 @_merge_across.register
 def _(*patterns: PatternExpr) -> KnitExpr:
-    rows = tuple(map(_merge_across, *map(attrgetter("rows"), patterns)))
+    rows = tuple(starmap(_merge_across,
+                         zip_longest(*map(attrgetter("rows"), patterns),
+                                     fillvalue=RowExpr([], Side.Right, 0, 0))))
     # Pattern calls have already been substituted by this point so the
     # parameters of the combined pattern can be empty.
     return PatternExpr(rows, (), rows[0].consumes, rows[-1].produces)
