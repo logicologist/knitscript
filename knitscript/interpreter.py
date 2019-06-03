@@ -1,15 +1,19 @@
 from __future__ import annotations
 
+<<<<<<< HEAD
 from functools import partial, singledispatch, reduce
 from itertools import accumulate, chain, repeat, zip_longest
+=======
+from functools import partial, singledispatch
+from itertools import accumulate, chain, repeat
+>>>>>>> bf79ccb2d324f30176dbf699cf946b0138354406
 from operator import attrgetter
 from typing import Mapping, Optional
-from math import gcd
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
     ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
     KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, Side, \
-    StitchLit, ast_map, pretty_print
+    StitchLit, ast_map
 
 
 class InterpretError(Exception):
@@ -405,24 +409,10 @@ def _merge_across(*exprs: Expr) -> KnitExpr:
 
 @_merge_across.register
 def _(*patterns: PatternExpr) -> KnitExpr:
-    repeat = _merge_across.dispatch(RowRepeatExpr)(*patterns)
-    # TODO should the params from each pattern be combined for the new PatternExpr below, rather than just ()?
-    return PatternExpr(repeat.rows, (), repeat.consumes, repeat.produces)
-
-
-@_merge_across.register
-def _(*repeats: RowRepeatExpr) -> KnitExpr:
-    # Check that the number of rows in total for each RowRepeatExpr is the same
-    num_rows = map(lambda repeat: sum(1 for _ in repeat.rows) * repeat.times.value, repeats)
-    # print(len(set(num_rows)) == 1)
-    # assert (len(set(num_rows)) == 1)
-    lcm = reduce(lambda x, y: (x*y)//gcd(x,y), map(lambda repeat: sum(1 for _ in repeat.rows), repeats), 1)
-    # Merge each row
-    rows = []
-    for line in zip_longest(*map(lambda repeat: _unroll_repeat_n_times(repeat, lcm//sum(1 for _ in repeat.rows)), repeats), fillvalue=RowExpr([], Side.Right, 0, 0)):
-        rows.append(_merge_across(*line))
-    return RowRepeatExpr(rows, NaturalLit(next(num_rows)//lcm),
-                         rows[0].consumes, rows[-1].produces)
+    rows = tuple(map(_merge_across, *map(attrgetter("rows"), patterns)))
+    # Pattern calls have already been substituted by this point so the
+    # parameters of the combined pattern can be empty.
+    return PatternExpr(rows, (), rows[0].consumes, rows[-1].produces)
 
 
 @_merge_across.register
@@ -457,15 +447,12 @@ def _(*rows: RowExpr) -> KnitExpr:
         sum(map(attrgetter("produces"), rows))
     )
 
-def _unroll_repeat_n_times(repeat: RowRepeatExpr, n: int):
-    for i in range(n):
-        for row in repeat.rows:
-            yield row
 
 def _contains_expanding_repeat(row: RowExpr):
     for stitch in row.stitches:
         if isinstance(stitch, ExpandingStitchRepeatExpr):
             return True
+
 
 def _add_to_expander_tolast(row: RowExpr, n: int):
     return RowExpr( \
