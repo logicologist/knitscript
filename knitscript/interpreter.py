@@ -417,27 +417,19 @@ def _(*rows: RowExpr) -> KnitExpr:
     # The side of the combined row is the same as the side of the first row
     # in the list. We reverse the other rows before combining them if they
     # have a different side.
+    #
+    # If we're reading RS rows, we need to read the list right-to-left
+    # instead of left-to-right.
     side = rows[0].side
-    rows = list(map(lambda row: row if row.side == side else reverse(row, 0),
-                    rows))
-    # If we're reading RS rows, we need to read the list right-to-left instead of left-to-right.
-    if side == Side.Right:
-        rows.reverse()
-    # If there's an ExpandingStitchRepeatExpr in the row, we need to update its to_last.
-    consumed_after_expanding_row = 0
-    found_expanding = False
-    for row in rows:
-        if found_expanding:
-            consumed_after_expanding_row += row.consumes
-        elif _contains_expanding_repeat(row):
-            found_expanding = True
-    if found_expanding:
-        updated_rows = []
-        for row in rows:
-            if not _contains_expanding_repeat(row):
-                updated_rows.append(row)
-            else:
-                updated_rows.append(_add_to_expander_tolast(row, consumed_after_expanding_row))
+    rows = tuple(map(lambda row: row if row.side == side else reverse(row, 0),
+                     reversed(rows) if side == Side.Right else rows))
+
+    # Update the "to last" value of any expanding stitch repeat in the rows by
+    # adding the number of stitches that come after it.
+    after = map(lambda i: sum(map(attrgetter("consumes"), rows[i + 1:])),
+                range(len(rows)))
+    rows = tuple(map(_increase_expanding_repeats, rows, after))
+
     return RowExpr(
         chain.from_iterable(map(attrgetter("stitches"), rows)), side,
         sum(map(attrgetter("consumes"), rows)),
@@ -445,16 +437,14 @@ def _(*rows: RowExpr) -> KnitExpr:
     )
 
 
-def _contains_expanding_repeat(row: RowExpr):
-    for stitch in row.stitches:
-        if isinstance(stitch, ExpandingStitchRepeatExpr):
-            return True
+@singledispatch
+def _increase_expanding_repeats(node: Node, n: int) -> Node:
+    # noinspection PyTypeChecker
+    return ast_map(node, partial(_increase_expanding_repeats, n=n))
 
 
-def _add_to_expander_tolast(row: RowExpr, n: int):
-    return RowExpr( \
-        map(lambda stitch: stitch \
-            if not isinstance(stitch, ExpandingStitchRepeatExpr) \
-            else ExpandingStitchRepeatExpr(stitch.stitches, NaturalLit(stitch.to_last.value + n), stitch.consumes, stitch.produces), \
-            row.stitches), \
-        row.side, row.consumes, row.produces)
+@_increase_expanding_repeats.register
+def _(expanding: ExpandingStitchRepeatExpr, n: int) -> Node:
+    return ExpandingStitchRepeatExpr(expanding.stitches,
+                                     NaturalLit(expanding.to_last.value + n),
+                                     expanding.consumes, expanding.produces)
