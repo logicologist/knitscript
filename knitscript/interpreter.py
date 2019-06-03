@@ -108,14 +108,14 @@ def _(row: RowExpr, available: Optional[int] = None) -> Node:
 
 
 @infer_counts.register
-def _(repeat: RowRepeatExpr, available: Optional[int] = None) -> Node:
+def _(rep: RowRepeatExpr, available: Optional[int] = None) -> Node:
     counted = []
-    for row in repeat.rows:
+    for row in rep.rows:
         row = infer_counts(row, available)
         assert isinstance(row, KnitExpr)
         counted.append(row)
         available = row.produces
-    return RowRepeatExpr(counted, repeat.times, counted[0].consumes, available)
+    return RowRepeatExpr(counted, rep.times, counted[0].consumes, available)
 
 
 # noinspection PyUnusedLocal
@@ -306,9 +306,9 @@ def _(block: BlockExpr, side: Side = Side.Right) -> Node:
 
 
 @infer_sides.register
-def _(repeat: RowRepeatExpr, side: Side = Side.Right) -> Node:
-    return RowRepeatExpr(map(infer_sides, repeat.rows, side.alternate()),
-                         repeat.times)
+def _(rep: RowRepeatExpr, side: Side = Side.Right) -> Node:
+    return RowRepeatExpr(map(infer_sides, rep.rows, side.alternate()),
+                         rep.times)
 
 
 @infer_sides.register
@@ -336,9 +336,9 @@ def _(row: RowExpr, side: Side = Side.Right) -> Node:
 
 
 @alternate_sides.register
-def _(repeat: RowRepeatExpr, side: Side = Side.Right) -> Node:
-    return RowRepeatExpr(map(alternate_sides, repeat.rows, side.alternate()),
-                         repeat.times, repeat.consumes, repeat.produces)
+def _(rep: RowRepeatExpr, side: Side = Side.Right) -> Node:
+    return RowRepeatExpr(map(alternate_sides, rep.rows, side.alternate()),
+                         rep.times, rep.consumes, rep.produces)
 
 
 @alternate_sides.register
