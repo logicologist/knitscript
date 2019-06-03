@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from functools import partial, singledispatch, reduce
-from itertools import accumulate, chain, repeat
+from itertools import accumulate, chain, repeat, zip_longest
 from operator import attrgetter
 from typing import Mapping, Optional
 from math import gcd
@@ -419,7 +419,7 @@ def _(*repeats: RowRepeatExpr) -> KnitExpr:
     lcm = reduce(lambda x, y: (x*y)//gcd(x,y), map(lambda repeat: sum(1 for _ in repeat.rows), repeats), 1)
     # Merge each row
     rows = []
-    for line in zip(*map(lambda repeat: _unroll_repeat_n_times(repeat, lcm//sum(1 for _ in repeat.rows)), repeats)):
+    for line in zip_longest(*map(lambda repeat: _unroll_repeat_n_times(repeat, lcm//sum(1 for _ in repeat.rows)), repeats), fillvalue=RowExpr([], Side.Right, 0, 0)):
         rows.append(_merge_across(*line))
     return RowRepeatExpr(rows, NaturalLit(next(num_rows)//lcm),
                          rows[0].consumes, rows[-1].produces)
