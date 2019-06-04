@@ -6,9 +6,9 @@ from operator import attrgetter
 from typing import Mapping, Optional
 
 from knitscript.astnodes import BlockExpr, CallExpr, \
-    ExpandingStitchRepeatExpr, Expr, FixedStitchRepeatExpr, GetExpr, \
-    KnitExpr, NaturalLit, Node, PatternExpr, RowExpr, RowRepeatExpr, Side, \
-    StitchLit, ast_map
+    ExpandingStitchRepeatExpr, Expr, FixedBlockRepeatExpr, \
+    FixedStitchRepeatExpr, GetExpr, KnitExpr, NaturalLit, Node, PatternExpr, \
+    RowExpr, RowRepeatExpr, Side, StitchLit, ast_map
 
 
 class InterpretError(Exception):
@@ -137,6 +137,15 @@ def _(pattern: PatternExpr, available: Optional[int] = None) -> Node:
                        counted.consumes, counted.produces)
 
 
+@infer_counts.register
+def _(rep: FixedBlockRepeatExpr, available: Optional[int] = None) -> Node:
+    counted = infer_counts(rep.block, available)
+    assert isinstance(counted, KnitExpr)
+    return FixedBlockRepeatExpr(counted, rep.times,
+                                rep.times.value * counted.consumes,
+                                rep.times.value * counted.produces)
+
+
 @singledispatch
 def substitute(node: Node, env: Mapping[str, Node]) -> Node:
     """
@@ -221,6 +230,24 @@ def _(concat: BlockExpr, unroll: bool = False) -> Node:
         return flatten(concat.blocks[0], unroll)
 
 
+@flatten.register
+def _(rep: FixedBlockRepeatExpr, unroll: bool = False) -> Node:
+    pattern = flatten(rep.block, unroll)
+    assert isinstance(pattern, PatternExpr)
+    rows = map(
+        lambda row: RowExpr(
+            [FixedStitchRepeatExpr(row.stitches, rep.times,
+                                   row.consumes * rep.times.value,
+                                   row.produces * rep.times.value)],
+            row.side,
+            row.consumes * rep.times.value, row.produces * rep.times.value
+        ),
+        pattern.rows
+    )
+    return PatternExpr(rows, pattern.params,
+                       pattern.consumes, pattern.produces)
+
+
 # noinspection PyUnusedLocal
 @singledispatch
 def reverse(expr: Node, before: int) -> Node:
@@ -303,6 +330,11 @@ def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
 @infer_sides.register
 def _(block: BlockExpr, side: Side = Side.Right) -> Node:
     return BlockExpr(map(infer_sides, block.blocks, side.alternate()))
+
+
+@infer_sides.register
+def _(rep: FixedBlockRepeatExpr, side: Side = Side.Right) -> Node:
+    return FixedBlockRepeatExpr(infer_sides(rep.block, side), rep.times)
 
 
 @infer_sides.register

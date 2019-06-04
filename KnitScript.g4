@@ -1,8 +1,6 @@
 grammar KnitScript;
 
-document: imports+=import* patterns+=patternDef* EOF;
-
-import: 'using' patternNames+=ID (',' patternNames+=ID)* 'from' filename=ID
+document: patterns+=patternDef* EOF;
 
 patternDef: 'pattern' ID ('(' paramList ')')? items+=item+ 'end';
 paramList: params+=ID (',' params+=ID)*;
@@ -15,7 +13,14 @@ rowRepeat: 'repeat' times=expr items+=item+ 'end';
 row: 'row' side? ':' (stitchList | 'empty');
 side: 'RS' | 'WS';
 
-block: calls+=call (',' calls+=call)*;
+block: patternList;
+
+patternRepeat: fixedPatternRepeat | call;
+fixedPatternRepeat
+    : call times=expr
+    | '(' patternList ')' times=expr;
+patternList: patterns+=patternRepeat (',' patterns+=patternRepeat)*;
+
 call: ID ('(' argList ')')?;
 argList: args+=expr (',' args+=expr)*;
 
