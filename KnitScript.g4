@@ -1,6 +1,8 @@
 grammar KnitScript;
 
-document: patterns+=patternDef* EOF;
+document: usings+=using* patterns+=patternDef* EOF;
+
+using: 'using' names+=ID (',' names+=ID)* 'from' module=ID;
 
 patternDef: 'pattern' ID ('(' paramList ')')? items+=item+ 'end';
 paramList: params+=ID (',' params+=ID)*;
