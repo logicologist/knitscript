@@ -70,5 +70,7 @@ test(lambda: not verify_error("test/double-expanding-repeat.ks"),
      "Should allow okay double expanding repeat")
 test(lambda: verify_error("test/patterns-lexical-scoping.ks"),
      "Patterns shouldn't be able to reference variables outside their environment")
-
+test(lambda: check_output("test/block-repeat-n.ks",
+                          "CO 6.\nK, P, K, P, K, P.\nP, K, P, K, P, K.\nBO 6."),
+     "Should allow n-repeat horizontal concat of sub-patterns")
 
