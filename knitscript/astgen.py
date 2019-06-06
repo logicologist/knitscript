@@ -4,7 +4,8 @@ from typing import Collection, Union
 
 from knitscript.astnodes import BlockExpr, CallExpr, Document, \
     ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
-    Node, PatternDef, PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit
+    Node, PatternDef, PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit, \
+    StringLit, UsingStmt
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
     ParserRuleContext
 from knitscript.stitch import Stitch
@@ -23,7 +24,12 @@ def build_ast(ctx: ParserRuleContext) -> Node:
 
 @build_ast.register
 def _(document: KnitScriptParser.DocumentContext) -> Node:
-    return Document(map(build_ast, document.patterns))
+    return Document(map(build_ast, document.patterns), map(build_ast, document.usings))
+
+
+@build_ast.register
+def _(using: KnitScriptParser.UsingStmtContext) -> Node:
+    return UsingStmt(map(lambda name: name.text, using.patternNames), using.filename.text)
 
 
 @build_ast.register

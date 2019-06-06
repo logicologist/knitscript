@@ -42,18 +42,48 @@ class Node(ABC):
 class Document(Node):
     """An AST node describing a complete KnitScript document."""
 
-    def __init__(self, patterns: Iterable[Node]) -> None:
+    def __init__(self, patterns: Iterable[Node], usings: Iterable[Node]) -> None:
         """
         Creates a new document node.
 
         :param patterns: the patterns in the document
+        :param usings: the using statements (imports) in the document
         """
         self._patterns = tuple(patterns)
+        self._usings = tuple(usings)
 
     @property
     def patterns(self) -> Sequence[Node]:
         """The patterns in the document."""
         return self._patterns
+
+    @property
+    def usings(self) -> Sequence[Node]:
+        """The import statements in the document."""
+        return self._usings
+
+
+class UsingStmt(Node):
+    """An AST node representing a pattern import."""
+
+    def __init__(self, patternNames: Iterable[str], filename: str):
+        """
+        Creates a new import node.
+
+        :param patternNames: the names of the patterns to import.
+        :param filename: the name of the module to import them from.
+        """
+        self._patternNames = tuple(patternNames)
+        self._filename = filename
+
+    @property
+    def patternNames(self):
+        return self._patternNames
+    
+    @property
+    def filename(self) -> str:
+        return self._filename
+
 
 
 class PatternDef(Node):
@@ -109,6 +139,24 @@ class NaturalLit(Expr):
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, NaturalLit) and self.value == other.value
+
+
+class StringLit(Node):
+    """An AST node for a string literal."""
+    def __init__(self, value: str) ->None:
+        """
+        Creates a new string literal.
+
+        :param value: the value of this literal
+        """
+        self._value = value
+
+    @property
+    def value(self) -> str:
+        return self._value
+    
+    def __repr__(self) -> str:
+        return f"StringLit({self.value})"
 
 
 class KnitExpr(Expr):
@@ -467,6 +515,14 @@ def pretty_print(node: Node, level: int = 0, end: str = "\n") -> None:
     :param end: the string to append to the end of the printed AST
     """
     print("  " * level + repr(node), end=end)
+
+@pretty_print.register
+def _(using: UsingStmt, level: int = 0, end: str = "\n") -> None:
+    _print_parent("UsingStmt",
+                  [],
+                  (list(map(str, using.patternNames)), str(using.filename)),
+                  level,
+                  end)
 
 
 @pretty_print.register
