@@ -70,7 +70,8 @@ test(lambda: not verify_error("test/double-expanding-repeat.ks"),
      "Should allow okay double expanding repeat")
 test(lambda: verify_error("test/patterns-lexical-scoping.ks"),
      "Patterns shouldn't be able to reference variables outside their environment")
-test(lambda: check_output("test/block-repeat-n.ks",
-                          "CO 6.\nK, P, K, P, K, P.\nP, K, P, K, P, K.\nBO 6."),
-     "Should allow n-repeat horizontal concat of sub-patterns")
+test(lambda: check_output(
+    "test/tile.ks",
+    "CO 6.\n**\n[K, P] 3.\n[P, K] 3.\nrep from ** 3 times.\nBO 6."
+), "Should allow n-by-m tiling of patterns")
 

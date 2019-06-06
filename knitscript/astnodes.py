@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC
 from enum import Enum
 from functools import singledispatch
-from typing import Callable, Generator, Iterable, Optional, Sequence
+from typing import Callable, Generator, Iterable, Optional, Sequence, Union
 
 from knitscript.stitch import Stitch
 
@@ -401,6 +401,41 @@ class PatternExpr(RowRepeatExpr):
         return self._params
 
 
+class FixedBlockRepeatExpr(KnitExpr):
+    """
+    An AST node for repeating a block horizontally a fixed number of times.
+    """
+
+    def __init__(self,
+                 block: Node,
+                 times: Node,
+                 consumes: Optional[int] = None,
+                 produces: Optional[int] = None) -> None:
+        """
+        Creates a new fixed block repeat expression.
+
+        :param block: the block to repeat
+        :param times: the number of times to repeat the block
+        :param consumes:
+            the number of stitches this expression consumes, if known
+        :param produces:
+            the number of stitches this expression produces, if known
+        """
+        super().__init__(consumes, produces)
+        self._block = block
+        self._times = times
+
+    @property
+    def block(self) -> Node:
+        """The block to repeat."""
+        return self._block
+
+    @property
+    def times(self) -> Node:
+        """The number of times to repeat the block."""
+        return self._times
+
+
 class GetExpr(Expr):
     """An AST node representing a variable lookup."""
 
@@ -501,6 +536,12 @@ def _(pattern: PatternExpr, function: Callable[[Node], Node]) -> Node:
 
 
 @ast_map.register
+def _(repeat: FixedBlockRepeatExpr, function: Callable[[Node], Node]) -> Node:
+    return FixedBlockRepeatExpr(function(repeat.block), function(repeat.times),
+                                repeat.consumes, repeat.produces)
+
+
+@ast_map.register
 def _(call: CallExpr, function: Callable[[Node], Node]) -> Node:
     return CallExpr(function(call.target), map(function, call.args))
 
@@ -530,6 +571,15 @@ def _(pattern: PatternExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("PatternExpr",
                   pattern.rows,
                   (pattern.params, pattern.consumes, pattern.produces),
+                  level,
+                  end)
+
+
+@pretty_print.register
+def _(repeat: FixedBlockRepeatExpr, level: int = 0, end: str = "\n") -> None:
+    _print_parent("FixedBlockRepeatExpr",
+                  repeat.block,
+                  (repeat.times, repeat.consumes, repeat.produces),
                   level,
                   end)
 
@@ -581,13 +631,19 @@ def _(expanding: ExpandingStitchRepeatExpr, level: int = 0, end: str = "\n") \
 
 
 def _print_parent(name: str,
-                  children: Sequence[Node],
+                  children: Union[Node, Sequence[Node]],
                   args: Iterable[object],
                   level: int,
                   end: str) -> None:
-    print("  " * level + name + "([")
-    for i, child in enumerate(children):
-        pretty_print(child,
-                     level + 1,
-                     ",\n" if i < len(children) - 1 else "\n")
-    print("  " * level + "], " + ", ".join(map(str, args)) + ")", end=end)
+    print("  " * level + name + "(", end="")
+    if isinstance(children, Sequence):
+        print("[")
+        for i, child in enumerate(children):
+            pretty_print(child,
+                         level + 1,
+                         ",\n" if i < len(children) - 1 else "\n")
+        print("  " * level + "], ", end="")
+    else:
+        print()
+        pretty_print(children, level + 1, end=",\n" + "  " * level)
+    print(", ".join(map(str, args)) + ")", end=end)

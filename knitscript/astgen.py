@@ -3,9 +3,9 @@ from operator import attrgetter
 from typing import Collection, Union
 
 from knitscript.astnodes import BlockExpr, CallExpr, Document, \
-    ExpandingStitchRepeatExpr, FixedStitchRepeatExpr, GetExpr, NaturalLit, \
-    Node, PatternDef, PatternExpr, RowExpr, RowRepeatExpr, Side, StitchLit, \
-    StringLit, UsingStmt
+    ExpandingStitchRepeatExpr, FixedBlockRepeatExpr, FixedStitchRepeatExpr, \
+    GetExpr, NaturalLit, Node, PatternDef, PatternExpr, RowExpr, \
+    RowRepeatExpr, Side, StitchLit, StringLit, UsingStmt
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
     ParserRuleContext
 from knitscript.stitch import Stitch
@@ -48,7 +48,21 @@ def _(item: KnitScriptParser.ItemContext) -> Node:
 
 @build_ast.register
 def _(block: KnitScriptParser.BlockContext) -> Node:
-    return BlockExpr(map(build_ast, block.calls))
+    return BlockExpr(map(build_ast, block.patternList().patterns))
+
+
+@build_ast.register
+def _(repeat: KnitScriptParser.PatternRepeatContext) -> Node:
+    return build_ast(repeat.fixedPatternRepeat() or repeat.call())
+
+
+@build_ast.register
+def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
+    return FixedBlockRepeatExpr(
+        BlockExpr([build_ast(repeat.call())] if repeat.call() is not None
+                  else map(build_ast, repeat.patternList().patterns)),
+        build_ast(repeat.times)
+    )
 
 
 @build_ast.register
