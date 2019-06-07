@@ -39,13 +39,12 @@ def _env_from_filename(filename: str):
         # TODO Get env from patternName and add to this env
 
 
-def main(filename: Optional[str] = None) -> None:
+def main() -> None:
     """
     Prints the knitting instructions for a KnitScript pattern which is read
     from the filename or stdin if no filename is provided.
-
-    :param filename: the filename of the KnitScript pattern to run
     """
+    filename = sys.argv[1] if len(sys.argv) >= 2 else None
     lexer = KnitScriptLexer(
         FileStream(filename) if filename is not None else StdinStream()
     )
@@ -82,4 +81,4 @@ def main(filename: Optional[str] = None) -> None:
 
 
 if __name__ == "__main__":
-    main(*sys.argv[1:])
+    main()
