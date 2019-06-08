@@ -1,18 +1,18 @@
 from functools import singledispatch
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
-    NaturalLit, Node, RowRepeat, StitchLit
+    NaturalLit, Node, Row, RowRepeat, StitchLit
 
 
 @singledispatch
-def export_text(expr: Node) -> str:
+def export_text(node: Node) -> str:
     """
     Exports the AST to human-readable knitting instructions in plain text.
 
-    :param expr: the AST to export
+    :param node: the AST to export
     :return: the instructions for the expression
     """
-    raise TypeError(f"unsupported node {type(expr).__name__}")
+    raise TypeError(f"unsupported node {type(node).__name__}")
 
 
 @export_text.register
@@ -42,8 +42,15 @@ def _(repeat: ExpandingStitchRepeat) -> str:
 
 
 @export_text.register
+def _(row: Row) -> str:
+    return (
+        f"{export_text.dispatch(FixedStitchRepeat)(row)}. ({row.produces} sts)"
+    )
+
+
+@export_text.register
 def _(repeat: RowRepeat) -> str:
-    rows = ".\n".join(map(export_text, repeat.rows)) + "."
+    rows = "\n".join(map(export_text, repeat.rows))
     if repeat.times == NaturalLit(1):
         return rows
     else:

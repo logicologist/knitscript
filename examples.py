@@ -5,7 +5,7 @@ from knitscript.astnodes import Block, Call, \
 from knitscript.interpreter import compile_text, infer_counts, \
     reverse
 from knitscript.stitch import Stitch
-from knitscript.verifiers import verify_pattern
+from knitscript.verifier import verify_pattern
 
 row_to_reverse = \
     Row([FixedStitchRepeat([StitchLit(Stitch.KNIT)],

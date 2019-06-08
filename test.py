@@ -1,10 +1,10 @@
 from typing import Type
 
 from knitscript.astnodes import Pattern
-from knitscript.export import export_text
+from knitscript.exporter import export_text
 from knitscript.interpreter import InterpretError, prepare_pattern
 from knitscript.loader import load
-from knitscript.verifiers import verify_pattern
+from knitscript.verifier import verify_pattern
 
 
 def process_pattern(filename: str) -> Pattern:
@@ -53,7 +53,9 @@ test(lambda: verify_error("test/too-many-stitches.ks"),
 test(lambda: verify_error("test/too-few-stitches.ks"),
      "Should catch expected stitches smaller than available")
 test(lambda: check_output("test/just-right.ks",
-                          "CO 12.\nK 12.\n*BO; rep from * to end."),
+                          "CO 12. (12 sts)\n" +
+                          "K 12. (12 sts)\n" +
+                          "*BO; rep from * to end. (0 sts)"),
      "Should compile simple pattern")
 test(lambda: verify_error("test/double-expanding-repeat-2.ks"),
      "Should catch bad double expanding repeat")
@@ -63,19 +65,23 @@ test(lambda: not verify_error("test/double-expanding-repeat.ks"),
 test(lambda: expect_except("test/patterns-lexical-scoping.ks", KeyError),
      "Patterns shouldn't be able to reference variables outside their " +
      "environment")
-test(lambda: check_output(
-    "test/tile.ks",
-    "CO 6.\n**\n[K, P] 3.\n[P, K] 3.\nrep from ** 3 times.\nBO 6."
-), "Should allow n-by-m tiling of patterns")
+test(lambda: check_output("test/tile.ks",
+                          "CO 6. (6 sts)\n" +
+                          "**\n" +
+                          "[K, P] 3. (6 sts)\n" +
+                          "[P, K] 3. (6 sts)\n" +
+                          "rep from ** 3 times\n" +
+                          "BO 6. (0 sts)"),
+     "Should allow n-by-m tiling of patterns")
 test(lambda: check_output("test/pass-called-pattern.ks",
-                          "CO 3.\n" +
+                          "CO 3. (3 sts)\n" +
                           "**\n" +
-                          "K, P, K.\n" +
-                          "rep from ** 5 times.\n" +
+                          "K, P, K. (3 sts)\n" +
+                          "rep from ** 5 times\n" +
                           "**\n" +
-                          "P, K, P.\n" +
-                          "rep from ** 3 times.\n" +
-                          "BO 3."),
+                          "P, K, P. (3 sts)\n" +
+                          "rep from ** 3 times\n" +
+                          "BO 3. (0 sts)"),
      "Patterns can be passed with or without being called with arguments")
 test(lambda: expect_except("test/too-few-arguments.ks", InterpretError),
      "Should catch patterns called with too few arguments")

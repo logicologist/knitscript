@@ -1,10 +1,10 @@
 import sys
 
 from knitscript.astnodes import Pattern, pretty_print
-from knitscript.export import export_text
+from knitscript.exporter import export_text
 from knitscript.interpreter import prepare_pattern
 from knitscript.loader import load
-from knitscript.verifiers import verify_pattern
+from knitscript.verifier import verify_pattern
 
 
 def main() -> None:

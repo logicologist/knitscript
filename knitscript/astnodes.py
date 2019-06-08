@@ -36,6 +36,9 @@ class Side(Enum):
         yield self
         yield from self.flip().alternate()
 
+    def __str__(self) -> str:
+        return self.value
+
 
 class Node(ABC):
     """An AST node."""
