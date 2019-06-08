@@ -61,7 +61,7 @@ def _(repeat: KnitScriptParser.PatternRepeatContext) -> Node:
 def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
     return FixedBlockRepeat(
         Block([build_ast(repeat.call())] if repeat.call() is not None
-                  else map(build_ast, repeat.patternList().patterns)),
+              else map(build_ast, repeat.patternList().patterns)),
         build_ast(repeat.times)
     )
 
