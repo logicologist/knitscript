@@ -181,7 +181,7 @@ def substitute(node: Node, env: Mapping[str, Node]) -> Node:
 
 @substitute.register
 def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
-    return PatternExpr(map(partial(substitute, env=pattern.env), pattern.rows),
+    return PatternExpr(map(partial(substitute, env=env), pattern.rows),
                        pattern.params, pattern.env,
                        pattern.consumes, pattern.produces)
 
@@ -200,7 +200,7 @@ def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return substitute(
         target,
-        {**env, **dict(zip(target.params,
+        {**target.env, **dict(zip(target.params,
                            map(partial(substitute, env=env), call.args)))}
     )
 
