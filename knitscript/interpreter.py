@@ -462,6 +462,36 @@ def _(pattern: Pattern, side: Side = Side.Right) -> Node:
 
 
 @singledispatch
+def reflect(node: Node) -> Node:
+    """
+    Reflects the AST horizontally.
+
+    :param node: the AST to reflect
+    :return: the reflected AST
+    """
+    return ast_map(node, reflect)
+
+
+@reflect.register
+def _(row: Row) -> Node:
+    return Row(map(reflect, reversed(row.stitches)), row.side,
+               row.consumes, row.produces)
+
+
+@reflect.register
+def _(fixed: FixedStitchRepeat) -> Node:
+    return FixedStitchRepeat(map(reflect, reversed(fixed.stitches)),
+                             fixed.times, fixed.consumes, fixed.produces)
+
+
+@reflect.register
+def _(expanding: ExpandingStitchRepeat) -> Node:
+    return ExpandingStitchRepeat(map(reflect, reversed(expanding.stitches)),
+                                 expanding.to_last,
+                                 expanding.consumes, expanding.produces)
+
+
+@singledispatch
 def _merge_across(*nodes: Node) -> Knittable:
     raise TypeError(f"unsupported node {type(nodes[0]).__name__}")
 

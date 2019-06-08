@@ -2,11 +2,14 @@ import os
 from typing import Mapping, Optional
 
 from knitscript.astgen import build_ast
-from knitscript.astnodes import Node, Document, Using, PatternDef
-from knitscript.interpreter import enclose
-from knitscript.parser.KnitScriptLexer import KnitScriptLexer, FileStream, \
-    StdinStream, CommonTokenStream
+from knitscript.astnodes import Document, NativeFunction, Node, PatternDef, \
+    Using
+from knitscript.interpreter import enclose, reflect
+from knitscript.parser.KnitScriptLexer import CommonTokenStream, FileStream, \
+    KnitScriptLexer, StdinStream
 from knitscript.parser.KnitScriptParser import KnitScriptParser
+
+_DEFAULT_ENV = {"reflect": NativeFunction(reflect)}
 
 
 def load_file(filename: Optional[str]) -> Mapping[str, Node]:
@@ -22,7 +25,7 @@ def load_file(filename: Optional[str]) -> Mapping[str, Node]:
     parser = KnitScriptParser(CommonTokenStream(lexer))
     document = build_ast(parser.document())
     assert isinstance(document, Document)
-    env = {}
+    env = dict(_DEFAULT_ENV)
 
     for using in document.usings:
         assert isinstance(using, Using)

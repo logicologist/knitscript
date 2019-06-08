@@ -100,3 +100,8 @@ test(lambda: check_output("test/nested-stitch-repeats-with-block.ks",
                           "BO 6. (0 sts)"),
      "Should flatten nested fixed stitch repeats that result from block " +
      "substitution")
+test(lambda: check_output("test/reflection.ks",
+                          "CO 9. (9 sts)\n" +
+                          "K, [K, K, P] 2, K, K. (9 sts)\n" +
+                          "BO 9. (0 sts)"),
+     "Should be able to reflect patterns horizontally")
