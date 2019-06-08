@@ -1,3 +1,5 @@
+from typing import Type
+
 from knitscript.astnodes import Pattern
 from knitscript.export import export_text
 from knitscript.interpreter import prepare_pattern
@@ -18,10 +20,11 @@ def check_output(filename: str, expected: str) -> bool:
     return actual == expected
 
 
-def expect_except(filename: str, exceptionType: Exception) -> bool:
+def expect_except(filename: str, exception_type: Type[Exception]) -> bool:
+    # noinspection PyBroadException
     try:
-        pattern = process_pattern(filename)
-    except exceptionType as e:
+        process_pattern(filename)
+    except exception_type:
         return True
 
 
@@ -58,9 +61,19 @@ test(lambda: verify_error("test/double-expanding-repeat-2.ks"),
 test(lambda: not verify_error("test/double-expanding-repeat.ks"),
      "Should allow okay double expanding repeat")
 test(lambda: expect_except("test/patterns-lexical-scoping.ks", KeyError),
-     "Patterns shouldn't be able to reference variables outside their environment")
+     "Patterns shouldn't be able to reference variables outside their " +
+     "environment")
 test(lambda: check_output(
     "test/tile.ks",
     "CO 6.\n**\n[K, P] 3.\n[P, K] 3.\nrep from ** 3 times.\nBO 6."
 ), "Should allow n-by-m tiling of patterns")
-
+test(lambda: check_output("test/pass-called-pattern.ks",
+                          "CO 3.\n" +
+                          "**\n" +
+                          "K, P, K.\n" +
+                          "rep from ** 5 times.\n" +
+                          "**\n" +
+                          "P, K, P.\n" +
+                          "rep from ** 3 times.\n" +
+                          "BO 3."),
+     "Patterns can be passed with or without being called with arguments.")

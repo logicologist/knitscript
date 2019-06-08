@@ -60,7 +60,7 @@ def _(repeat: KnitScriptParser.PatternRepeatContext) -> Node:
 @build_ast.register
 def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
     return FixedBlockRepeat(
-        Block([build_ast(repeat.call())] if repeat.call() is not None
+        Block([build_ast(repeat.pattern)] if repeat.pattern is not None
               else map(build_ast, repeat.patternList().patterns)),
         build_ast(repeat.times)
     )
@@ -116,7 +116,7 @@ def _(stitch: KnitScriptParser.StitchContext) -> Node:
 
 @build_ast.register
 def _(expr: KnitScriptParser.ExprContext) -> Node:
-    return build_ast(expr.variable() or expr.natural())
+    return build_ast(expr.call() or expr.variable() or expr.natural())
 
 
 @build_ast.register

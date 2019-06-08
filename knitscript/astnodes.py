@@ -370,6 +370,7 @@ class Pattern(RowRepeat):
 
         :param rows: the sequence of rows in the pattern
         :param params: the names of the parameters for the pattern
+        :param env: the environment enclosing the pattern, if any
         :param consumes:
             the number of stitches this expression consumes, if known
         :param produces:
@@ -377,8 +378,7 @@ class Pattern(RowRepeat):
         """
         super().__init__(rows, NaturalLit(1), consumes, produces)
         self._params = tuple(params)
-        # TODO: Figure out how to make the environment properly immutable.
-        self._env = dict(env) if env is not None else None
+        self._env = env
 
     @property
     def params(self) -> Sequence[str]:
@@ -386,7 +386,8 @@ class Pattern(RowRepeat):
         return self._params
 
     @property
-    def env(self):
+    def env(self) -> Optional[Mapping[str, Node]]:
+        """The environment enclosing the pattern, if any."""
         return self._env
 
 

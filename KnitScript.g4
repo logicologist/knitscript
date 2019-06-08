@@ -19,11 +19,10 @@ block: patternList;
 
 patternRepeat: fixedPatternRepeat | call;
 fixedPatternRepeat
-    : call times=expr
+    : pattern=call times=expr
     | '(' patternList ')' times=expr;
 patternList: patterns+=patternRepeat (',' patterns+=patternRepeat)*;
 
-call: ID ('(' argList ')')?;
 argList: args+=expr (',' args+=expr)*;
 
 stitchRepeat: fixedStitchRepeat | expandingStitchRepeat | stitch;
@@ -37,8 +36,9 @@ stitchList: stitches+=stitchRepeat (',' stitches+=stitchRepeat)*;
 
 stitch: ID;
 
-expr: variable | natural;
+expr: variable | call | natural;
 variable: ID;
+call: ID ('(' argList ')')?;
 natural: NATURAL;
 
 ID: [_A-Za-z] [_A-Za-z0-9]*;
