@@ -7,7 +7,8 @@ from typing import Mapping, Optional
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NaturalLit, Node, \
-    Pattern, Row, RowRepeat, Side, StitchLit, ast_map, ast_reduce
+    Pattern, Row, RowRepeat, Side, StitchLit
+from knitscript.asttools import ast_map, ast_reduce
 from knitscript.stitch import Stitch
 
 

@@ -1,6 +1,7 @@
 import sys
 
-from knitscript.astnodes import Pattern, pretty_print
+from knitscript.astnodes import Pattern
+from knitscript.asttools import pretty_print
 from knitscript.exporter import export_text
 from knitscript.interpreter import prepare_pattern
 from knitscript.loader import load
