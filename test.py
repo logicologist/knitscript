@@ -1,14 +1,14 @@
-from knitscript.astnodes import PatternExpr
+from knitscript.astnodes import Pattern
 from knitscript.export import export_text
 from knitscript.interpreter import prepare_pattern
 from knitscript.loader import load
 from knitscript.verifiers import verify_pattern
 
 
-def process_pattern(filename: str) -> PatternExpr:
+def process_pattern(filename: str) -> Pattern:
     env = load(filename)
     pattern = env["main"]
-    assert isinstance(pattern, PatternExpr)
+    assert isinstance(pattern, Pattern)
     return prepare_pattern(pattern)
 
 

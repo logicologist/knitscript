@@ -2,7 +2,7 @@ import os
 from typing import Mapping, Optional
 
 from knitscript.astgen import build_ast
-from knitscript.astnodes import Node, Document, UsingStmt, PatternDef
+from knitscript.astnodes import Node, Document, Using, PatternDef
 from knitscript.interpreter import enclose
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer, FileStream, \
     StdinStream, CommonTokenStream
@@ -25,10 +25,10 @@ def load(filename: Optional[str]) -> Mapping[str, Node]:
     env = {}
 
     for using in document.usings:
-        assert isinstance(using, UsingStmt)
+        assert isinstance(using, Using)
         used_env = load(os.path.join(os.path.dirname(filename),
                                      using.filename + ".ks"))
-        for name in using.patternNames:
+        for name in using.pattern_names:
             env[name] = used_env[name]
 
     for pattern in document.patterns:

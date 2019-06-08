@@ -3,7 +3,8 @@ from __future__ import annotations
 from abc import ABC
 from enum import Enum
 from functools import singledispatch
-from typing import Callable, Generator, Iterable, Optional, Sequence, Union
+from typing import Callable, Generator, Iterable, Mapping, Optional, \
+    Sequence, Union
 
 from knitscript.stitch import Stitch
 
@@ -42,48 +43,50 @@ class Node(ABC):
 class Document(Node):
     """An AST node describing a complete KnitScript document."""
 
-    def __init__(self, patterns: Iterable[Node], usings: Iterable[Node]) -> None:
+    def __init__(self, usings: Iterable[Node], patterns: Iterable[Node]) \
+            -> None:
         """
         Creates a new document node.
 
-        :param patterns: the patterns in the document
         :param usings: the using statements (imports) in the document
+        :param patterns: the patterns in the document
         """
-        self._patterns = tuple(patterns)
         self._usings = tuple(usings)
-
-    @property
-    def patterns(self) -> Sequence[Node]:
-        """The patterns in the document."""
-        return self._patterns
+        self._patterns = tuple(patterns)
 
     @property
     def usings(self) -> Sequence[Node]:
         """The import statements in the document."""
         return self._usings
 
+    @property
+    def patterns(self) -> Sequence[Node]:
+        """The patterns in the document."""
+        return self._patterns
 
-class UsingStmt(Node):
+
+class Using(Node):
     """An AST node representing a pattern import."""
 
-    def __init__(self, patternNames: Iterable[str], filename: str):
+    def __init__(self, pattern_names: Iterable[str], filename: str):
         """
         Creates a new import node.
 
-        :param patternNames: the names of the patterns to import.
-        :param filename: the name of the module to import them from.
+        :param pattern_names: the names of the patterns to import
+        :param filename: the name of the module to import them from
         """
-        self._patternNames = tuple(patternNames)
+        self._pattern_names = tuple(pattern_names)
         self._filename = filename
 
     @property
-    def patternNames(self):
-        return self._patternNames
+    def pattern_names(self):
+        """The names of the patterns to import."""
+        return self._pattern_names
     
     @property
     def filename(self) -> str:
+        """The name of the module to import them from."""
         return self._filename
-
 
 
 class PatternDef(Node):
@@ -110,12 +113,7 @@ class PatternDef(Node):
         return self._pattern
 
 
-class Expr(Node):
-    """An expression AST node."""
-    pass
-
-
-class NaturalLit(Expr):
+class NaturalLit(Node):
     """An AST node for a natural number (non-negative integer) literal."""
 
     def __init__(self, value: int) -> None:
@@ -141,25 +139,7 @@ class NaturalLit(Expr):
         return isinstance(other, NaturalLit) and self.value == other.value
 
 
-class StringLit(Node):
-    """An AST node for a string literal."""
-    def __init__(self, value: str) ->None:
-        """
-        Creates a new string literal.
-
-        :param value: the value of this literal
-        """
-        self._value = value
-
-    @property
-    def value(self) -> str:
-        return self._value
-    
-    def __repr__(self) -> str:
-        return f"StringLit({self.value})"
-
-
-class KnitExpr(Expr):
+class Knittable(Node):
     """An AST node representing a knitting action."""
 
     def __init__(self,
@@ -191,7 +171,7 @@ class KnitExpr(Expr):
         return self._produces
 
 
-class StitchLit(KnitExpr):
+class StitchLit(Knittable):
     """An AST node for a stitch literal."""
 
     def __init__(self, value: Stitch) -> None:
@@ -212,7 +192,7 @@ class StitchLit(KnitExpr):
         return f"StitchLit({self.value})"
 
 
-class FixedStitchRepeatExpr(KnitExpr):
+class FixedStitchRepeat(Knittable):
     """
     An AST node for repeating a sequence of stitches a fixed number of times.
     """
@@ -247,7 +227,7 @@ class FixedStitchRepeatExpr(KnitExpr):
         return self._times
 
 
-class ExpandingStitchRepeatExpr(KnitExpr):
+class ExpandingStitchRepeat(Knittable):
     """
     An AST node for repeating a sequence of stitches an undetermined number of
     times.
@@ -283,7 +263,7 @@ class ExpandingStitchRepeatExpr(KnitExpr):
         return self._to_last
 
 
-class RowExpr(FixedStitchRepeatExpr):
+class Row(FixedStitchRepeat):
     """An AST node representing a row."""
 
     def __init__(self,
@@ -315,7 +295,7 @@ class RowExpr(FixedStitchRepeatExpr):
         return self._side
 
 
-class RowRepeatExpr(KnitExpr):
+class RowRepeat(Knittable):
     """An AST node for repeating a sequence of rows a fixed number of times."""
 
     def __init__(self,
@@ -348,32 +328,32 @@ class RowRepeatExpr(KnitExpr):
         return self._times
 
 
-class BlockExpr(KnitExpr):
-    """An AST node representing horizontal concatenation of 2D blocks."""
+class Block(Knittable):
+    """An AST node representing horizontal combination of patterns."""
 
     def __init__(self,
-                 blocks: Iterable[Node],
+                 patterns: Iterable[Node],
                  consumes: Optional[int] = None,
                  produces: Optional[int] = None) -> None:
         """
         Creates a new block concatenation expression.
 
-        :param blocks: the blocks to concatenate
+        :param patterns: the patterns to concatenate
         :param consumes:
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
         """
         super().__init__(consumes, produces)
-        self._blocks = tuple(blocks)
+        self._patterns = tuple(patterns)
 
     @property
-    def blocks(self) -> Sequence[Node]:
+    def patterns(self) -> Sequence[Node]:
         """The blocks to concatenate."""
-        return self._blocks
+        return self._patterns
 
 
-class PatternExpr(RowRepeatExpr):
+class Pattern(RowRepeat):
     """An AST node representing a pattern."""
 
     def __init__(self,
@@ -395,8 +375,8 @@ class PatternExpr(RowRepeatExpr):
         """
         super().__init__(rows, NaturalLit(1), consumes, produces)
         self._params = tuple(params)
+        # TODO: Figure out how to make the environment properly immutable.
         self._env = dict(env) if env is not None else None 
-        # ^^ TODO figure out how to make this properly immutable
 
     @property
     def params(self) -> Sequence[str]:
@@ -408,7 +388,7 @@ class PatternExpr(RowRepeatExpr):
         return self._env
 
 
-class FixedBlockRepeatExpr(KnitExpr):
+class FixedBlockRepeat(Knittable):
     """
     An AST node for repeating a block horizontally a fixed number of times.
     """
@@ -443,7 +423,7 @@ class FixedBlockRepeatExpr(KnitExpr):
         return self._times
 
 
-class GetExpr(Expr):
+class Get(Node):
     """An AST node representing a variable lookup."""
 
     def __init__(self, name: str) -> None:
@@ -463,7 +443,7 @@ class GetExpr(Expr):
         return f"GetExpr({repr(self.name)})"
 
 
-class CallExpr(Expr):
+class Call(Node):
     """An AST node representing a call to a pattern or texture."""
 
     def __init__(self, target: Node, args: Iterable[Node]) -> None:
@@ -504,53 +484,53 @@ def ast_map(node: Node, function: Callable[[Node], Node]) -> Node:
 
 
 @ast_map.register
-def _(fixed: FixedStitchRepeatExpr, function: Callable[[Node], Node]) -> Node:
-    return FixedStitchRepeatExpr(map(function, fixed.stitches),
-                                 function(fixed.times),
-                                 fixed.consumes, fixed.produces)
+def _(fixed: FixedStitchRepeat, function: Callable[[Node], Node]) -> Node:
+    return FixedStitchRepeat(map(function, fixed.stitches),
+                             function(fixed.times),
+                             fixed.consumes, fixed.produces)
 
 
 @ast_map.register
-def _(expanding: ExpandingStitchRepeatExpr, function: Callable[[Node], Node]) \
+def _(expanding: ExpandingStitchRepeat, function: Callable[[Node], Node]) \
         -> Node:
-    return ExpandingStitchRepeatExpr(map(function, expanding.stitches),
-                                     function(expanding.to_last),
-                                     expanding.consumes, expanding.produces)
+    return ExpandingStitchRepeat(map(function, expanding.stitches),
+                                 function(expanding.to_last),
+                                 expanding.consumes, expanding.produces)
 
 
 @ast_map.register
-def _(row: RowExpr, function: Callable[[Node], Node]) -> Node:
-    return RowExpr(map(function, row.stitches), row.side,
-                   row.consumes, row.produces)
+def _(row: Row, function: Callable[[Node], Node]) -> Node:
+    return Row(map(function, row.stitches), row.side,
+               row.consumes, row.produces)
 
 
 @ast_map.register
-def _(repeat: RowRepeatExpr, function: Callable[[Node], Node]) -> Node:
-    return RowRepeatExpr(map(function, repeat.rows), function(repeat.times),
-                         repeat.consumes, repeat.produces)
+def _(repeat: RowRepeat, function: Callable[[Node], Node]) -> Node:
+    return RowRepeat(map(function, repeat.rows), function(repeat.times),
+                     repeat.consumes, repeat.produces)
 
 
 @ast_map.register
-def _(block: BlockExpr, function: Callable[[Node], Node]) -> Node:
-    return BlockExpr(map(function, block.blocks),
-                     block.consumes, block.produces)
+def _(block: Block, function: Callable[[Node], Node]) -> Node:
+    return Block(map(function, block.patterns),
+                 block.consumes, block.produces)
 
 
 @ast_map.register
-def _(pattern: PatternExpr, function: Callable[[Node], Node]) -> Node:
-    return PatternExpr(map(function, pattern.rows), pattern.params, pattern.env,
-                       pattern.consumes, pattern.produces)
+def _(pattern: Pattern, function: Callable[[Node], Node]) -> Node:
+    return Pattern(map(function, pattern.rows), pattern.params, pattern.env,
+                   pattern.consumes, pattern.produces)
 
 
 @ast_map.register
-def _(repeat: FixedBlockRepeatExpr, function: Callable[[Node], Node]) -> Node:
-    return FixedBlockRepeatExpr(function(repeat.block), function(repeat.times),
-                                repeat.consumes, repeat.produces)
+def _(repeat: FixedBlockRepeat, function: Callable[[Node], Node]) -> Node:
+    return FixedBlockRepeat(function(repeat.block), function(repeat.times),
+                            repeat.consumes, repeat.produces)
 
 
 @ast_map.register
-def _(call: CallExpr, function: Callable[[Node], Node]) -> Node:
-    return CallExpr(function(call.target), map(function, call.args))
+def _(call: Call, function: Callable[[Node], Node]) -> Node:
+    return Call(function(call.target), map(function, call.args))
 
 
 @singledispatch
@@ -564,26 +544,28 @@ def pretty_print(node: Node, level: int = 0, end: str = "\n") -> None:
     """
     print("  " * level + repr(node), end=end)
 
+
 @pretty_print.register
-def _(using: UsingStmt, level: int = 0, end: str = "\n") -> None:
+def _(using: Using, level: int = 0, end: str = "\n") -> None:
     _print_parent("UsingStmt",
                   [],
-                  (list(map(str, using.patternNames)), str(using.filename)),
+                  (list(map(str, using.pattern_names)), str(using.filename)),
                   level,
                   end)
 
 
 @pretty_print.register
-def _(pattern: PatternExpr, level: int = 0, end: str = "\n") -> None:
+def _(pattern: Pattern, level: int = 0, end: str = "\n") -> None:
     _print_parent("PatternExpr",
                   pattern.rows,
-                  (pattern.params, pattern.env, pattern.consumes, pattern.produces),
+                  (pattern.params, pattern.env,
+                   pattern.consumes, pattern.produces),
                   level,
                   end)
 
 
 @pretty_print.register
-def _(repeat: FixedBlockRepeatExpr, level: int = 0, end: str = "\n") -> None:
+def _(repeat: FixedBlockRepeat, level: int = 0, end: str = "\n") -> None:
     _print_parent("FixedBlockRepeatExpr",
                   repeat.block,
                   (repeat.times, repeat.consumes, repeat.produces),
@@ -592,16 +574,16 @@ def _(repeat: FixedBlockRepeatExpr, level: int = 0, end: str = "\n") -> None:
 
 
 @pretty_print.register
-def _(block: BlockExpr, level: int = 0, end: str = "\n") -> None:
+def _(block: Block, level: int = 0, end: str = "\n") -> None:
     _print_parent("BlockExpr",
-                  block.blocks,
+                  block.patterns,
                   (block.consumes, block.produces),
                   level,
                   end)
 
 
 @pretty_print.register
-def _(repeat: RowRepeatExpr, level: int = 0, end: str = "\n") -> None:
+def _(repeat: RowRepeat, level: int = 0, end: str = "\n") -> None:
     _print_parent("RowRepeatExpr",
                   repeat.rows,
                   (repeat.times, repeat.consumes, repeat.produces),
@@ -610,7 +592,7 @@ def _(repeat: RowRepeatExpr, level: int = 0, end: str = "\n") -> None:
 
 
 @pretty_print.register
-def _(row: RowExpr, level: int = 0, end: str = "\n") -> None:
+def _(row: Row, level: int = 0, end: str = "\n") -> None:
     _print_parent("RowExpr",
                   row.stitches,
                   (row.side, row.consumes, row.produces),
@@ -619,7 +601,7 @@ def _(row: RowExpr, level: int = 0, end: str = "\n") -> None:
 
 
 @pretty_print.register
-def _(fixed: FixedStitchRepeatExpr, level: int = 0, end: str = "\n") -> None:
+def _(fixed: FixedStitchRepeat, level: int = 0, end: str = "\n") -> None:
     _print_parent("FixedStitchRepeatExpr",
                   fixed.stitches,
                   (fixed.times, fixed.consumes, fixed.produces),
@@ -628,7 +610,7 @@ def _(fixed: FixedStitchRepeatExpr, level: int = 0, end: str = "\n") -> None:
 
 
 @pretty_print.register
-def _(expanding: ExpandingStitchRepeatExpr, level: int = 0, end: str = "\n") \
+def _(expanding: ExpandingStitchRepeat, level: int = 0, end: str = "\n") \
         -> None:
     _print_parent("ExpandingStitchRepeatExpr",
                   expanding.stitches,

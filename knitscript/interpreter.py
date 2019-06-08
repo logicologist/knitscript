@@ -5,10 +5,9 @@ from itertools import accumulate, chain, repeat, starmap, zip_longest
 from operator import attrgetter
 from typing import Mapping, Optional
 
-from knitscript.astnodes import BlockExpr, CallExpr, \
-    ExpandingStitchRepeatExpr, Expr, FixedBlockRepeatExpr, \
-    FixedStitchRepeatExpr, GetExpr, KnitExpr, NaturalLit, Node, PatternExpr, \
-    RowExpr, RowRepeatExpr, Side, StitchLit, ast_map
+from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
+    FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NaturalLit, Node, \
+    Pattern, Row, RowRepeat, Side, StitchLit, ast_map
 
 
 class InterpretError(Exception):
@@ -40,7 +39,7 @@ class InterpretError(Exception):
         return f"{self.message} at {self.node}"
 
 
-def prepare_pattern(pattern: PatternExpr) -> PatternExpr:
+def prepare_pattern(pattern: Pattern) -> Pattern:
     """
     Interprets and prepares the pattern for exporting.
 
@@ -52,7 +51,7 @@ def prepare_pattern(pattern: PatternExpr) -> PatternExpr:
     pattern = infer_counts(pattern)
     pattern = flatten(pattern)
     pattern = alternate_sides(pattern)
-    assert isinstance(pattern, PatternExpr)
+    assert isinstance(pattern, Pattern)
     return pattern
 
 
@@ -75,7 +74,7 @@ def infer_counts(node: Node, available: Optional[int] = None) -> Node:
 
 
 @infer_counts.register
-def _(fixed: FixedStitchRepeatExpr, available: Optional[int] = None) -> Node:
+def _(fixed: FixedStitchRepeat, available: Optional[int] = None) -> Node:
     counted = []
     consumes = 0
     produces = 0
@@ -86,80 +85,80 @@ def _(fixed: FixedStitchRepeatExpr, available: Optional[int] = None) -> Node:
         )
         counted.append(stitch)
         try:
-            assert isinstance(stitch, KnitExpr)
+            assert isinstance(stitch, Knittable)
             consumes += stitch.consumes
             produces += stitch.produces
         except TypeError:
             consumes = produces = None
 
     try:
-        return FixedStitchRepeatExpr(counted, fixed.times,
-                                     fixed.times.value * consumes,
-                                     fixed.times.value * produces)
+        return FixedStitchRepeat(counted, fixed.times,
+                                 fixed.times.value * consumes,
+                                 fixed.times.value * produces)
     except TypeError:
-        return FixedStitchRepeatExpr(counted, fixed.times)
+        return FixedStitchRepeat(counted, fixed.times)
 
 
 @infer_counts.register
-def _(expanding: ExpandingStitchRepeatExpr, available: Optional[int] = None) \
+def _(expanding: ExpandingStitchRepeat, available: Optional[int] = None) \
         -> Node:
     if available is None:
         raise InterpretError("ambiguous use of expanding stitch repeat",
                              expanding)
     fixed = infer_counts(
-        FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
+        FixedStitchRepeat(expanding.stitches, NaturalLit(1)),
         available - expanding.to_last.value
     )
-    assert isinstance(fixed, FixedStitchRepeatExpr)
+    assert isinstance(fixed, FixedStitchRepeat)
     n = (available - expanding.to_last.value) // fixed.consumes
-    return ExpandingStitchRepeatExpr(fixed.stitches, expanding.to_last,
-                                     n * fixed.consumes, n * fixed.produces)
+    return ExpandingStitchRepeat(fixed.stitches, expanding.to_last,
+                                 n * fixed.consumes, n * fixed.produces)
 
 
 @infer_counts.register
-def _(row: RowExpr, available: Optional[int] = None) -> Node:
-    counted = infer_counts.dispatch(FixedStitchRepeatExpr)(row, available)
-    return RowExpr(counted.stitches, row.side,
-                   counted.consumes, counted.produces)
+def _(row: Row, available: Optional[int] = None) -> Node:
+    counted = infer_counts.dispatch(FixedStitchRepeat)(row, available)
+    return Row(counted.stitches, row.side,
+               counted.consumes, counted.produces)
 
 
 @infer_counts.register
-def _(rep: RowRepeatExpr, available: Optional[int] = None) -> Node:
+def _(rep: RowRepeat, available: Optional[int] = None) -> Node:
     counted = []
     for row in rep.rows:
         row = infer_counts(row, available)
-        assert isinstance(row, KnitExpr)
+        assert isinstance(row, Knittable)
         counted.append(row)
         available = row.produces
-    return RowRepeatExpr(counted, rep.times, counted[0].consumes, available)
+    return RowRepeat(counted, rep.times, counted[0].consumes, available)
 
 
 # noinspection PyUnusedLocal
 @infer_counts.register
-def _(block: BlockExpr, available: Optional[int] = None) -> Node:
-    if len(block.blocks) == 1:
-        counted = [infer_counts(block.blocks[0], available)]
+def _(block: Block, available: Optional[int] = None) -> Node:
+    if len(block.patterns) == 1:
+        counted = [infer_counts(block.patterns[0], available)]
     else:
-        counted = list(map(infer_counts, block.blocks))
-    return BlockExpr(counted,
-                     sum(map(attrgetter("consumes"), counted)),
-                     sum(map(attrgetter("produces"), counted)))
+        counted = list(map(infer_counts, block.patterns))
+    return Block(counted,
+                 sum(map(attrgetter("consumes"), counted)),
+                 sum(map(attrgetter("produces"), counted)))
 
 
 @infer_counts.register
-def _(pattern: PatternExpr, available: Optional[int] = None) -> Node:
-    counted = infer_counts.dispatch(RowRepeatExpr)(pattern, available)
-    return PatternExpr(counted.rows, pattern.params, pattern.env,
-                       counted.consumes, counted.produces)
+def _(pattern: Pattern, available: Optional[int] = None) -> Node:
+    counted = infer_counts.dispatch(RowRepeat)(pattern, available)
+    return Pattern(counted.rows, pattern.params, pattern.env,
+                   counted.consumes, counted.produces)
 
 
 @infer_counts.register
-def _(rep: FixedBlockRepeatExpr, available: Optional[int] = None) -> Node:
+def _(rep: FixedBlockRepeat, available: Optional[int] = None) -> Node:
     counted = infer_counts(rep.block, available)
-    assert isinstance(counted, KnitExpr)
-    return FixedBlockRepeatExpr(counted, rep.times,
-                                rep.times.value * counted.consumes,
-                                rep.times.value * counted.produces)
+    assert isinstance(counted, Knittable)
+    return FixedBlockRepeat(counted, rep.times,
+                            rep.times.value * counted.consumes,
+                            rep.times.value * counted.produces)
 
 
 @singledispatch
@@ -176,9 +175,9 @@ def enclose(node: Node, env: Mapping[str, Node]) -> Node:
 
 
 @enclose.register
-def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
-    return PatternExpr(pattern.rows, pattern.params, env,
-                       pattern.consumes, pattern.produces)
+def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
+    return Pattern(pattern.rows, pattern.params, env,
+                   pattern.consumes, pattern.produces)
 
 
 @singledispatch
@@ -197,23 +196,23 @@ def substitute(node: Node, env: Mapping[str, Node]) -> Node:
 
 
 @substitute.register
-def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
-    return PatternExpr(map(partial(substitute, env=env), pattern.rows),
-                       pattern.params, pattern.env,
-                       pattern.consumes, pattern.produces)
+def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
+    return Pattern(map(partial(substitute, env=env), pattern.rows),
+                   pattern.params, pattern.env,
+                   pattern.consumes, pattern.produces)
 
 
 @substitute.register
-def _(get: GetExpr, env: Mapping[str, Node]) -> Node:
+def _(get: Get, env: Mapping[str, Node]) -> Node:
     return env[get.name]
 
 
 @substitute.register
-def _(call: CallExpr, env: Mapping[str, Node]) -> Node:
+def _(call: Call, env: Mapping[str, Node]) -> Node:
     target = call.target
-    if isinstance(target, GetExpr):
+    if isinstance(target, Get):
         target = substitute(target, env)
-    assert isinstance(target, PatternExpr)
+    assert isinstance(target, Pattern)
     # noinspection PyTypeChecker
     return substitute(
         target,
@@ -239,83 +238,83 @@ def flatten(node: Node, unroll: bool = False) -> Node:
 
 
 @flatten.register
-def _(row_repeat: RowRepeatExpr, unroll: bool = False) -> Node:
+def _(row_repeat: RowRepeat, unroll: bool = False) -> Node:
     rows = []
     # noinspection PyTypeChecker
     for row in map(partial(flatten, unroll=unroll), row_repeat.rows):
-        if isinstance(row, RowRepeatExpr) and (unroll or row.times.value <= 1):
+        if isinstance(row, RowRepeat) and (unroll or row.times.value <= 1):
             rows.extend(chain.from_iterable(repeat(row.rows, row.times.value)))
         else:
             rows.append(row)
-    return RowRepeatExpr(rows, row_repeat.times,
-                         rows[0].consumes if rows else 0,
-                         rows[-1].produces if rows else 0)
+    return RowRepeat(rows, row_repeat.times,
+                     rows[0].consumes if rows else 0,
+                     rows[-1].produces if rows else 0)
 
 
 @flatten.register
-def _(pattern: PatternExpr, unroll: bool = False) -> Node:
-    flattened = flatten.dispatch(RowRepeatExpr)(pattern, unroll)
-    return PatternExpr(flattened.rows, pattern.params, pattern.env,
-                       flattened.consumes, flattened.produces)
+def _(pattern: Pattern, unroll: bool = False) -> Node:
+    flattened = flatten.dispatch(RowRepeat)(pattern, unroll)
+    return Pattern(flattened.rows, pattern.params, pattern.env,
+                   flattened.consumes, flattened.produces)
 
 
 @flatten.register
-def _(concat: BlockExpr, unroll: bool = False) -> Node:
-    if len(concat.blocks) > 1:
+def _(concat: Block, unroll: bool = False) -> Node:
+    if len(concat.patterns) > 1:
         # Unroll row repeats if there is more than one pattern in this block.
         # This makes merging across rows much simpler.
         # noinspection PyTypeChecker
         return _merge_across(*map(partial(flatten, unroll=True),
-                                  concat.blocks))
+                                  concat.patterns))
     else:
         # noinspection PyTypeChecker
-        return flatten(concat.blocks[0], unroll)
+        return flatten(concat.patterns[0], unroll)
 
 
 @flatten.register
-def _(rep: FixedBlockRepeatExpr, unroll: bool = False) -> Node:
+def _(rep: FixedBlockRepeat, unroll: bool = False) -> Node:
     pattern = flatten(rep.block, unroll)
-    assert isinstance(pattern, PatternExpr)
+    assert isinstance(pattern, Pattern)
     rows = map(
-        lambda row: RowExpr(
-            [FixedStitchRepeatExpr(row.stitches, rep.times,
-                                   row.consumes * rep.times.value,
-                                   row.produces * rep.times.value)],
+        lambda row: Row(
+            [FixedStitchRepeat(row.stitches, rep.times,
+                               row.consumes * rep.times.value,
+                               row.produces * rep.times.value)],
             row.side,
             row.consumes * rep.times.value, row.produces * rep.times.value
         ),
         pattern.rows
     )
-    return PatternExpr(rows, pattern.params, pattern.env,
-                       pattern.consumes, pattern.produces)
+    return Pattern(rows, pattern.params, pattern.env,
+                   pattern.consumes, pattern.produces)
 
 
 # noinspection PyUnusedLocal
 @singledispatch
-def reverse(expr: Node, before: int) -> Node:
+def reverse(node: Node, before: int) -> Node:
     """
     Reverses the yarn direction of an expression. Assumes the AST has had
     stitches counted.
 
-    :param expr: the expression to reverse
+    :param node: the expression to reverse
     :param before:
         the number of stitches made so far, before this expression, in the
         current row
     :return: the reversed expression
     """
-    raise TypeError(f"unsupported node {type(expr).__name__}")
+    raise TypeError(f"unsupported node {type(node).__name__}")
 
 
 # noinspection PyUnusedLocal
 @reverse.register
-def _(fixed: FixedStitchRepeatExpr, before: int) -> Node:
+def _(fixed: FixedStitchRepeat, before: int) -> Node:
     before_acc = accumulate(
         chain([before], map(attrgetter("consumes"), fixed.stitches[:-1]))
     )
-    return FixedStitchRepeatExpr(map(reverse,
-                                     reversed(fixed.stitches),
-                                     reversed(list(before_acc))),
-                                 fixed.times, fixed.consumes, fixed.produces)
+    return FixedStitchRepeat(map(reverse,
+                                 reversed(fixed.stitches),
+                                 reversed(list(before_acc))),
+                             fixed.times, fixed.consumes, fixed.produces)
 
 
 # noinspection PyUnusedLocal
@@ -325,22 +324,22 @@ def _(stitch: StitchLit, before: int) -> Node:
 
 
 @reverse.register
-def _(expanding: ExpandingStitchRepeatExpr, before: int) -> Node:
-    fixed = reverse(FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
+def _(expanding: ExpandingStitchRepeat, before: int) -> Node:
+    fixed = reverse(FixedStitchRepeat(expanding.stitches, NaturalLit(1)),
                     before)
-    assert isinstance(fixed, FixedStitchRepeatExpr)
-    return ExpandingStitchRepeatExpr(fixed.stitches, NaturalLit(before),
-                                     expanding.consumes, expanding.produces)
+    assert isinstance(fixed, FixedStitchRepeat)
+    return ExpandingStitchRepeat(fixed.stitches, NaturalLit(before),
+                                 expanding.consumes, expanding.produces)
 
 
 @reverse.register
-def _(row: RowExpr, before: int) -> Node:
-    fixed = reverse(FixedStitchRepeatExpr(row.stitches, row.times,
-                                          row.consumes, row.produces),
+def _(row: Row, before: int) -> Node:
+    fixed = reverse(FixedStitchRepeat(row.stitches, row.times,
+                                      row.consumes, row.produces),
                     before)
-    assert isinstance(fixed, FixedStitchRepeatExpr)
-    return RowExpr(fixed.stitches, row.side.flip() if row.side else None,
-                   fixed.consumes, fixed.produces)
+    assert isinstance(fixed, FixedStitchRepeat)
+    return Row(fixed.stitches, row.side.flip() if row.side else None,
+               fixed.consumes, fixed.produces)
 
 
 # noinspection PyUnusedLocal
@@ -362,8 +361,8 @@ def infer_sides(node: Node, side: Side = Side.Right) -> Node:
 
 # noinspection PyUnusedLocal
 @infer_sides.register
-def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
-    return PatternExpr(
+def _(pattern: Pattern, side: Side = Side.Right) -> Node:
+    return Pattern(
         map(infer_sides, pattern.rows, Side.Right.alternate()),
         pattern.params,
         pattern.env
@@ -371,24 +370,24 @@ def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
 
 
 @infer_sides.register
-def _(block: BlockExpr, side: Side = Side.Right) -> Node:
-    return BlockExpr(map(infer_sides, block.blocks, side.alternate()))
+def _(block: Block, side: Side = Side.Right) -> Node:
+    return Block(map(infer_sides, block.patterns, side.alternate()))
 
 
 @infer_sides.register
-def _(rep: FixedBlockRepeatExpr, side: Side = Side.Right) -> Node:
-    return FixedBlockRepeatExpr(infer_sides(rep.block, side), rep.times)
+def _(rep: FixedBlockRepeat, side: Side = Side.Right) -> Node:
+    return FixedBlockRepeat(infer_sides(rep.block, side), rep.times)
 
 
 @infer_sides.register
-def _(rep: RowRepeatExpr, side: Side = Side.Right) -> Node:
-    return RowRepeatExpr(map(infer_sides, rep.rows, side.alternate()),
-                         rep.times)
+def _(rep: RowRepeat, side: Side = Side.Right) -> Node:
+    return RowRepeat(map(infer_sides, rep.rows, side.alternate()),
+                     rep.times)
 
 
 @infer_sides.register
-def _(row: RowExpr, side: Side = Side.Right) -> Node:
-    return RowExpr(row.stitches, side if row.side is None else row.side)
+def _(row: Row, side: Side = Side.Right) -> Node:
+    return Row(row.stitches, side if row.side is None else row.side)
 
 
 @singledispatch
@@ -406,41 +405,41 @@ def alternate_sides(node: Node, side: Side = Side.Right) -> Node:
 
 
 @alternate_sides.register
-def _(row: RowExpr, side: Side = Side.Right) -> Node:
+def _(row: Row, side: Side = Side.Right) -> Node:
     return row if row.side == side else reverse(row, 0)
 
 
 @alternate_sides.register
-def _(rep: RowRepeatExpr, side: Side = Side.Right) -> Node:
-    return RowRepeatExpr(map(alternate_sides, rep.rows, side.alternate()),
-                         rep.times, rep.consumes, rep.produces)
+def _(rep: RowRepeat, side: Side = Side.Right) -> Node:
+    return RowRepeat(map(alternate_sides, rep.rows, side.alternate()),
+                     rep.times, rep.consumes, rep.produces)
 
 
 @alternate_sides.register
-def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
-    return PatternExpr(
-        alternate_sides.dispatch(RowRepeatExpr)(pattern, side).rows,
+def _(pattern: Pattern, side: Side = Side.Right) -> Node:
+    return Pattern(
+        alternate_sides.dispatch(RowRepeat)(pattern, side).rows,
         pattern.params, pattern.env, pattern.consumes, pattern.produces
     )
 
 
 @singledispatch
-def _merge_across(*exprs: Expr) -> KnitExpr:
-    raise TypeError(f"unsupported expression {type(exprs[0]).__name__}")
+def _merge_across(*nodes: Node) -> Knittable:
+    raise TypeError(f"unsupported node {type(nodes[0]).__name__}")
 
 
 @_merge_across.register
-def _(*patterns: PatternExpr) -> KnitExpr:
+def _(*patterns: Pattern) -> Knittable:
     rows = tuple(starmap(_merge_across,
                          zip_longest(*map(attrgetter("rows"), patterns),
-                                     fillvalue=RowExpr([], Side.Right, 0, 0))))
+                                     fillvalue=Row([], Side.Right, 0, 0))))
     # Pattern calls have already been substituted by this point so the
     # parameters of the combined pattern can be empty.
-    return PatternExpr(rows, (), None, rows[0].consumes, rows[-1].produces)
+    return Pattern(rows, (), None, rows[0].consumes, rows[-1].produces)
 
 
 @_merge_across.register
-def _(*rows: RowExpr) -> KnitExpr:
+def _(*rows: Row) -> Knittable:
     # The side of the combined row is the same as the side of the first row
     # in the list. We reverse the other rows before combining them if they
     # have a different side.
@@ -457,7 +456,7 @@ def _(*rows: RowExpr) -> KnitExpr:
                 range(len(rows)))
     rows = tuple(map(_increase_expanding_repeats, rows, after))
 
-    return RowExpr(
+    return Row(
         chain.from_iterable(map(attrgetter("stitches"), rows)), side,
         sum(map(attrgetter("consumes"), rows)),
         sum(map(attrgetter("produces"), rows))
@@ -471,7 +470,7 @@ def _increase_expanding_repeats(node: Node, n: int) -> Node:
 
 
 @_increase_expanding_repeats.register
-def _(expanding: ExpandingStitchRepeatExpr, n: int) -> Node:
-    return ExpandingStitchRepeatExpr(expanding.stitches,
-                                     NaturalLit(expanding.to_last.value + n),
-                                     expanding.consumes, expanding.produces)
+def _(expanding: ExpandingStitchRepeat, n: int) -> Node:
+    return ExpandingStitchRepeat(expanding.stitches,
+                                 NaturalLit(expanding.to_last.value + n),
+                                 expanding.consumes, expanding.produces)

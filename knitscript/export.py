@@ -1,7 +1,7 @@
 from functools import singledispatch
 
-from knitscript.astnodes import ExpandingStitchRepeatExpr, \
-    FixedStitchRepeatExpr, NaturalLit, Node, RowRepeatExpr, StitchLit
+from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
+    NaturalLit, Node, RowRepeat, StitchLit
 
 
 @singledispatch
@@ -21,7 +21,7 @@ def _(stitch: StitchLit) -> str:
 
 
 @export_text.register
-def _(repeat: FixedStitchRepeatExpr) -> str:
+def _(repeat: FixedStitchRepeat) -> str:
     stitches = ", ".join(map(export_text, repeat.stitches))
     if repeat.times == NaturalLit(1):
         return stitches
@@ -32,9 +32,9 @@ def _(repeat: FixedStitchRepeatExpr) -> str:
 
 
 @export_text.register
-def _(repeat: ExpandingStitchRepeatExpr) -> str:
-    stitches = export_text(FixedStitchRepeatExpr(repeat.stitches,
-                                                 NaturalLit(1)))
+def _(repeat: ExpandingStitchRepeat) -> str:
+    stitches = export_text(FixedStitchRepeat(repeat.stitches,
+                                             NaturalLit(1)))
     if repeat.to_last == NaturalLit(0):
         return f"*{stitches}; rep from * to end"
     else:
@@ -42,7 +42,7 @@ def _(repeat: ExpandingStitchRepeatExpr) -> str:
 
 
 @export_text.register
-def _(repeat: RowRepeatExpr) -> str:
+def _(repeat: RowRepeat) -> str:
     rows = ".\n".join(map(export_text, repeat.rows)) + "."
     if repeat.times == NaturalLit(1):
         return rows

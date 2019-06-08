@@ -1,9 +1,8 @@
 from functools import singledispatch
 from typing import Generator
 
-from knitscript.astnodes import ExpandingStitchRepeatExpr, \
-    FixedStitchRepeatExpr, KnitExpr, NaturalLit, Node, PatternExpr, \
-    RowRepeatExpr, StitchLit
+from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
+    Knittable, NaturalLit, Node, Pattern, RowRepeat, StitchLit
 from knitscript.interpreter import infer_counts
 
 
@@ -34,7 +33,7 @@ class KnitError:
         return f"{self.message} at {self.node}"
 
 
-def verify_pattern(pattern: PatternExpr) -> Generator[KnitError, None, None]:
+def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:
     """
     Checks the correctness of stitch counts in the pattern.
 
@@ -43,7 +42,7 @@ def verify_pattern(pattern: PatternExpr) -> Generator[KnitError, None, None]:
     """
     pattern = infer_counts(pattern, 0)
     yield from verify_counts(pattern, 0)
-    assert isinstance(pattern, KnitExpr)
+    assert isinstance(pattern, Knittable)
     if pattern.consumes != 0:
         yield KnitError(
             f"expected {pattern.consumes} stitches to be cast on", pattern
@@ -75,13 +74,13 @@ def _(stitch: StitchLit, available: int) -> Generator[KnitError, None, None]:
 
 
 @verify_counts.register
-def _(fixed: FixedStitchRepeatExpr, available: int) \
+def _(fixed: FixedStitchRepeat, available: int) \
         -> Generator[KnitError, None, None]:
     consumes = 0
     produces = 0
     for stitch in fixed.stitches:
         yield from verify_counts(stitch, available - consumes)
-        assert isinstance(stitch, KnitExpr)
+        assert isinstance(stitch, Knittable)
         consumes += stitch.consumes
         produces += stitch.produces
     if fixed.times.value > 1:
@@ -89,10 +88,10 @@ def _(fixed: FixedStitchRepeatExpr, available: int) \
 
 
 @verify_counts.register
-def _(expanding: ExpandingStitchRepeatExpr, available: int) \
+def _(expanding: ExpandingStitchRepeat, available: int) \
         -> Generator[KnitError, None, None]:
     yield from verify_counts(
-        FixedStitchRepeatExpr(expanding.stitches, NaturalLit(1)),
+        FixedStitchRepeat(expanding.stitches, NaturalLit(1)),
         available - expanding.to_last.value
     )
     n = (available - expanding.to_last.value) // expanding.consumes
@@ -102,12 +101,12 @@ def _(expanding: ExpandingStitchRepeatExpr, available: int) \
 
 
 @verify_counts.register
-def _(repeat: RowRepeatExpr, available: int) \
+def _(repeat: RowRepeat, available: int) \
         -> Generator[KnitError, None, None]:
     start = available
     for row in repeat.rows:
         yield from verify_counts(row, available)
-        assert isinstance(row, KnitExpr)
+        assert isinstance(row, Knittable)
         yield from _exactly(row.consumes, available, row)
         available = row.produces
     if repeat.times.value > 1:

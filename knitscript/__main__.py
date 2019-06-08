@@ -1,6 +1,6 @@
 import sys
 
-from knitscript.astnodes import PatternExpr, pretty_print
+from knitscript.astnodes import Pattern, pretty_print
 from knitscript.export import export_text
 from knitscript.interpreter import prepare_pattern
 from knitscript.loader import load
@@ -14,13 +14,13 @@ def main() -> None:
     """
     env = load(sys.argv[1] if len(sys.argv) >= 2 else None)
     pattern = env["main"]
-    assert isinstance(pattern, PatternExpr)
+    assert isinstance(pattern, Pattern)
     pattern = prepare_pattern(pattern)
     pretty_print(pattern)
     print()
     print(export_text(pattern))
     print()
-    assert isinstance(pattern, PatternExpr)
+    assert isinstance(pattern, Pattern)
     print(*verify_pattern(pattern), sep="\n")
 
 

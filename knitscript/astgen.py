@@ -2,10 +2,9 @@ from functools import singledispatch
 from operator import attrgetter
 from typing import Collection, Union
 
-from knitscript.astnodes import BlockExpr, CallExpr, Document, \
-    ExpandingStitchRepeatExpr, FixedBlockRepeatExpr, FixedStitchRepeatExpr, \
-    GetExpr, NaturalLit, Node, PatternDef, PatternExpr, RowExpr, \
-    RowRepeatExpr, Side, StitchLit, StringLit, UsingStmt
+from knitscript.astnodes import Block, Call, Document, ExpandingStitchRepeat, \
+    FixedBlockRepeat, FixedStitchRepeat, Get, NaturalLit, Node, PatternDef, \
+    Pattern, Row, RowRepeat, Side, StitchLit, Using
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
     ParserRuleContext
 from knitscript.stitch import Stitch
@@ -24,12 +23,14 @@ def build_ast(ctx: ParserRuleContext) -> Node:
 
 @build_ast.register
 def _(document: KnitScriptParser.DocumentContext) -> Node:
-    return Document(map(build_ast, document.patterns), map(build_ast, document.usings))
+    return Document(map(build_ast, document.usings),
+                    map(build_ast, document.patterns))
 
 
 @build_ast.register
 def _(using: KnitScriptParser.UsingStmtContext) -> Node:
-    return UsingStmt(map(lambda name: name.text, using.patternNames), using.filename.text)
+    return Using(map(lambda name: name.text, using.patternNames),
+                 using.filename.text)
 
 
 @build_ast.register
@@ -38,7 +39,7 @@ def _(pattern: KnitScriptParser.PatternDefContext) -> Node:
               if pattern.paramList()
               else [])
     return PatternDef(pattern.ID().getText(),
-                      PatternExpr(map(build_ast, pattern.items), params))
+                      Pattern(map(build_ast, pattern.items), params))
 
 
 @build_ast.register
@@ -48,7 +49,7 @@ def _(item: KnitScriptParser.ItemContext) -> Node:
 
 @build_ast.register
 def _(block: KnitScriptParser.BlockContext) -> Node:
-    return BlockExpr(map(build_ast, block.patternList().patterns))
+    return Block(map(build_ast, block.patternList().patterns))
 
 
 @build_ast.register
@@ -58,8 +59,8 @@ def _(repeat: KnitScriptParser.PatternRepeatContext) -> Node:
 
 @build_ast.register
 def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
-    return FixedBlockRepeatExpr(
-        BlockExpr([build_ast(repeat.call())] if repeat.call() is not None
+    return FixedBlockRepeat(
+        Block([build_ast(repeat.call())] if repeat.call() is not None
                   else map(build_ast, repeat.patternList().patterns)),
         build_ast(repeat.times)
     )
@@ -67,20 +68,20 @@ def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
 
 @build_ast.register
 def _(call: KnitScriptParser.CallContext) -> Node:
-    return CallExpr(
-        GetExpr(call.ID().getText()),
+    return Call(
+        Get(call.ID().getText()),
         map(build_ast, call.argList().args) if call.argList() else []
     )
 
 
 @build_ast.register
 def _(repeat: KnitScriptParser.RowRepeatContext) -> Node:
-    return RowRepeatExpr(map(build_ast, repeat.items), build_ast(repeat.times))
+    return RowRepeat(map(build_ast, repeat.items), build_ast(repeat.times))
 
 
 @build_ast.register
 def _(row: KnitScriptParser.RowContext) -> Node:
-    return RowExpr(
+    return Row(
         map(build_ast,
             row.stitchList().stitches if row.stitchList() is not None else ()),
         Side(row.side().getText()) if row.side() is not None else None
@@ -96,13 +97,13 @@ def _(repeat: KnitScriptParser.StitchRepeatContext) -> Node:
 
 @build_ast.register
 def _(fixed: KnitScriptParser.FixedStitchRepeatContext) -> Node:
-    return FixedStitchRepeatExpr(map(build_ast, _stitches(fixed)),
-                                 build_ast(fixed.times))
+    return FixedStitchRepeat(map(build_ast, _stitches(fixed)),
+                             build_ast(fixed.times))
 
 
 @build_ast.register
 def _(expanding: KnitScriptParser.ExpandingStitchRepeatContext) -> Node:
-    return ExpandingStitchRepeatExpr(
+    return ExpandingStitchRepeat(
         map(build_ast, _stitches(expanding)),
         build_ast(expanding.toLast) if expanding.toLast else NaturalLit(0)
     )
@@ -120,7 +121,7 @@ def _(expr: KnitScriptParser.ExprContext) -> Node:
 
 @build_ast.register
 def _(variable: KnitScriptParser.VariableContext) -> Node:
-    return GetExpr(variable.ID().getText())
+    return Get(variable.ID().getText())
 
 
 @build_ast.register
