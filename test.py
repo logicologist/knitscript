@@ -1,30 +1,13 @@
-from antlr4 import CommonTokenStream, FileStream
-
-from knitscript.astgen import build_ast
-from knitscript.astnodes import Document, PatternDef, PatternExpr
+from knitscript.astnodes import PatternExpr
 from knitscript.export import export_text
 from knitscript.interpreter import alternate_sides, flatten, infer_counts, \
-    infer_sides, substitute, enclose
-from knitscript.parser.KnitScriptLexer import KnitScriptLexer
-from knitscript.parser.KnitScriptParser import KnitScriptParser
+    infer_sides, substitute
+from knitscript.loader import load
 from knitscript.verifiers import verify_pattern
 
 
 def process_pattern(filename: str) -> PatternExpr:
-    lexer = KnitScriptLexer(
-        FileStream(filename)
-    )
-    parser = KnitScriptParser(CommonTokenStream(lexer))
-    document = build_ast(parser.document())
-
-    assert isinstance(document, Document)
-    env = {}
-    for def_ in document.patterns:
-        assert isinstance(def_, PatternDef)
-        env[def_.name] = def_.pattern
-
-    for name, node in env.items():
-        env[name] = enclose(node, env)
+    env = load(filename)
     pattern = infer_counts(infer_sides(substitute(env["main"], env)))
     pattern = flatten(pattern)
     pattern = alternate_sides(pattern)

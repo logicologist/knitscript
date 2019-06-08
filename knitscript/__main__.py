@@ -1,42 +1,11 @@
 import sys
-from typing import Optional
 
-from antlr4 import CommonTokenStream, FileStream, StdinStream
-
-from knitscript.astgen import build_ast
-from knitscript.astnodes import Document, PatternDef, PatternExpr, UsingStmt, \
-    pretty_print
+from knitscript.astnodes import PatternExpr, pretty_print
 from knitscript.export import export_text
 from knitscript.interpreter import alternate_sides, flatten, infer_counts, \
-    infer_sides, substitute, InterpretError, enclose
-from knitscript.verifiers import verify_pattern, KnitError
-from knitscript.parser.KnitScriptLexer import KnitScriptLexer
-from knitscript.parser.KnitScriptParser import KnitScriptParser
-
-
-def _env_from_filename(filename: str):
-    try:
-        lexer = KnitScriptLexer(
-            FileStream(filename) if filename is not None else StdinStream()
-        )
-    except FileNotFoundError:
-        raise InterpretError(filename + " not found")
-    parser = KnitScriptParser(CommonTokenStream(lexer))
-    document = build_ast(parser.document())
-
-    assert isinstance(document, Document)
-    env = {}
-    for def_ in document.patterns:
-        assert isinstance(def_, PatternDef)
-        env[def_.name] = def_.pattern
-    for using_ in document.usings:
-        assert isinstance(using_, UsingStmt)
-        for patternName in using_.patternNames:
-            # Check if there's a name conflict with something already in the environment
-            if patternName.value in env:
-                raise InterpretError("Name conflict: pattern " + patternName.value + " already defined")
-        using_env = _env_from_filename(using)
-        # TODO Get env from patternName and add to this env
+    infer_sides, substitute
+from knitscript.loader import load
+from knitscript.verifiers import verify_pattern
 
 
 def main() -> None:
@@ -44,29 +13,7 @@ def main() -> None:
     Prints the knitting instructions for a KnitScript pattern which is read
     from the filename or stdin if no filename is provided.
     """
-    filename = sys.argv[1] if len(sys.argv) >= 2 else None
-    lexer = KnitScriptLexer(
-        FileStream(filename) if filename is not None else StdinStream()
-    )
-    parser = KnitScriptParser(CommonTokenStream(lexer))
-    document = build_ast(parser.document())
-
-    assert isinstance(document, Document)
-    env = {}
-    for def_ in document.patterns:
-        assert isinstance(def_, PatternDef)
-        env[def_.name] = def_.pattern
-    for using_ in document.usings:
-        assert isinstance(using_, UsingStmt)
-        for patternName in using_.patternNames:
-            # Check if there's a name conflict with something already in the environment
-            if patternName in env:
-                raise KnitError("Name conflict: pattern " + patternName.value + "already defined")
-            # TODO get pattern and add to env
-
-    list(map(pretty_print, document.usings))
-    env = dict(map(lambda item: (item[0], enclose(item[1], env)), env.items()))
-    list(map(pretty_print, env.values()))
+    env = load(sys.argv[1] if len(sys.argv) >= 2 else None)
     pattern = infer_counts(infer_sides(substitute(env["main"], env)))
     pretty_print(pattern)
     print()

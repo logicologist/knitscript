@@ -41,7 +41,7 @@ expr: variable | natural;
 variable: ID;
 natural: NATURAL;
 
-ID: [A-Za-z] [A-Za-z0-9]*;
+ID: [_A-Za-z] [_A-Za-z0-9]*;
 NATURAL: [1-9] [0-9]* | '0';
 WHITESPACE: [ \r\n] -> skip;
 COMMENT: '--' ~[\r\n]* -> skip;
