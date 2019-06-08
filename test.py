@@ -23,7 +23,8 @@ def process_pattern(filename: str) -> PatternExpr:
         assert isinstance(def_, PatternDef)
         env[def_.name] = def_.pattern
 
-    env = dict(map(lambda item: (item[0], enclose(item[1], env)), env.items()))
+    for name, node in env.items():
+        env[name] = enclose(node, env)
     pattern = infer_counts(infer_sides(substitute(env["main"], env)))
     pattern = flatten(pattern)
     pattern = alternate_sides(pattern)
