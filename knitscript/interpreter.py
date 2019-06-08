@@ -234,8 +234,7 @@ def _(call: Call, env: Mapping[str, Node]) -> Node:
 @singledispatch
 def flatten(node: Node, unroll: bool = False) -> Node:
     """
-    Flattens each block concatenation expression and nested pattern expression
-    into a single pattern.
+    Flattens blocks, nested patterns, and nested fixed stitch repeats.
 
     :param node: the AST to transform
     :param unroll:
@@ -245,6 +244,30 @@ def flatten(node: Node, unroll: bool = False) -> Node:
     """
     # noinspection PyTypeChecker
     return ast_map(node, partial(flatten, unroll=unroll))
+
+
+@flatten.register
+def _(fixed: FixedStitchRepeat, unroll: bool = False) -> Node:
+    # Cases where the only node a fixed stitch repeat contains is another fixed
+    # stitch repeat should be flattened by multiplying the repeat times
+    # together, because the unflattened output is confusing.
+    first = fixed.stitches[0]
+    if (fixed.times.value != 1
+            and len(fixed.stitches) == 1
+            and isinstance(first, FixedStitchRepeat)):
+        # noinspection PyTypeChecker
+        return ast_map(
+            FixedStitchRepeat(
+                first.stitches,
+                NaturalLit(first.times.value * fixed.times.value),
+                first.consumes * fixed.times.value,
+                first.produces * fixed.times.value
+            ),
+            partial(flatten, unroll=unroll)
+        )
+    else:
+        # noinspection PyTypeChecker
+        return ast_map(fixed, partial(flatten, unroll=unroll))
 
 
 @flatten.register
@@ -269,16 +292,16 @@ def _(pattern: Pattern, unroll: bool = False) -> Node:
 
 
 @flatten.register
-def _(concat: Block, unroll: bool = False) -> Node:
-    if len(concat.patterns) > 1:
+def _(block: Block, unroll: bool = False) -> Node:
+    if len(block.patterns) > 1:
         # Unroll row repeats if there is more than one pattern in this block.
         # This makes merging across rows much simpler.
         # noinspection PyTypeChecker
         return _merge_across(*map(partial(flatten, unroll=True),
-                                  concat.patterns))
+                                  block.patterns))
     else:
         # noinspection PyTypeChecker
-        return flatten(concat.patterns[0], unroll)
+        return flatten(block.patterns[0], unroll)
 
 
 @flatten.register
@@ -295,7 +318,9 @@ def _(rep: FixedBlockRepeat, unroll: bool = False) -> Node:
         ),
         pattern.rows
     )
-    return Pattern(rows, pattern.params, pattern.env,
+    # noinspection PyTypeChecker
+    return Pattern(map(partial(flatten, unroll=unroll), rows),
+                   pattern.params, pattern.env,
                    pattern.consumes, pattern.produces)
 
 

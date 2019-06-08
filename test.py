@@ -89,3 +89,14 @@ test(lambda: expect_except("test/too-many-arguments.ks", InterpretError),
      "Should catch patterns called with too many arguments")
 test(lambda: expect_except("test/called-twice.ks", InterpretError),
      "Should catch patterns that are called twice")
+test(lambda: check_output("test/nested-stitch-repeats.ks",
+                          "CO 6. (6 sts)\n" +
+                          "K 6. (6 sts)\n" +
+                          "BO 6. (0 sts)"),
+     "Should flatten redundant nested fixed stitch repeats")
+test(lambda: check_output("test/nested-stitch-repeats-with-block.ks",
+                          "CO 6. (6 sts)\n" +
+                          "K 6. (6 sts)\n" +
+                          "BO 6. (0 sts)"),
+     "Should flatten nested fixed stitch repeats that result from block " +
+     "substitution")
