@@ -379,6 +379,7 @@ class PatternExpr(RowRepeatExpr):
     def __init__(self,
                  rows: Iterable[Node],
                  params: Iterable[str] = (),
+                 env: Optional[Mapping[str, Node]] = None,
                  consumes: Optional[int] = None,
                  produces: Optional[int] = None) \
             -> None:
@@ -394,11 +395,17 @@ class PatternExpr(RowRepeatExpr):
         """
         super().__init__(rows, NaturalLit(1), consumes, produces)
         self._params = tuple(params)
+        self._env = dict(env) if env is not None else None 
+        # ^^ TODO figure out how to make this properly immutable
 
     @property
     def params(self) -> Sequence[str]:
         """The names of the parameters for the pattern."""
         return self._params
+
+    @property
+    def env(self):
+        return self._env
 
 
 class FixedBlockRepeatExpr(KnitExpr):
@@ -531,7 +538,7 @@ def _(block: BlockExpr, function: Callable[[Node], Node]) -> Node:
 
 @ast_map.register
 def _(pattern: PatternExpr, function: Callable[[Node], Node]) -> Node:
-    return PatternExpr(map(function, pattern.rows), pattern.params,
+    return PatternExpr(map(function, pattern.rows), pattern.params, pattern.env,
                        pattern.consumes, pattern.produces)
 
 
@@ -570,7 +577,7 @@ def _(using: UsingStmt, level: int = 0, end: str = "\n") -> None:
 def _(pattern: PatternExpr, level: int = 0, end: str = "\n") -> None:
     _print_parent("PatternExpr",
                   pattern.rows,
-                  (pattern.params, pattern.consumes, pattern.produces),
+                  (pattern.params, pattern.env, pattern.consumes, pattern.produces),
                   level,
                   end)
 

@@ -133,7 +133,7 @@ def _(block: BlockExpr, available: Optional[int] = None) -> Node:
 @infer_counts.register
 def _(pattern: PatternExpr, available: Optional[int] = None) -> Node:
     counted = infer_counts.dispatch(RowRepeatExpr)(pattern, available)
-    return PatternExpr(counted.rows, pattern.params,
+    return PatternExpr(counted.rows, pattern.params, pattern.env,
                        counted.consumes, counted.produces)
 
 
@@ -213,7 +213,7 @@ def _(row_repeat: RowRepeatExpr, unroll: bool = False) -> Node:
 @flatten.register
 def _(pattern: PatternExpr, unroll: bool = False) -> Node:
     flattened = flatten.dispatch(RowRepeatExpr)(pattern, unroll)
-    return PatternExpr(flattened.rows, pattern.params,
+    return PatternExpr(flattened.rows, pattern.params, pattern.env,
                        flattened.consumes, flattened.produces)
 
 
@@ -244,7 +244,7 @@ def _(rep: FixedBlockRepeatExpr, unroll: bool = False) -> Node:
         ),
         pattern.rows
     )
-    return PatternExpr(rows, pattern.params,
+    return PatternExpr(rows, pattern.params, pattern.env,
                        pattern.consumes, pattern.produces)
 
 
@@ -323,7 +323,8 @@ def infer_sides(node: Node, side: Side = Side.Right) -> Node:
 def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
     return PatternExpr(
         map(infer_sides, pattern.rows, Side.Right.alternate()),
-        pattern.params
+        pattern.params,
+        pattern.env
     )
 
 
@@ -377,7 +378,7 @@ def _(rep: RowRepeatExpr, side: Side = Side.Right) -> Node:
 def _(pattern: PatternExpr, side: Side = Side.Right) -> Node:
     return PatternExpr(
         alternate_sides.dispatch(RowRepeatExpr)(pattern, side).rows,
-        pattern.params, pattern.consumes, pattern.produces
+        pattern.params, pattern.env, pattern.consumes, pattern.produces
     )
 
 
@@ -393,7 +394,7 @@ def _(*patterns: PatternExpr) -> KnitExpr:
                                      fillvalue=RowExpr([], Side.Right, 0, 0))))
     # Pattern calls have already been substituted by this point so the
     # parameters of the combined pattern can be empty.
-    return PatternExpr(rows, (), rows[0].consumes, rows[-1].produces)
+    return PatternExpr(rows, (), None, rows[0].consumes, rows[-1].produces)
 
 
 @_merge_across.register
