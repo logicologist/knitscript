@@ -40,22 +40,20 @@ class InterpretError(Exception):
         return f"{self.message} at {self.node}"
 
 
-@singledispatch
-def enclose(node: Node, env: Mapping[str, Node]) -> Node:
+def prepare_pattern(pattern: PatternExpr) -> PatternExpr:
     """
-    Encloses patterns in environment, in order to achieve lexical scoping.
+    Interprets and prepares the pattern for exporting.
 
-    :param node: the AST node to enclose
-    :param env: the environment that the pattern should form a closure with
-    :return: an AST with environments baked into the patterns
+    :param pattern: the pattern to prepare
+    :return: the pattern prepared for exporting
     """
-    return ast_map(node, partial(enclose, env=env))
-
-@enclose.register
-def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
-    return PatternExpr(pattern.rows, pattern.params, env,
-        pattern.consumes, pattern.produces)
-
+    pattern = substitute(pattern, pattern.env)
+    pattern = infer_sides(pattern)
+    pattern = infer_counts(pattern)
+    pattern = flatten(pattern)
+    pattern = alternate_sides(pattern)
+    assert isinstance(pattern, PatternExpr)
+    return pattern
 
 
 @singledispatch
@@ -162,6 +160,25 @@ def _(rep: FixedBlockRepeatExpr, available: Optional[int] = None) -> Node:
     return FixedBlockRepeatExpr(counted, rep.times,
                                 rep.times.value * counted.consumes,
                                 rep.times.value * counted.produces)
+
+
+@singledispatch
+def enclose(node: Node, env: Mapping[str, Node]) -> Node:
+    """
+    Encloses patterns in environment, in order to achieve lexical scoping.
+
+    :param node: the AST node to enclose
+    :param env: the environment that the pattern should form a closure with
+    :return: an AST with environments baked into the patterns
+    """
+    # noinspection PyTypeChecker
+    return ast_map(node, partial(enclose, env=env))
+
+
+@enclose.register
+def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
+    return PatternExpr(pattern.rows, pattern.params, env,
+                       pattern.consumes, pattern.produces)
 
 
 @singledispatch

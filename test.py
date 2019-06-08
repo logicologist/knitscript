@@ -1,18 +1,15 @@
 from knitscript.astnodes import PatternExpr
 from knitscript.export import export_text
-from knitscript.interpreter import alternate_sides, flatten, infer_counts, \
-    infer_sides, substitute
+from knitscript.interpreter import prepare_pattern
 from knitscript.loader import load
 from knitscript.verifiers import verify_pattern
 
 
 def process_pattern(filename: str) -> PatternExpr:
     env = load(filename)
-    pattern = infer_counts(infer_sides(substitute(env["main"], env)))
-    pattern = flatten(pattern)
-    pattern = alternate_sides(pattern)
+    pattern = env["main"]
     assert isinstance(pattern, PatternExpr)
-    return pattern
+    return prepare_pattern(pattern)
 
 
 def check_output(filename: str, expected: str) -> bool:
