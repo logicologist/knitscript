@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC
 from enum import Enum
-from typing import Generator, Iterable, Mapping, Optional, Sequence
+from typing import Callable, Generator, Iterable, Mapping, Optional, Sequence
 
 from knitscript.stitch import Stitch
 
@@ -470,3 +470,20 @@ class Call(Node):
 
     def __repr__(self) -> str:
         return f"CallExpr({repr(self.target)}, {repr(self.args)})"
+
+
+class NativeFunction(Node):
+    """An AST node representing a native Python function."""
+
+    def __init__(self, function: Callable[[Node, ...], Node]) -> None:
+        """
+        Creates a new native function node.
+
+        :param function: the native function
+        """
+        self._function = function
+
+    @property
+    def function(self) -> Callable[[Node, ...], Node]:
+        """The native function."""
+        return self._function

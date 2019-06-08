@@ -6,8 +6,8 @@ from operator import attrgetter
 from typing import Mapping, Optional
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
-    FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NaturalLit, Node, \
-    Pattern, Row, RowRepeat, Side, StitchLit
+    FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NativeFunction, \
+    NaturalLit, Node, Pattern, Row, RowRepeat, Side, StitchLit
 from knitscript.asttools import ast_map, ast_reduce
 from knitscript.stitch import Stitch
 
@@ -216,20 +216,20 @@ def _(call: Call, env: Mapping[str, Node]) -> Node:
     target = call.target
     if isinstance(target, Get):
         target = substitute(target, env)
-    assert isinstance(target, Pattern)
-    if len(target.params) != len(call.args):
-        raise InterpretError(
-            f"called pattern with {len(call.args)} arguments, but expected " +
-            f"{len(target.params)}",
-            call
-        )
     # noinspection PyTypeChecker
-    return substitute(
-        target,
-        {**target.env,
-         **dict(zip(target.params,
-                    map(partial(substitute, env=env), call.args)))}
-    )
+    args = map(partial(substitute, env=env), call.args)
+    assert isinstance(target, Pattern) or isinstance(target, NativeFunction)
+    if isinstance(target, Pattern):
+        if len(target.params) != len(call.args):
+            raise InterpretError(
+                f"called pattern with {len(call.args)} arguments, but " +
+                f"expected {len(target.params)}",
+                call
+            )
+        return substitute(target,
+                          {**target.env, **dict(zip(target.params, args))})
+    elif isinstance(target, NativeFunction):
+        return target.function(*args)
 
 
 @singledispatch
