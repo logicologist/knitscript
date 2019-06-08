@@ -41,6 +41,24 @@ class InterpretError(Exception):
 
 
 @singledispatch
+def enclose(node: Node, env: Mapping[str, Node]) -> Node:
+    """
+    Encloses patterns in environment, in order to achieve lexical scoping.
+
+    :param node: the AST node to enclose
+    :param env: the environment that the pattern should form a closure with
+    :return: an AST with environments baked into the patterns
+    """
+    return ast_map(node, partial(enclose, env=env))
+
+@enclose.register
+def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
+    return PatternExpr(pattern.rows, pattern.params, env,
+        pattern.consumes, pattern.produces)
+
+
+
+@singledispatch
 def infer_counts(node: Node, available: Optional[int] = None) -> Node:
     """
     Tries to count the number of stitches that each node consumes and produces.
@@ -159,6 +177,13 @@ def substitute(node: Node, env: Mapping[str, Node]) -> Node:
     """
     # noinspection PyTypeChecker
     return ast_map(node, partial(substitute, env=env))
+
+
+@substitute.register
+def _(pattern: PatternExpr, env: Mapping[str, Node]) -> Node:
+    return PatternExpr(map(partial(substitute, env=pattern.env), pattern.rows),
+                       pattern.params, pattern.env,
+                       pattern.consumes, pattern.produces)
 
 
 @substitute.register

@@ -4,7 +4,7 @@ from knitscript.astgen import build_ast
 from knitscript.astnodes import Document, PatternDef, PatternExpr
 from knitscript.export import export_text
 from knitscript.interpreter import alternate_sides, flatten, infer_counts, \
-    infer_sides, substitute
+    infer_sides, substitute, enclose
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 from knitscript.verifiers import verify_pattern
@@ -23,6 +23,7 @@ def process_pattern(filename: str) -> PatternExpr:
         assert isinstance(def_, PatternDef)
         env[def_.name] = def_.pattern
 
+    env = dict(map(lambda item: (item[0], enclose(item[1], env)), env.items()))
     pattern = infer_counts(infer_sides(substitute(env["main"], env)))
     pattern = flatten(pattern)
     pattern = alternate_sides(pattern)

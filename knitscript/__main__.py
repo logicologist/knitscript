@@ -8,7 +8,7 @@ from knitscript.astnodes import Document, PatternDef, PatternExpr, UsingStmt, \
     pretty_print
 from knitscript.export import export_text
 from knitscript.interpreter import alternate_sides, flatten, infer_counts, \
-    infer_sides, substitute, InterpretError
+    infer_sides, substitute, InterpretError, enclose
 from knitscript.verifiers import verify_pattern, KnitError
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
@@ -65,6 +65,8 @@ def main() -> None:
             # TODO get pattern and add to env
 
     list(map(pretty_print, document.usings))
+    env = dict(map(lambda item: (item[0], enclose(item[1], env)), env.items()))
+    list(map(pretty_print, env.values()))
     pattern = infer_counts(infer_sides(substitute(env["main"], env)))
     pretty_print(pattern)
     print()
