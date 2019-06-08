@@ -2,7 +2,7 @@ from typing import Type
 
 from knitscript.astnodes import Pattern
 from knitscript.export import export_text
-from knitscript.interpreter import prepare_pattern
+from knitscript.interpreter import InterpretError, prepare_pattern
 from knitscript.loader import load
 from knitscript.verifiers import verify_pattern
 
@@ -76,4 +76,10 @@ test(lambda: check_output("test/pass-called-pattern.ks",
                           "P, K, P.\n" +
                           "rep from ** 3 times.\n" +
                           "BO 3."),
-     "Patterns can be passed with or without being called with arguments.")
+     "Patterns can be passed with or without being called with arguments")
+test(lambda: expect_except("test/too-few-arguments.ks", InterpretError),
+     "Should catch patterns called with too few arguments")
+test(lambda: expect_except("test/too-many-arguments.ks", InterpretError),
+     "Should catch patterns called with too many arguments")
+test(lambda: expect_except("test/called-twice.ks", InterpretError),
+     "Should catch patterns that are called twice")

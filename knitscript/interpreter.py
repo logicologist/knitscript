@@ -202,8 +202,7 @@ def substitute(node: Node, env: Mapping[str, Node]) -> Node:
 def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return Pattern(map(partial(substitute, env=env), pattern.rows),
-                   pattern.params, pattern.env,
-                   pattern.consumes, pattern.produces)
+                   (), pattern.env, pattern.consumes, pattern.produces)
 
 
 @substitute.register
@@ -217,6 +216,12 @@ def _(call: Call, env: Mapping[str, Node]) -> Node:
     if isinstance(target, Get):
         target = substitute(target, env)
     assert isinstance(target, Pattern)
+    if len(target.params) != len(call.args):
+        raise InterpretError(
+            f"called pattern with {len(call.args)} arguments, but expected " +
+            f"{len(target.params)}",
+            call
+        )
     # noinspection PyTypeChecker
     return substitute(
         target,
