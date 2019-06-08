@@ -1,13 +1,13 @@
 pattern left
-  row WS: K 5.
-  row RS: P 5.
-  row WS: K to end.
+  row: K 5.
+  row: P 5.
+  row: K to end.
 end
 
 pattern right
-  row WS: P 2.
-  row RS: K 2.
-  row WS: P 2.
+  row: P, K.
+  row: K 2.
+  row: P 2.
 end
 
 pattern main
@@ -15,4 +15,3 @@ pattern main
   left, right, right.
   row: BO 9.
 end
-

@@ -7,7 +7,8 @@ from typing import Mapping, Optional
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NaturalLit, Node, \
-    Pattern, Row, RowRepeat, Side, StitchLit, ast_map
+    Pattern, Row, RowRepeat, Side, StitchLit, ast_map, ast_reduce
+from knitscript.stitch import Stitch
 
 
 class InterpretError(Exception):
@@ -50,7 +51,9 @@ def prepare_pattern(pattern: Pattern) -> Pattern:
     pattern = infer_sides(pattern)
     pattern = infer_counts(pattern)
     pattern = flatten(pattern)
-    pattern = alternate_sides(pattern)
+    pattern = alternate_sides(
+        pattern, Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
+    )
     assert isinstance(pattern, Pattern)
     return pattern
 
@@ -349,7 +352,8 @@ def _(row: Row, before: int) -> Node:
 def infer_sides(node: Node, side: Side = Side.Right) -> Node:
     """
     Infers the side of each row, assuming that:
-     1. Patterns start on RS.
+     1. Patterns that cast on in the first row start on WS; other patterns
+        start on RS.
      2. Rows alternate between RS and WS.
 
     Rows that have an explicit side already are unchanged.
@@ -364,8 +368,9 @@ def infer_sides(node: Node, side: Side = Side.Right) -> Node:
 # noinspection PyUnusedLocal
 @infer_sides.register
 def _(pattern: Pattern, side: Side = Side.Right) -> Node:
+    side = Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
     return Pattern(
-        map(infer_sides, pattern.rows, Side.Right.alternate()),
+        map(infer_sides, pattern.rows, side.alternate()),
         pattern.params,
         pattern.env
     )
@@ -476,3 +481,18 @@ def _(expanding: ExpandingStitchRepeat, n: int) -> Node:
     return ExpandingStitchRepeat(expanding.stitches,
                                  NaturalLit(expanding.to_last.value + n),
                                  expanding.consumes, expanding.produces)
+
+
+@singledispatch
+def _starts_with_cast_ons(node: Node, acc: bool = True) -> bool:
+    return ast_reduce(node, _starts_with_cast_ons, acc)
+
+
+@_starts_with_cast_ons.register
+def _(rep: RowRepeat, acc: bool = True) -> bool:
+    return _starts_with_cast_ons(rep.rows[0], acc)
+
+
+@_starts_with_cast_ons.register
+def _(stitch: StitchLit, acc: bool = True) -> bool:
+    return acc and stitch.value == Stitch.CAST_ON

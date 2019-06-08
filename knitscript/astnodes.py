@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from abc import ABC
 from enum import Enum
-from functools import singledispatch
+from functools import reduce, singledispatch
 from typing import Callable, Generator, Iterable, Mapping, Optional, \
-    Sequence, Union
+    Sequence, TypeVar, Union
 
 from knitscript.stitch import Stitch
+
+_T = TypeVar("_T")
 
 
 class Side(Enum):
@@ -82,7 +84,7 @@ class Using(Node):
     def pattern_names(self):
         """The names of the patterns to import."""
         return self._pattern_names
-    
+
     @property
     def filename(self) -> str:
         """The name of the module to import them from."""
@@ -376,7 +378,7 @@ class Pattern(RowRepeat):
         super().__init__(rows, NaturalLit(1), consumes, produces)
         self._params = tuple(params)
         # TODO: Figure out how to make the environment properly immutable.
-        self._env = dict(env) if env is not None else None 
+        self._env = dict(env) if env is not None else None
 
     @property
     def params(self) -> Sequence[str]:
@@ -531,6 +533,83 @@ def _(repeat: FixedBlockRepeat, function: Callable[[Node], Node]) -> Node:
 @ast_map.register
 def _(call: Call, function: Callable[[Node], Node]) -> Node:
     return Call(function(call.target), map(function, call.args))
+
+
+# noinspection PyUnusedLocal
+@singledispatch
+def ast_reduce(node: Node,
+               function: Callable[[Node, _T], _T],
+               initializer: _T) -> _T:
+    """
+    Reduces the AST to an accumulated value by repeatedly combining nodes.
+
+    :param node: the AST to reduce
+    :param function:
+        the reducing function that takes the current node and the accumulated
+        value and returns a new value
+    :param initializer: the initial value for the accumulator
+    :return: the final accumulated value
+    """
+    return initializer
+
+
+@ast_reduce.register
+def _(fixed: FixedStitchRepeat,
+      function: Callable[[Node, _T], _T],
+      initializer: _T) -> _T:
+    return function(fixed.times,
+                    reduce(lambda acc, node: function(node, acc),
+                           fixed.stitches, initializer))
+
+
+@ast_reduce.register
+def _(expanding: ExpandingStitchRepeat,
+      function: Callable[[Node, _T], _T],
+      initializer: _T) -> _T:
+    return function(expanding.to_last,
+                    reduce(lambda acc, node: function(node, acc),
+                           expanding.stitches, initializer))
+
+
+@ast_reduce.register
+def _(row: Row, function: Callable[[Node, _T], _T], initializer: _T) -> _T:
+    return reduce(lambda acc, node: function(node, acc),
+                  row.stitches, initializer)
+
+
+@ast_reduce.register
+def _(repeat: RowRepeat, function: Callable[[Node, _T], _T], initializer: _T) \
+        -> _T:
+    return function(repeat.times,
+                    reduce(lambda acc, node: function(node, acc),
+                           repeat.rows, initializer))
+
+
+@ast_reduce.register
+def _(block: Block, function: Callable[[Node, _T], _T], initializer: _T) -> _T:
+    return reduce(lambda acc, node: function(node, acc),
+                  block.patterns, initializer)
+
+
+@ast_reduce.register
+def _(pattern: Pattern, function: Callable[[Node, _T], _T], initializer: _T) \
+        -> _T:
+    return reduce(lambda acc, node: function(node, acc),
+                  pattern.rows, initializer)
+
+
+@ast_reduce.register
+def _(repeat: FixedBlockRepeat,
+      function: Callable[[Node, _T], _T],
+      initializer: _T) -> _T:
+    return function(repeat.times, function(repeat.block, initializer))
+
+
+@ast_reduce.register
+def _(call: Call, function: Callable[[Node, _T], _T], initializer: _T) -> _T:
+    return function(call.target,
+                    reduce(lambda acc, node: function(node, acc),
+                           call.args, initializer))
 
 
 @singledispatch
