@@ -3,12 +3,12 @@ from typing import Type
 from knitscript.astnodes import Pattern
 from knitscript.exporter import export_text
 from knitscript.interpreter import InterpretError, prepare_pattern
-from knitscript.loader import load
+from knitscript.loader import load_file
 from knitscript.verifier import verify_pattern
 
 
 def process_pattern(filename: str) -> Pattern:
-    env = load(filename)
+    env = load_file(filename)
     pattern = env["main"]
     assert isinstance(pattern, Pattern)
     return prepare_pattern(pattern)

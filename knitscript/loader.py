@@ -9,7 +9,7 @@ from knitscript.parser.KnitScriptLexer import KnitScriptLexer, FileStream, \
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 
 
-def load(filename: Optional[str]) -> Mapping[str, Node]:
+def load_file(filename: Optional[str]) -> Mapping[str, Node]:
     """
     Loads the environment from a KnitScript document.
 
@@ -26,8 +26,8 @@ def load(filename: Optional[str]) -> Mapping[str, Node]:
 
     for using in document.usings:
         assert isinstance(using, Using)
-        used_env = load(os.path.join(os.path.dirname(filename),
-                                     using.filename + ".ks"))
+        used_env = load_file(os.path.join(os.path.dirname(filename),
+                                          using.filename + ".ks"))
         for name in using.pattern_names:
             env[name] = used_env[name]
 
