@@ -37,6 +37,13 @@ def check_output(filename: str, expected: str) -> bool:
     return actual == expected
 
 
+def expect_except(filename: str, exceptionType: Exception) -> bool:
+    try:
+        pattern = process_pattern(filename)
+    except exceptionType as e:
+        return True
+
+
 def verify_error(filename: str) -> bool:
     pattern = process_pattern(filename)
     verification = verify_pattern(pattern)
@@ -69,7 +76,7 @@ test(lambda: verify_error("test/double-expanding-repeat-2.ks"),
 # technically legit even though nobody writes patterns this way
 test(lambda: not verify_error("test/double-expanding-repeat.ks"),
      "Should allow okay double expanding repeat")
-test(lambda: verify_error("test/patterns-lexical-scoping.ks"),
+test(lambda: expect_except("test/patterns-lexical-scoping.ks", KeyError),
      "Patterns shouldn't be able to reference variables outside their environment")
 test(lambda: check_output(
     "test/tile.ks",
