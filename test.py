@@ -105,3 +105,5 @@ test(lambda: check_output("test/reflection.ks",
                           "K, [K, K, P] 2, K, K. (9 sts)\n" +
                           "BO 9. (0 sts)"),
      "Should be able to reflect patterns horizontally")
+test(lambda: verify_error("test/bad-block.ks"),
+     "Should catch invalid block combinations")
