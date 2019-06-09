@@ -191,7 +191,6 @@ def _(rep: RowRepeat) -> Generator[KnitError, None, None]:
 @_verify_psso.register
 def _(row: Row) -> Generator[KnitError, None, None]:
     stitches = list(_unroll_row(row))
-    # print(str(stitches) + "\n")
     num_stitches = len(stitches)
     i = 0
     for _ in range(num_stitches):
@@ -201,12 +200,11 @@ def _(row: Row) -> Generator[KnitError, None, None]:
                 yield KnitError("PSSO without stitch to pass over", row)
             try:
                 st_before = stitches[:i]
-                # print("Removing slip from " + str(st_before) + "\n")
                 st_before.reverse()
                 st_before.remove(Stitch.SLIP)
+                i -= 1
                 st_before.reverse()
                 stitches = st_before + stitches[i+1:]
-                i -= 1
             except ValueError:
                 yield KnitError("PSSO without SLIP", row)
         i += 1
