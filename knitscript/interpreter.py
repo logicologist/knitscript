@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from functools import partial, singledispatch
+from functools import partial, singledispatch, reduce
 from itertools import accumulate, chain, repeat, starmap, zip_longest
 from operator import attrgetter
-from typing import Mapping, Optional
+from typing import Mapping, Optional, List
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NativeFunction, \
@@ -475,6 +475,27 @@ def _(row: Row, side: Side = Side.Right) -> Node:
 
 
 @singledispatch
+def _count_rows(node: Node) -> int:
+    """
+    Recursively counts rows in the subexpression.
+
+    :param node: the expression to count rows of.
+    :return: the number of rows in the expression.
+    """
+    return ast_map(node, _count_rows)
+
+
+@_count_rows.register
+def _(row: Row) -> int:
+    return 1
+
+
+@_count_rows.register
+def _(rep: RowRepeat) -> int:
+    return sum(map(_count_rows, rep.rows)) * rep.times.value
+
+
+@singledispatch
 def _alternate_sides(node: Node, side: Side = Side.Right) -> Node:
     """
     Ensures that every row alternates between right and wrong side, starting
@@ -482,7 +503,8 @@ def _alternate_sides(node: Node, side: Side = Side.Right) -> Node:
 
     :param node: the AST to alternate the sides of
     :param side: the side of the first row
-    :return: the AST with every row alternating sides
+    :return: (1) the AST with every row alternating sides, and
+    (2) the side that the next row should be on
     """
     # noinspection PyTypeChecker
     return ast_map(node, partial(_alternate_sides, side=side))
@@ -495,15 +517,21 @@ def _(row: Row, side: Side = Side.Right) -> Node:
 
 @_alternate_sides.register
 def _(rep: RowRepeat, side: Side = Side.Right) -> Node:
-    return RowRepeat(map(_alternate_sides, rep.rows, side.alternate()),
-                     rep.times, rep.consumes, rep.produces)
+    new_rows = []
+    for row in rep.rows:
+        num_rows = _count_rows(row) # TODO this is somewhat inefficient
+        new_rows.append(_alternate_sides(row, side))
+        if num_rows % 2: # num_rows is odd
+            side = side.flip()
+    return RowRepeat(new_rows, rep.times, rep.consumes, rep.produces)
 
 
 @_alternate_sides.register
 def _(pattern: Pattern, side: Side = Side.Right) -> Node:
+    new_patt = _alternate_sides.dispatch(RowRepeat)(pattern, side)
     return Pattern(
-        _alternate_sides.dispatch(RowRepeat)(pattern, side).rows,
-        pattern.params, pattern.env, pattern.consumes, pattern.produces
+        new_patt.rows, pattern.params, pattern.env, 
+        pattern.consumes, pattern.produces
     )
 
 

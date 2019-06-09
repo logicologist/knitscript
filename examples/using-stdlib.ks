@@ -7,3 +7,6 @@ pattern main
   tile (garter, 12, 2).
   row: BO 12.
 end
+
+show (main)
+
