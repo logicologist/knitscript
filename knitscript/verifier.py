@@ -168,7 +168,7 @@ def _(expanding: ExpandingStitchRepeat) -> Sequence:
 
 @_unroll_row.register
 def _(stitch: StitchLit) -> Sequence:
-    return [stitch]
+    return [stitch.value]
 
 
 @singledispatch
@@ -191,15 +191,17 @@ def _(rep: RowRepeat) -> Generator[KnitError, None, None]:
 @_verify_psso.register
 def _(row: Row) -> Generator[KnitError, None, None]:
     stitches = list(_unroll_row(row))
+    # print(str(stitches) + "\n")
     num_stitches = len(stitches)
     i = 0
     for _ in range(num_stitches):
-        if stitches[i].value == Stitch.PSSO:
+        if stitches[i] == Stitch.PSSO:
             # attempt to remove the last slip
-            if stitches[i-1].value == Stitch.SLIP:
+            if stitches[i-1] == Stitch.SLIP:
                 yield KnitError("PSSO without stitch to pass over", row)
             try:
-                st_before = stitches[:i-1]
+                st_before = stitches[:i]
+                # print("Removing slip from " + str(st_before) + "\n")
                 st_before.reverse()
                 st_before.remove(Stitch.SLIP)
                 st_before.reverse()
