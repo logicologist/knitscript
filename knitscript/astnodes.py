@@ -44,50 +44,43 @@ class Node(ABC):
 class Document(Node):
     """An AST node describing a complete KnitScript document."""
 
-    def __init__(self, usings: Iterable[Node], patterns: Iterable[Node]) \
+    def __init__(self, stmts: Iterable[Node]) \
             -> None:
         """
         Creates a new document node.
 
-        :param usings: the using statements (imports) in the document
-        :param patterns: the patterns in the document
+        :param stmts: the statements in the document
         """
-        self._usings = tuple(usings)
-        self._patterns = tuple(patterns)
+        self._stmts = tuple(stmts)
 
     @property
-    def usings(self) -> Sequence[Node]:
-        """The import statements in the document."""
-        return self._usings
-
-    @property
-    def patterns(self) -> Sequence[Node]:
-        """The patterns in the document."""
-        return self._patterns
+    def stmts(self) -> Sequence[Node]:
+        """The statements in the document."""
+        return self._stmts
 
 
 class Using(Node):
-    """An AST node representing a pattern import."""
+    """An AST node representing a using statement."""
 
-    def __init__(self, pattern_names: Iterable[str], filename: str):
+    def __init__(self, names: Iterable[str], module: str):
         """
-        Creates a new import node.
+        Creates a new using statement node.
 
-        :param pattern_names: the names of the patterns to import
-        :param filename: the name of the module to import them from
+        :param names: the names to import
+        :param module: the name of the module to import them from
         """
-        self._pattern_names = tuple(pattern_names)
-        self._filename = filename
+        self._names = tuple(names)
+        self._module = module
 
     @property
-    def pattern_names(self):
-        """The names of the patterns to import."""
-        return self._pattern_names
+    def names(self):
+        """The names to import."""
+        return self._names
 
     @property
-    def filename(self) -> str:
-        """The name of the module to import them from."""
-        return self._filename
+    def module(self) -> str:
+        """The name of the module to import the names from."""
+        return self._module
 
 
 class PatternDef(Node):
@@ -138,6 +131,26 @@ class NaturalLit(Node):
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, NaturalLit) and self.value == other.value
+
+
+class StringLit(Node):
+    """An AST node for a string literal."""
+
+    def __init__(self, value: str) -> None:
+        """
+        Creates a new string literal.
+
+        :param value: the value of this literal
+        """
+        self._value = value
+
+    @property
+    def value(self) -> str:
+        """The value of this literal."""
+        return self._value
+
+    def __str__(self) -> str:
+        return str(self._value)
 
 
 class Knittable(Node):
@@ -475,7 +488,8 @@ class Call(Node):
 class NativeFunction(Node):
     """An AST node representing a native Python function."""
 
-    def __init__(self, function: Callable[[Node, ...], Node]) -> None:
+    def __init__(self, function: Callable[[Node, ...], Optional[Node]]) \
+            -> None:
         """
         Creates a new native function node.
 
@@ -484,6 +498,6 @@ class NativeFunction(Node):
         self._function = function
 
     @property
-    def function(self) -> Callable[[Node, ...], Node]:
+    def function(self) -> Callable[[Node, ...], Optional[Node]]:
         """The native function."""
         return self._function

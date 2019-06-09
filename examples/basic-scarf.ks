@@ -18,6 +18,4 @@ pattern basicScarf (n)
   row: BO to end.
 end
 
-pattern main
-  basicScarf (5).
-end
+show (basicScarf (5), "Basic scarf with 5 repeats")

@@ -1,5 +1,3 @@
 using seed, fourByFour from first_class_patterns
 
-pattern main
-  fourByFour (seed).
-end
+show (fourByFour (seed), "Using patterns from another file")

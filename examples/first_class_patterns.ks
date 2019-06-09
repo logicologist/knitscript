@@ -10,6 +10,4 @@ pattern fourByFour (stitch)
   row: BO to end.
 end
 
-pattern main
-  fourByFour (seed).
-end
+show (fourByFour (seed), "4x4 seed stitch using first-class patterns")

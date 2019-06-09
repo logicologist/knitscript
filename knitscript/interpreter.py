@@ -108,6 +108,35 @@ def _(expanding: ExpandingStitchRepeat) -> Node:
                                  expanding.consumes, expanding.produces)
 
 
+def do_call(call: Call, env: Mapping[str, Node]) -> Optional[Node]:
+    """
+    Evaluates a call node and returns the result.
+
+    :param call: the call node to evaluate
+    :param env: the environment to use
+    :return: the result of the call
+    """
+    target = call.target
+    if isinstance(target, Get):
+        target = _substitute(target, env)
+    # noinspection PyTypeChecker
+    args = map(partial(_substitute, env=env), call.args)
+    assert isinstance(target, Pattern) or isinstance(target,
+                                                     NativeFunction)
+    if isinstance(target, Pattern):
+        if len(target.params) != len(call.args):
+            raise InterpretError(
+                f"called pattern with {len(call.args)} arguments, but " +
+                f"expected {len(target.params)}",
+                call
+            )
+        return _substitute(target,
+                           {**target.env,
+                            **dict(zip(target.params, args))})
+    elif isinstance(target, NativeFunction):
+        return target.function(*args)
+
+
 @singledispatch
 def _infer_counts(node: Node, available: Optional[int] = None) -> Node:
     """
@@ -243,23 +272,9 @@ def _(get: Get, env: Mapping[str, Node]) -> Node:
 
 @_substitute.register
 def _(call: Call, env: Mapping[str, Node]) -> Node:
-    target = call.target
-    if isinstance(target, Get):
-        target = _substitute(target, env)
-    # noinspection PyTypeChecker
-    args = map(partial(_substitute, env=env), call.args)
-    assert isinstance(target, Pattern) or isinstance(target, NativeFunction)
-    if isinstance(target, Pattern):
-        if len(target.params) != len(call.args):
-            raise InterpretError(
-                f"called pattern with {len(call.args)} arguments, but " +
-                f"expected {len(target.params)}",
-                call
-            )
-        return _substitute(target,
-                           {**target.env, **dict(zip(target.params, args))})
-    elif isinstance(target, NativeFunction):
-        return target.function(*args)
+    result = do_call(call, env)
+    assert result is not None
+    return result
 
 
 @singledispatch
