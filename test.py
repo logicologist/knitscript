@@ -114,3 +114,6 @@ test(lambda: check_output("test/spiral-square.ks",
                           "K, P, P. (3 sts)\n" +
                           "BO 3. (0 sts)"),
      "Should support advanced block concatenation using empty rows")
+test(lambda: expect_except("test/reversing-psso.ks", InterpretError),
+     "Should disallow reversing psso")
+

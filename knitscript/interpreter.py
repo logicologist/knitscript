@@ -402,7 +402,12 @@ def _(fixed: FixedStitchRepeat, before: int) -> Node:
 # noinspection PyUnusedLocal
 @_reverse.register
 def _(stitch: StitchLit, before: int) -> Node:
-    return StitchLit(stitch.value.reverse)
+    new_stitch = stitch.value.reverse
+    if new_stitch is not None:
+        return StitchLit(new_stitch)
+    else:
+        raise InterpretError(stitch,
+                             "Cannot reverse stitch " + str(stitch.value))
 
 
 @_reverse.register

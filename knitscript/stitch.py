@@ -1,6 +1,6 @@
 from __future__ import annotations
 from enum import Enum
-from typing import Callable
+from typing import Callable, Optional
 
 
 class Stitch(Enum):
@@ -13,7 +13,7 @@ class Stitch(Enum):
     KNIT = ("K", 1, 1, lambda: Stitch.PURL)
     PURL = ("P", 1, 1, lambda: Stitch.KNIT)
     SLIP = ("SL", 1, 1, lambda: Stitch.SLIP)
-    PSSO = ("PSSO", 0, -1, lambda: Stitch.PSSO)
+    PSSO = ("PSSO", 0, -1, lambda: None)
     YARN_OVER = ("YO", 0, 1, lambda: Stitch.YARN_OVER)
     KNIT2TOG = ("K2TOG", 2, 1, lambda: Stitch.SLIP_SLIP_PURL)
     PURL2TOG = ("P2TOG", 2, 1, lambda: Stitch.SLIP_SLIP_KNIT)
@@ -60,7 +60,7 @@ class Stitch(Enum):
         return self._produces
 
     @property
-    def reverse(self) -> Stitch:
+    def reverse(self) -> Optional[Stitch]:
         """This stitch's side-reversed stitch type."""
         return self._reverse()
 
