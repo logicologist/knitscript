@@ -1,12 +1,12 @@
 import os
 from functools import partial
-from typing import Mapping, MutableMapping, Optional, TextIO
+from typing import Mapping, Optional, TextIO
 
 from antlr4 import CommonTokenStream, FileStream, InputStream
 
 from knitscript.astgen import build_ast
 from knitscript.astnodes import Call, Document, NativeFunction, Node, \
-    Pattern, PatternDef, StringLit, Using
+    Pattern, PatternDef, Using
 from knitscript.exporter import export_text
 from knitscript.interpreter import do_call, enclose, reflect, prepare_pattern
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
@@ -25,7 +25,9 @@ def load_file(filename: str, out: Optional[TextIO] = None) \
     Loads the environment from a document.
 
     :param filename: the filename of the document
-    :param out: the output stream to use for the document
+    :param out:
+        the stream to use for any output the document produces, or None if
+        output should be suppressed
     :return: the document's environment
     """
     return _load(FileStream(filename),
@@ -33,10 +35,9 @@ def load_file(filename: str, out: Optional[TextIO] = None) \
                  os.path.dirname(filename))
 
 
-def _load(instream: InputStream,
-          env: Mapping[str, Node],
-          base_dir: str) -> Mapping[str, Node]:
-    lexer = KnitScriptLexer(instream)
+def _load(in_: InputStream, env: Mapping[str, Node], base_dir: str) \
+        -> Mapping[str, Node]:
+    lexer = KnitScriptLexer(in_)
     parser = KnitScriptParser(CommonTokenStream(lexer))
     document = build_ast(parser.document())
     assert isinstance(document, Document)
@@ -58,22 +59,20 @@ def _load(instream: InputStream,
 
 def _show(out: Optional[TextIO],
           pattern: Node,
-          description: Optional[StringLit] = None) -> None:
+          description: Optional[Node] = None) -> None:
     if out is None:
         return
     assert isinstance(pattern, Pattern)
     pattern = prepare_pattern(pattern)
     if description:
-        out.write(f"\033[1m{description}\033[0m\n")
-        out.write("\n")
-    out.write(f"{export_text(pattern)}\n")
-    out.write("\n")
+        out.write(f"\033[1m{description}\033[0m\n\n")
+    out.write(f"{export_text(pattern)}\n\n")
     for error in verify_pattern(pattern):
         out.write(f"error: {error}\n")
     out.write("\n")
 
 
-def _get_default_env(out: Optional[TextIO]) -> MutableMapping[str, Node]:
+def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
     # noinspection PyTypeChecker
     return {
         "reflect": NativeFunction(reflect),
