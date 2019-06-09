@@ -56,16 +56,21 @@ def _load(instream: InputStream,
     return env
 
 
-def _show(out: Optional[TextIO], pattern: Node, name: StringLit) -> None:
-    if out is not None:
-        assert isinstance(pattern, Pattern)
-        pattern = prepare_pattern(pattern)
-        out.write(f"\033[1m{name}\033[0m\n")
+def _show(out: Optional[TextIO],
+          pattern: Node,
+          description: Optional[StringLit] = None) -> None:
+    if out is None:
+        return
+    assert isinstance(pattern, Pattern)
+    pattern = prepare_pattern(pattern)
+    if description:
+        out.write(f"\033[1m{description}\033[0m\n")
         out.write("\n")
-        out.write(f"{export_text(pattern)}\n")
-        for error in verify_pattern(pattern):
-            out.write(f"error: {error}\n")
-        out.write("\n")
+    out.write(f"{export_text(pattern)}\n")
+    out.write("\n")
+    for error in verify_pattern(pattern):
+        out.write(f"error: {error}\n")
+    out.write("\n")
 
 
 def _get_default_env(out: Optional[TextIO]) -> MutableMapping[str, Node]:
