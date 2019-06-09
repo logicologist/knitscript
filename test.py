@@ -116,4 +116,14 @@ test(lambda: check_output("test/spiral-square.ks",
      "Should support advanced block concatenation using empty rows")
 test(lambda: expect_except("test/reversing-psso.ks", InterpretError),
      "Should disallow reversing psso")
-
+test(lambda: verify_error("test/sl-psso-immediately.ks"),
+     "Should disallow psso immediately after slip")
+test(lambda: verify_error("test/psso-without-slip.ks"),
+     "Should disallow psso without slip")
+test(lambda: verify_error("test/psso-without-slip-2.ks"),
+     "Should disallow psso without slip in case of multiple psso/slip")
+test(lambda: check_output("test/nested-psso.ks",
+                          "CO 8. (8 sts)\n" +
+                          "K, SL, K, SL, K, PSSO, K, PSSO, K 2. (6 sts)\n" +
+                          "*BO; rep from * to end. (0 sts)"),
+     "Should allow nested psso")

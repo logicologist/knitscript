@@ -1,8 +1,10 @@
 from functools import singledispatch
-from typing import Generator
+from operator import attrgetter
+from typing import Generator, Sequence
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
-    Knittable, NaturalLit, Node, Pattern, RowRepeat, StitchLit
+    Knittable, NaturalLit, Node, Pattern, RowRepeat, Row, StitchLit
+from knitscript.stitch import Stitch
 
 
 class KnitError:
@@ -49,6 +51,7 @@ def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:
         yield KnitError(
             f"expected {pattern.produces} stitches to be bound off", pattern
         )
+    yield from _verify_psso(pattern)
 
 
 # noinspection PyUnusedLocal
@@ -127,3 +130,81 @@ def _exactly(expected: int, actual: int, node: Node) \
     yield from _at_least(expected, actual, node)
     if expected < actual:
         yield KnitError(f"{actual - expected} stitches left over", node)
+
+
+@singledispatch
+def _unroll_row(node: Node) -> Sequence:
+    """
+    Turns a row into a list of stitches.
+
+    :param node: the node to unroll.
+    :return: a list of stitches.
+    """
+    raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+@_unroll_row.register
+def _(row: Row) -> Sequence:
+    return [item for st in row.stitches for item in _unroll_row(st)]
+
+
+@_unroll_row.register
+def _(fixed: FixedStitchRepeat) -> Sequence:
+    acc = []
+    for _ in range(fixed.times.value):
+        acc += [item for st in fixed.stitches for item in _unroll_row(st)]
+    return acc
+
+
+@_unroll_row.register
+def _(expanding: ExpandingStitchRepeat) -> Sequence:
+    times = expanding.consumes // \
+            sum(map(attrgetter("consumes"), expanding.stitches))
+    acc = []
+    for _ in range(times):
+        acc += [item for st in expanding.stitches for item in _unroll_row(st)]
+    return acc
+
+
+@_unroll_row.register
+def _(stitch: StitchLit) -> Sequence:
+    return [stitch]
+
+
+@singledispatch
+def _verify_psso(node: Node) -> Generator[KnitError, None, None]:
+    """
+    Verifies that every psso is preceded by a slipped stitch.
+
+    :param node: the expression to verify.
+    :return: a generator producing all errors of this kind, if any.
+    """
+    raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+@_verify_psso.register
+def _(rep: RowRepeat) -> Generator[KnitError, None, None]:
+    for row in rep.rows:
+        yield from _verify_psso(row)
+
+
+@_verify_psso.register
+def _(row: Row) -> Generator[KnitError, None, None]:
+    stitches = list(_unroll_row(row))
+    num_stitches = len(stitches)
+    i = 0
+    for _ in range(num_stitches):
+        if stitches[i].value == Stitch.PSSO:
+            # attempt to remove the last slip
+            if stitches[i-1].value == Stitch.SLIP:
+                yield KnitError("PSSO without stitch to pass over", row)
+            try:
+                st_before = stitches[:i-1]
+                st_before.reverse()
+                st_before.remove(Stitch.SLIP)
+                st_before.reverse()
+                stitches = st_before + stitches[i+1:]
+                i -= 1
+            except ValueError:
+                yield KnitError("PSSO without SLIP", row)
+        i += 1
