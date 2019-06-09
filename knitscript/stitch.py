@@ -14,7 +14,11 @@ class Stitch(Enum):
     PURL = ("P", 1, 1, lambda: Stitch.KNIT)
     SLIP = ("SL", 1, 1, lambda: Stitch.SLIP)
     PSSO = ("PSSO", 0, -1, lambda: None)
+    # Increases
     YARN_OVER = ("YO", 0, 1, lambda: Stitch.YARN_OVER)
+    KNIT_FRONT_BACK = ("KFB", 1, 2, lambda: Stitch.PURL_FRONT_BACK)
+    PURL_FRONT_BACK = ("PFB", 1, 2, lambda: Stitch.KNIT_FRONT_BACK)
+    # Decreases
     KNIT2TOG = ("K2TOG", 2, 1, lambda: Stitch.SLIP_SLIP_PURL)
     PURL2TOG = ("P2TOG", 2, 1, lambda: Stitch.SLIP_SLIP_KNIT)
     SLIP_SLIP_KNIT = ("SSK", 2, 1, lambda: Stitch.PURL2TOG)
