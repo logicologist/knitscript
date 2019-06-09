@@ -1,8 +1,9 @@
 grammar KnitScript;
 
-document: usings+=usingStmt* patterns+=patternDef* EOF;
+document: stmts+=stmt* EOF;
+stmt: using | patternDef | call;
 
-usingStmt: 'using' patternNames+=ID (',' patternNames+=ID)* 'from' filename=ID;
+using: 'using' names+=ID (',' names+=ID)* 'from' module=ID;
 
 patternDef: 'pattern' ID ('(' paramList ')')? items+=item+ 'end';
 paramList: params+=ID (',' params+=ID)*;
@@ -23,8 +24,6 @@ fixedPatternRepeat
     | '(' patternList ')' times=expr;
 patternList: patterns+=patternRepeat (',' patterns+=patternRepeat)*;
 
-argList: args+=expr (',' args+=expr)*;
-
 stitchRepeat: fixedStitchRepeat | expandingStitchRepeat | stitch;
 fixedStitchRepeat
     : stitch times=expr
@@ -36,12 +35,14 @@ stitchList: stitches+=stitchRepeat (',' stitches+=stitchRepeat)*;
 
 stitch: ID;
 
-expr: variable | call | natural;
+expr: variable | call | natural | string;
 variable: ID;
-call: ID ('(' argList ')')?;
+call: ID ('(' args+=expr (',' args+=expr)* ')')?;
 natural: NATURAL;
+string: STRING;
 
 ID: [_A-Za-z] [_A-Za-z0-9]*;
 NATURAL: [1-9] [0-9]* | '0';
+STRING: '"' ~('"')* '"';
 WHITESPACE: [ \r\n] -> skip;
 COMMENT: '--' ~[\r\n]* -> skip;

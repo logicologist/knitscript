@@ -3,12 +3,12 @@ from typing import Type
 from knitscript.astnodes import Pattern
 from knitscript.exporter import export_text
 from knitscript.interpreter import InterpretError, prepare_pattern
-from knitscript.loader import load
+from knitscript.loader import load_file
 from knitscript.verifier import verify_pattern
 
 
 def process_pattern(filename: str) -> Pattern:
-    env = load(filename)
+    env = load_file(filename)
     pattern = env["main"]
     assert isinstance(pattern, Pattern)
     return prepare_pattern(pattern)
@@ -100,3 +100,17 @@ test(lambda: check_output("test/nested-stitch-repeats-with-block.ks",
                           "BO 6. (0 sts)"),
      "Should flatten nested fixed stitch repeats that result from block " +
      "substitution")
+test(lambda: check_output("test/reflection.ks",
+                          "CO 9. (9 sts)\n" +
+                          "K, [K, K, P] 2, K, K. (9 sts)\n" +
+                          "BO 9. (0 sts)"),
+     "Should be able to reflect patterns horizontally")
+test(lambda: verify_error("test/bad-block.ks"),
+     "Should catch invalid block combinations")
+test(lambda: check_output("test/spiral-square.ks",
+                          "CO 3. (3 sts)\n" +
+                          "P, P, K. (3 sts)\n" +
+                          "K, SL, K. (3 sts)\n" +
+                          "K, P, P. (3 sts)\n" +
+                          "BO 3. (0 sts)"),
+     "Should support advanced block concatenation using empty rows")

@@ -3,7 +3,6 @@ from typing import Generator
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
     Knittable, NaturalLit, Node, Pattern, RowRepeat, StitchLit
-from knitscript.interpreter import infer_counts
 
 
 class KnitError:
@@ -40,7 +39,6 @@ def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:
     :param pattern: the pattern to verify
     :return: a generator producing all of the errors in the pattern, if any
     """
-    pattern = infer_counts(pattern, 0)
     yield from verify_counts(pattern, 0)
     assert isinstance(pattern, Knittable)
     if pattern.consumes != 0:

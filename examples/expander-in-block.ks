@@ -15,3 +15,5 @@ pattern main
   left, right, right.
   row: BO 9.
 end
+
+show (main, "Expanding stitch repeat in a block")

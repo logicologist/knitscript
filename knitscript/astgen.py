@@ -4,7 +4,7 @@ from typing import Collection, Union
 
 from knitscript.astnodes import Block, Call, Document, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, NaturalLit, Node, PatternDef, \
-    Pattern, Row, RowRepeat, Side, StitchLit, Using
+    Pattern, Row, RowRepeat, Side, StitchLit, StringLit, Using
 from knitscript.parser.KnitScriptParser import KnitScriptParser, \
     ParserRuleContext
 from knitscript.stitch import Stitch
@@ -23,14 +23,17 @@ def build_ast(ctx: ParserRuleContext) -> Node:
 
 @build_ast.register
 def _(document: KnitScriptParser.DocumentContext) -> Node:
-    return Document(map(build_ast, document.usings),
-                    map(build_ast, document.patterns))
+    return Document(map(build_ast, document.stmts))
 
 
 @build_ast.register
-def _(using: KnitScriptParser.UsingStmtContext) -> Node:
-    return Using(map(lambda name: name.text, using.patternNames),
-                 using.filename.text)
+def _(stmt: KnitScriptParser.StmtContext) -> Node:
+    return build_ast(stmt.using() or stmt.patternDef() or stmt.call())
+
+
+@build_ast.register
+def _(using: KnitScriptParser.UsingContext) -> Node:
+    return Using(map(lambda name: name.text, using.names), using.module.text)
 
 
 @build_ast.register
@@ -68,10 +71,8 @@ def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
 
 @build_ast.register
 def _(call: KnitScriptParser.CallContext) -> Node:
-    return Call(
-        Get(call.ID().getText()),
-        map(build_ast, call.argList().args) if call.argList() else []
-    )
+    return Call(Get(call.ID().getText()),
+                map(build_ast, call.args) if call.args else [])
 
 
 @build_ast.register
@@ -116,7 +117,10 @@ def _(stitch: KnitScriptParser.StitchContext) -> Node:
 
 @build_ast.register
 def _(expr: KnitScriptParser.ExprContext) -> Node:
-    return build_ast(expr.call() or expr.variable() or expr.natural())
+    return build_ast(expr.call()
+                     or expr.variable()
+                     or expr.natural()
+                     or expr.string())
 
 
 @build_ast.register
@@ -127,6 +131,11 @@ def _(variable: KnitScriptParser.VariableContext) -> Node:
 @build_ast.register
 def _(natural: KnitScriptParser.NaturalContext) -> Node:
     return NaturalLit(int(natural.getText()))
+
+
+@build_ast.register
+def _(string: KnitScriptParser.StringContext) -> Node:
+    return StringLit(string.getText()[1:-1])
 
 
 def _stitches(ctx: Union[KnitScriptParser.FixedStitchRepeatContext,

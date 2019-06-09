@@ -15,3 +15,4 @@ pattern main
   b, a.
 end
 
+show (main, "Patterns with different numbers of rows in a block")

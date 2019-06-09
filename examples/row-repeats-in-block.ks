@@ -1,7 +1,7 @@
 pattern left
   repeat 3
     row: K, K, K, K.
-   row: P, P, P, P.
+    row: P, P, P, P.
   end
 end
 
@@ -19,3 +19,4 @@ pattern main
   row: BO 8.
 end
 
+show (main, "Row repeats in a block")
