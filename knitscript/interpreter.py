@@ -282,10 +282,11 @@ def _(fixed: FixedStitchRepeat, unroll: bool = False) -> Node:
     # Cases where the only node a fixed stitch repeat contains is another fixed
     # stitch repeat should be flattened by multiplying the repeat times
     # together, because the unflattened output is confusing.
-    first = fixed.stitches[0]
     if (fixed.times.value != 1
             and len(fixed.stitches) == 1
-            and isinstance(first, FixedStitchRepeat)):
+            and isinstance(fixed.stitches[0], FixedStitchRepeat)):
+        first = fixed.stitches[0]
+        assert isinstance(first, FixedStitchRepeat)
         # noinspection PyTypeChecker
         return ast_map(
             FixedStitchRepeat(

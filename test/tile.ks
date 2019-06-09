@@ -8,4 +8,3 @@ pattern main
   tile (seed, 3, 3).
   row: BO 6.
 end
-

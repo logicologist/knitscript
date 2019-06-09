@@ -107,3 +107,10 @@ test(lambda: check_output("test/reflection.ks",
      "Should be able to reflect patterns horizontally")
 test(lambda: verify_error("test/bad-block.ks"),
      "Should catch invalid block combinations")
+test(lambda: check_output("test/spiral-square.ks",
+                          "CO 3. (3 sts)\n" +
+                          "P, P, K. (3 sts)\n" +
+                          "K, SL, K. (3 sts)\n" +
+                          "K, P, P. (3 sts)\n" +
+                          "BO 3. (0 sts)"),
+     "Should support advanced block concatenation using empty rows")
