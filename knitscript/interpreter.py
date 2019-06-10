@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from functools import partial, singledispatch, reduce
 from itertools import accumulate, chain, repeat, starmap, zip_longest
+from math import ceil, gcd
 from operator import attrgetter
-from typing import Mapping, Optional, List
+from typing import Iterable, Iterator, Mapping, Optional, Sequence
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NativeFunction, \
@@ -340,15 +341,9 @@ def _(pattern: Pattern, unroll: bool = False) -> Node:
 
 @_flatten.register
 def _(block: Block, unroll: bool = False) -> Node:
-    if len(block.patterns) > 1:
-        # Unroll row repeats if there is more than one pattern in this block.
-        # This makes merging across rows much simpler.
-        # noinspection PyTypeChecker
-        return _merge_across(*map(partial(_flatten, unroll=True),
-                                  block.patterns))
-    else:
-        # noinspection PyTypeChecker
-        return _flatten(block.patterns[0], unroll)
+    # noinspection PyTypeChecker
+    return _merge_across(*map(partial(_flatten, unroll=unroll),
+                              block.patterns))
 
 
 @_flatten.register
@@ -547,12 +542,43 @@ def _merge_across(*nodes: Node) -> Knittable:
 
 @_merge_across.register
 def _(*patterns: Pattern) -> Knittable:
-    rows = tuple(starmap(_merge_across,
-                         zip_longest(*map(attrgetter("rows"), patterns),
-                                     fillvalue=Row([], Side.Right, 0, 0))))
+    rep = _merge_across.dispatch(RowRepeat)(*patterns)
     # Pattern calls have already been substituted by this point so the
     # parameters of the combined pattern can be empty.
-    return Pattern(rows, (), None, rows[0].consumes, rows[-1].produces)
+    return Pattern(rep.rows, (), None, rep.consumes, rep.produces)
+
+
+@_merge_across.register
+def _(*reps: RowRepeat) -> Knittable:
+    if not all(map(lambda item: len(set(map(type, item))) == 1,
+                   _padded_zip(*map(attrgetter("rows"), reps)))):
+        # Unroll all row repeats if we see a row and a row repeat side-by-side.
+        # There may be a smarter way to do it where we only unroll the
+        # misplaced row repeat instead of all of them, but that's more
+        # complicated. :(
+        #
+        # noinspection PyTypeChecker
+        rows = list(
+            starmap(_merge_across,
+                    _padded_zip(*map(attrgetter("rows"),
+                                     map(partial(_flatten, unroll=True),
+                                         reps))))
+        )
+        return RowRepeat(rows, NaturalLit(1),
+                         rows[0].consumes, rows[-1].produces)
+
+    # Find the smallest number of rows that all row repeats can be expanded to.
+    num_rows = _lcm(*map(lambda rep: sum(map(_count_rows, rep.rows)), reps))
+
+    def expand(rep: RowRepeat) -> Iterator[Node]:
+        times = min(rep.times.value,
+                    num_rows // sum(map(_count_rows, rep.rows)))
+        return chain.from_iterable(repeat(rep.rows, times))
+
+    rows = list(starmap(_merge_across, _padded_zip(*map(expand, reps))))
+    return RowRepeat(rows,
+                     NaturalLit(ceil(max(map(_count_rows, reps)) / num_rows)),
+                     rows[0].consumes, rows[-1].produces)
 
 
 @_merge_across.register
@@ -606,3 +632,11 @@ def _(rep: RowRepeat, acc: bool = True) -> bool:
 @_starts_with_cast_ons.register
 def _(stitch: StitchLit, acc: bool = True) -> bool:
     return acc and stitch.value == Stitch.CAST_ON
+
+
+def _padded_zip(*rows: Node) -> Iterable[Sequence[Node]]:
+    return zip_longest(*rows, fillvalue=Row([], Side.Right, 0, 0))
+
+
+def _lcm(*nums: int) -> int:
+    return reduce(lambda x, y: (x * y) // gcd(x, y), nums, 1)
