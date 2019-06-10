@@ -131,13 +131,13 @@ test(
     ),
     "Should allow nested psso"
 )
-test(lambda: check_output("test/do-unroll.ks",
+test(lambda: check_output("test/merge-with-unrolling.ks",
                           "WS: CO 4. (4 sts)\n" +
                           "RS: P, P, K, P. (4 sts)\n" +
                           "WS: P, K, K, K. (4 sts)\n" +
                           "RS: BO 4. (0 sts)"),
      "Blocks with mixed rows and row repeats should be unrolled")
-test(lambda: check_output("test/dont-unroll.ks",
+test(lambda: check_output("test/merge-without-unrolling.ks",
                           "WS: CO 12. (12 sts)\n" +
                           "**\n" +
                           "RS: K, K 10, K. (12 sts)\n" +
@@ -145,7 +145,7 @@ test(lambda: check_output("test/dont-unroll.ks",
                           "rep from ** 10 times\n" +
                           "RS: BO 12. (0 sts)"),
      "Merging parallel row repeats should preserve the repeat")
-test(lambda: check_output("test/dont-unroll-with-lcm.ks",
+test(lambda: check_output("test/merge-finding-lcm.ks",
                           "WS: CO 8. (8 sts)\n" +
                           "**\n" +
                           "RS: P 2, P 2, K, K, K, K. (8 sts)\n" +
