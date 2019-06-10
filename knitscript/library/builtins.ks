@@ -1,7 +1,7 @@
-
 -- Common stitch textures
 
 pattern garter
+  row: K.
   row: K.
 end
 
@@ -10,7 +10,7 @@ pattern stst
   row: P.
 end
 
-pattern rib (a,b)
+pattern rib (a, b)
   row: K a, P b.
   row: K b, P a.
 end
