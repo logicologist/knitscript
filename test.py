@@ -49,13 +49,13 @@ def test(callback, desc: str):
 
 
 test(lambda: verify_error("test/too-many-stitches.ks"),
-     "Should catch expedted stitches greater than available")
+     "Should catch expected stitches greater than available")
 test(lambda: verify_error("test/too-few-stitches.ks"),
      "Should catch expected stitches smaller than available")
 test(lambda: check_output("test/just-right.ks",
-                          "CO 12. (12 sts)\n" +
-                          "K 12. (12 sts)\n" +
-                          "*BO; rep from * to end. (0 sts)"),
+                          "WS: CO 12. (12 sts)\n" +
+                          "RS: K 12. (12 sts)\n" +
+                          "WS: *BO; rep from * to end. (0 sts)"),
      "Should compile simple pattern")
 test(lambda: verify_error("test/double-expanding-repeat-2.ks"),
      "Should catch bad double expanding repeat")
@@ -66,22 +66,22 @@ test(lambda: expect_except("test/patterns-lexical-scoping.ks", KeyError),
      "Patterns shouldn't be able to reference variables outside their " +
      "environment")
 test(lambda: check_output("test/tile.ks",
-                          "CO 6. (6 sts)\n" +
+                          "WS: CO 6. (6 sts)\n" +
                           "**\n" +
-                          "[K, P] 3. (6 sts)\n" +
-                          "[P, K] 3. (6 sts)\n" +
+                          "RS: [K, P] 3. (6 sts)\n" +
+                          "WS: [P, K] 3. (6 sts)\n" +
                           "rep from ** 3 times\n" +
-                          "BO 6. (0 sts)"),
+                          "RS: BO 6. (0 sts)"),
      "Should allow n-by-m tiling of patterns")
 test(lambda: check_output("test/pass-called-pattern.ks",
-                          "CO 3. (3 sts)\n" +
+                          "WS: CO 3. (3 sts)\n" +
                           "**\n" +
-                          "K, P, K. (3 sts)\n" +
+                          "RS: K, P, K. (3 sts)\n" +
                           "rep from ** 5 times\n" +
                           "**\n" +
-                          "P, K, P. (3 sts)\n" +
+                          "WS: P, K, P. (3 sts)\n" +
                           "rep from ** 3 times\n" +
-                          "BO 3. (0 sts)"),
+                          "RS: BO 3. (0 sts)"),
      "Patterns can be passed with or without being called with arguments")
 test(lambda: expect_except("test/too-few-arguments.ks", InterpretError),
      "Should catch patterns called with too few arguments")
@@ -90,29 +90,29 @@ test(lambda: expect_except("test/too-many-arguments.ks", InterpretError),
 test(lambda: expect_except("test/called-twice.ks", InterpretError),
      "Should catch patterns that are called twice")
 test(lambda: check_output("test/nested-stitch-repeats.ks",
-                          "CO 6. (6 sts)\n" +
-                          "K 6. (6 sts)\n" +
-                          "BO 6. (0 sts)"),
+                          "WS: CO 6. (6 sts)\n" +
+                          "RS: K 6. (6 sts)\n" +
+                          "WS: BO 6. (0 sts)"),
      "Should flatten redundant nested fixed stitch repeats")
 test(lambda: check_output("test/nested-stitch-repeats-with-block.ks",
-                          "CO 6. (6 sts)\n" +
-                          "K 6. (6 sts)\n" +
-                          "BO 6. (0 sts)"),
+                          "WS: CO 6. (6 sts)\n" +
+                          "RS: K 6. (6 sts)\n" +
+                          "WS: BO 6. (0 sts)"),
      "Should flatten nested fixed stitch repeats that result from block " +
      "substitution")
 test(lambda: check_output("test/reflection.ks",
-                          "CO 9. (9 sts)\n" +
-                          "K, [K, K, P] 2, K, K. (9 sts)\n" +
-                          "BO 9. (0 sts)"),
+                          "WS: CO 9. (9 sts)\n" +
+                          "RS: K, [K, K, P] 2, K, K. (9 sts)\n" +
+                          "WS: BO 9. (0 sts)"),
      "Should be able to reflect patterns horizontally")
 test(lambda: verify_error("test/bad-block.ks"),
      "Should catch invalid block combinations")
 test(lambda: check_output("test/spiral-square.ks",
-                          "CO 3. (3 sts)\n" +
-                          "P, P, K. (3 sts)\n" +
-                          "K, SL, K. (3 sts)\n" +
-                          "K, P, P. (3 sts)\n" +
-                          "BO 3. (0 sts)"),
+                          "WS: CO 3. (3 sts)\n" +
+                          "RS: P, P, K. (3 sts)\n" +
+                          "WS: K, SL, K. (3 sts)\n" +
+                          "RS: K, P, P. (3 sts)\n" +
+                          "WS: BO 3. (0 sts)"),
      "Should support advanced block concatenation using empty rows")
 test(lambda: expect_except("test/reversing-psso.ks", InterpretError),
      "Should disallow reversing psso")
@@ -122,8 +122,12 @@ test(lambda: verify_error("test/psso-without-slip.ks"),
      "Should disallow psso without slip")
 test(lambda: verify_error("test/psso-without-slip-2.ks"),
      "Should disallow psso without slip in case of multiple psso/slip")
-test(lambda: check_output("test/nested-psso.ks",
-                          "CO 8. (8 sts)\n" +
-                          "K, SL, K, SL, K, PSSO, K, PSSO, K 2. (6 sts)\n" +
-                          "*BO; rep from * to end. (0 sts)"),
-     "Should allow nested psso")
+test(
+    lambda: check_output(
+        "test/nested-psso.ks",
+        "WS: CO 8. (8 sts)\n" +
+        "RS: K, SL, K, SL, K, PSSO, K, PSSO, K 2. (6 sts)\n" +
+        "WS: *BO; rep from * to end. (0 sts)"
+    ),
+    "Should allow nested psso"
+)

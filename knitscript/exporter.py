@@ -44,7 +44,7 @@ def _(repeat: ExpandingStitchRepeat) -> str:
 @export_text.register
 def _(row: Row) -> str:
     return (
-        f"({row.side}) {export_text.dispatch(FixedStitchRepeat)(row)}. " +
+        f"{row.side}: {export_text.dispatch(FixedStitchRepeat)(row)}. " +
         f"({row.produces} sts)"
     )
 
