@@ -1,12 +1,12 @@
 pattern left
-  repeat 3
+  repeat 6
     row: K, K, K, K.
     row: P, P, P, P.
   end
 end
 
 pattern right
-  repeat 2
+  repeat 4
     row: P 2, P 2.
     row: K 2, K 2.
     row: K2TOG, YO, K2TOG, YO.
