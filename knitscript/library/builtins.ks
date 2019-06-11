@@ -91,3 +91,17 @@ pattern pad (p, before, after)
     row: empty.
   end
 end
+
+pattern garterBorder(p, width, height, topbottom, leftright)
+  repeat topbottom
+    tile (garter, leftright, 1),
+      tile (garter, width, 1),
+      tile (garter, leftright, 1).
+  end
+  tile (garter, leftright, height), p, tile (garter, leftright, height).
+  repeat topbottom
+    tile (garter, leftright, 1),
+      tile (garter, width, 1),
+      tile (garter, leftright, 1).
+  end
+end
