@@ -21,31 +21,7 @@ pattern seed
 end
 
 
-
 -- Fancier stitch textures
-
-pattern pineTrees
-  row: K, (YO, P 3, SL2TOG_K, K, PSSO 2, P 3, YO, K 9) to last 10,
-       YO, P 3, SL2TOG_K, K, PSSO 2, P 3, YO, K.
-  row: P to end.
-  row: K, (K, YO, P 2, SL2TOG_K, K, PSSO 2, P 2, YO, K 10) to last 10,
-       K, YO, P 2, SL2TOG_K, K, PSSO 2, P 2, YO, K 2.
-  row: P to end.
-  row: K, (K 2, YO, P, SL2TOG_K, K, PSSO 2, P, YO, K 11) to last 10,
-       K 2, YO, P, SL2TOG_K, K, PSSO 2, P, YO, K 3.
-  row: P to end.
-  row: K, (K 3, YO, SL2TOG_K, K, PSSO 2, YO, K 12) to last 10,
-       K 3, YO, SL2TOG_K, K, PSSO 2, YO, K 4.
-  row: P to end.
-  row: K, (K 9, YO, P 3, SL2TOG_K, K, PSSO 2, P 3, YO) to last 10, K 10.
-  row: P to end.
-  row: K, (K 10, YO, P 2, SL2TOG_K, K, PSSO 2, P 2, YO, K) to last 10, K 10.
-  row: P to end.
-  row: K, (K 11, YO, P, SL2TOG_K, K, PSSO 2, P, YO, K 2) to last 10, K 10.
-  row: P to end.
-  row: K, (K 12, YO, SL2TOG_K, K, PSSO 2, YO, K 3) to last 10, K 10.
-  row: P to end.
-end
 
 pattern oldShale
   row: K 18.
@@ -72,6 +48,28 @@ pattern slippedWaves
   row: SL, K.
 end
 
+pattern pineTrees
+  row: K, (YO, P 3, SL2TOG_K, K, PSSO 2, P 3, YO, K 9) to last 10,
+       YO, P 3, SL2TOG_K, K, PSSO 2, P 3, YO, K.
+  row: P to end.
+  row: K, (K, YO, P 2, SL2TOG_K, K, PSSO 2, P 2, YO, K 10) to last 10,
+       K, YO, P 2, SL2TOG_K, K, PSSO 2, P 2, YO, K 2.
+  row: P to end.
+  row: K, (K 2, YO, P, SL2TOG_K, K, PSSO 2, P, YO, K 11) to last 10,
+       K 2, YO, P, SL2TOG_K, K, PSSO 2, P, YO, K 3.
+  row: P to end.
+  row: K, (K 3, YO, SL2TOG_K, K, PSSO 2, YO, K 12) to last 10,
+       K 3, YO, SL2TOG_K, K, PSSO 2, YO, K 4.
+  row: P to end.
+  row: K, (K 9, YO, P 3, SL2TOG_K, K, PSSO 2, P 3, YO) to last 10, K 10.
+  row: P to end.
+  row: K, (K 10, YO, P 2, SL2TOG_K, K, PSSO 2, P 2, YO, K) to last 10, K 10.
+  row: P to end.
+  row: K, (K 11, YO, P, SL2TOG_K, K, PSSO 2, P, YO, K 2) to last 10, K 10.
+  row: P to end.
+  row: K, (K 12, YO, SL2TOG_K, K, PSSO 2, YO, K 3) to last 10, K 10.
+  row: P to end.
+end
 
 
 -- Library functions
@@ -92,16 +90,14 @@ pattern pad (p, before, after)
   end
 end
 
-pattern garterBorder(p, width, height, topbottom, leftright)
-  repeat topbottom
-    tile (garter, leftright, 1),
-      tile (garter, width, 1),
-      tile (garter, leftright, 1).
-  end
-  tile (garter, leftright, height), p, tile (garter, leftright, height).
-  repeat topbottom
-    tile (garter, leftright, 1),
-      tile (garter, width, 1),
-      tile (garter, leftright, 1).
-  end
+pattern garterBorder(p, topBottom, leftRight)
+  fill (garter, leftRight, topBottom),
+    fill (garter, width (p), topBottom),
+    fill (garter, leftRight, topBottom).
+  fill (garter, leftRight, height (p)),
+    p,
+    fill (garter, leftRight, height (p)).
+  fill (garter, leftRight, topBottom),
+    fill (garter, width (p), topBottom),
+    fill (garter, leftRight, topBottom).
 end

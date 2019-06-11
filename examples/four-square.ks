@@ -5,7 +5,7 @@ end
 
 pattern fourSquare
   row: CO 20.
-  garterBorder(squares, 16, 8, 2, 2).
+  garterBorder(squares, 4, 2).
   row: BO to end.
 end
 
