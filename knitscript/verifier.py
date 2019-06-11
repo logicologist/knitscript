@@ -52,6 +52,7 @@ def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:
             f"expected {pattern.produces} stitches to be bound off", pattern
         )
     yield from _verify_psso(pattern)
+    yield from _verify_make(pattern)
 
 
 # noinspection PyUnusedLocal
@@ -222,3 +223,28 @@ def _(row: Row) -> Generator[KnitError, None, None]:
             except ValueError:
                 yield KnitError("PSSO without SLIP", row)
         i += 1
+
+
+@singledispatch
+def _verify_make(node: Node) -> Generator[KnitError, None, None]:
+    """
+    Verifies that no make-1 appears at the beginning of a row.
+
+    :param node: the expression to verify.
+    :return: a generator procuding all errors of this kind, if any.
+    """
+    raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+@_verify_make.register
+def _(rep: RowRepeat) -> Generator[KnitError, None, None]:
+    for row in rep.rows:
+        yield from _verify_make(row)
+
+
+@_verify_make.register
+def _(row: Row) -> Generator[KnitError, None, None]:
+    stitches = list(_unroll_row(row))
+    if stitches[0] == Stitch.MAKE_1_LEFT or stitches[0] == Stitch.MAKE_1_RIGHT:
+        yield KnitError("Make 1 on first stitch of row", row)
+
