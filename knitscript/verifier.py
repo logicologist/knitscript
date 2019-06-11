@@ -31,7 +31,14 @@ class KnitError:
         return self._node
 
     def __str__(self) -> str:
-        return f"{self.message} at {self.node}"
+        if self.node.line is not None:
+            position = (f"{type(self.node).__name__} at " +
+                        f"line {self.node.line}, " +
+                        f"column {self.node.column} " +
+                        f"in {self.node.file}")
+        else:
+            position = f"merged {type(self.node).__name__}"
+        return f"{self.message} ({position})"
 
 
 def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:

@@ -23,7 +23,8 @@ def ast_map(node: Node, function: Callable[[Node], Node]) -> Node:
 def _(fixed: FixedStitchRepeat, function: Callable[[Node], Node]) -> Node:
     return FixedStitchRepeat(map(function, fixed.stitches),
                              function(fixed.times),
-                             fixed.consumes, fixed.produces)
+                             fixed.consumes, fixed.produces,
+                             fixed.line, fixed.column, fixed.file)
 
 
 @ast_map.register
@@ -31,42 +32,49 @@ def _(expanding: ExpandingStitchRepeat, function: Callable[[Node], Node]) \
         -> Node:
     return ExpandingStitchRepeat(map(function, expanding.stitches),
                                  function(expanding.to_last),
-                                 expanding.consumes, expanding.produces)
+                                 expanding.consumes, expanding.produces,
+                                 expanding.line, expanding.column,
+                                 expanding.file)
 
 
 @ast_map.register
 def _(row: Row, function: Callable[[Node], Node]) -> Node:
     return Row(map(function, row.stitches), row.side,
-               row.consumes, row.produces)
+               row.consumes, row.produces, row.line, row.column, row.file)
 
 
 @ast_map.register
 def _(repeat: RowRepeat, function: Callable[[Node], Node]) -> Node:
     return RowRepeat(map(function, repeat.rows), function(repeat.times),
-                     repeat.consumes, repeat.produces)
+                     repeat.consumes, repeat.produces,
+                     repeat.line, repeat.column, repeat.file)
 
 
 @ast_map.register
 def _(block: Block, function: Callable[[Node], Node]) -> Node:
     return Block(map(function, block.patterns),
-                 block.consumes, block.produces)
+                 block.consumes, block.produces,
+                 block.line, block.column, block.file)
 
 
 @ast_map.register
 def _(pattern: Pattern, function: Callable[[Node], Node]) -> Node:
     return Pattern(map(function, pattern.rows), pattern.params, pattern.env,
-                   pattern.consumes, pattern.produces)
+                   pattern.consumes, pattern.produces,
+                   pattern.line, pattern.column, pattern.file)
 
 
 @ast_map.register
 def _(repeat: FixedBlockRepeat, function: Callable[[Node], Node]) -> Node:
     return FixedBlockRepeat(function(repeat.block), function(repeat.times),
-                            repeat.consumes, repeat.produces)
+                            repeat.consumes, repeat.produces,
+                            repeat.line, repeat.column, repeat.file)
 
 
 @ast_map.register
 def _(call: Call, function: Callable[[Node], Node]) -> Node:
-    return Call(function(call.target), map(function, call.args))
+    return Call(function(call.target), map(function, call.args),
+                call.line, call.column, call.file)
 
 
 # noinspection PyUnusedLocal

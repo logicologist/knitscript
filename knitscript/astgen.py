@@ -23,7 +23,9 @@ def build_ast(ctx: ParserRuleContext) -> Node:
 
 @build_ast.register
 def _(document: KnitScriptParser.DocumentContext) -> Node:
-    return Document(map(build_ast, document.stmts))
+    return Document(map(build_ast, document.stmts),
+                    line=document.start.line, column=document.start.column,
+                    file=document.start.source[1].fileName)
 
 
 @build_ast.register
@@ -33,7 +35,9 @@ def _(stmt: KnitScriptParser.StmtContext) -> Node:
 
 @build_ast.register
 def _(using: KnitScriptParser.UsingContext) -> Node:
-    return Using(map(lambda name: name.text, using.names), using.module.text)
+    return Using(map(lambda name: name.text, using.names), using.module.text,
+                 line=using.start.line, column=using.start.column,
+                 file=using.start.source[1].fileName)
 
 
 @build_ast.register
@@ -42,7 +46,9 @@ def _(pattern: KnitScriptParser.PatternDefContext) -> Node:
               if pattern.paramList()
               else [])
     return PatternDef(pattern.ID().getText(),
-                      Pattern(map(build_ast, pattern.items), params))
+                      Pattern(map(build_ast, pattern.items), params),
+                      line=pattern.start.line, column=pattern.start.column,
+                      file=pattern.start.source[1].fileName)
 
 
 @build_ast.register
@@ -52,7 +58,9 @@ def _(item: KnitScriptParser.ItemContext) -> Node:
 
 @build_ast.register
 def _(block: KnitScriptParser.BlockContext) -> Node:
-    return Block(map(build_ast, block.patternList().patterns))
+    return Block(map(build_ast, block.patternList().patterns),
+                 line=block.start.line, column=block.start.column,
+                 file=block.start.source[1].fileName)
 
 
 @build_ast.register
@@ -65,19 +73,25 @@ def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
     return FixedBlockRepeat(
         Block([build_ast(repeat.pattern)] if repeat.pattern is not None
               else map(build_ast, repeat.patternList().patterns)),
-        build_ast(repeat.times)
+        build_ast(repeat.times),
+        line=repeat.start.line, column=repeat.start.column,
+        file=repeat.start.source[1].fileName
     )
 
 
 @build_ast.register
 def _(call: KnitScriptParser.CallContext) -> Node:
     return Call(Get(call.ID().getText()),
-                map(build_ast, call.args) if call.args else [])
+                map(build_ast, call.args) if call.args else [],
+                line=call.start.line, column=call.start.column,
+                file=call.start.source[1].fileName)
 
 
 @build_ast.register
 def _(repeat: KnitScriptParser.RowRepeatContext) -> Node:
-    return RowRepeat(map(build_ast, repeat.items), build_ast(repeat.times))
+    return RowRepeat(map(build_ast, repeat.items), build_ast(repeat.times),
+                     line=repeat.start.line, column=repeat.start.column,
+                     file=repeat.start.source[1].fileName)
 
 
 @build_ast.register
@@ -85,7 +99,9 @@ def _(row: KnitScriptParser.RowContext) -> Node:
     return Row(
         map(build_ast,
             row.stitchList().stitches if row.stitchList() is not None else ()),
-        Side(row.side().getText()) if row.side() is not None else None
+        Side(row.side().getText()) if row.side() is not None else None,
+        line=row.start.line, column=row.start.column,
+        file=row.start.source[1].fileName
     )
 
 
@@ -99,20 +115,26 @@ def _(repeat: KnitScriptParser.StitchRepeatContext) -> Node:
 @build_ast.register
 def _(fixed: KnitScriptParser.FixedStitchRepeatContext) -> Node:
     return FixedStitchRepeat(map(build_ast, _stitches(fixed)),
-                             build_ast(fixed.times))
+                             build_ast(fixed.times),
+                             line=fixed.start.line, column=fixed.start.column,
+                             file=fixed.start.source[1].fileName)
 
 
 @build_ast.register
 def _(expanding: KnitScriptParser.ExpandingStitchRepeatContext) -> Node:
     return ExpandingStitchRepeat(
         map(build_ast, _stitches(expanding)),
-        build_ast(expanding.toLast) if expanding.toLast else NaturalLit(0)
+        build_ast(expanding.toLast) if expanding.toLast else NaturalLit(0),
+        line=expanding.start.line, column=expanding.start.column,
+        file=expanding.start.source[1].fileName
     )
 
 
 @build_ast.register
 def _(stitch: KnitScriptParser.StitchContext) -> Node:
-    return StitchLit(Stitch.from_symbol(stitch.ID().getText()))
+    return StitchLit(Stitch.from_symbol(stitch.ID().getText()),
+                     line=stitch.start.line, column=stitch.start.column,
+                     file=stitch.start.source[1].fileName)
 
 
 @build_ast.register
@@ -125,17 +147,23 @@ def _(expr: KnitScriptParser.ExprContext) -> Node:
 
 @build_ast.register
 def _(variable: KnitScriptParser.VariableContext) -> Node:
-    return Get(variable.ID().getText())
+    return Get(variable.ID().getText(),
+               line=variable.start.line, column=variable.start.column,
+               file=variable.start.source[1].fileName)
 
 
 @build_ast.register
 def _(natural: KnitScriptParser.NaturalContext) -> Node:
-    return NaturalLit(int(natural.getText()))
+    return NaturalLit(int(natural.getText()),
+                      line=natural.start.line, column=natural.start.column,
+                      file=natural.start.source[1].fileName)
 
 
 @build_ast.register
 def _(string: KnitScriptParser.StringContext) -> Node:
-    return StringLit(string.getText()[1:-1])
+    return StringLit(string.getText()[1:-1],
+                     line=string.start.line, column=string.start.column,
+                     file=string.start.source[1].fileName)
 
 
 def _stitches(ctx: Union[KnitScriptParser.FixedStitchRepeatContext,

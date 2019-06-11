@@ -39,7 +39,14 @@ class InterpretError(Exception):
         return self._node
 
     def __str__(self) -> str:
-        return f"{self.message} at {self.node}"
+        if self.node.line is not None:
+            position = (f"{type(self.node).__name__} at " +
+                        f"line {self.node.line}, " +
+                        f"column {self.node.column} " +
+                        f"in {self.node.file}")
+        else:
+            position = f"merged {type(self.node).__name__}"
+        return f"{self.message} ({position})"
 
 
 def prepare_pattern(pattern: Pattern) -> Pattern:
@@ -76,7 +83,8 @@ def enclose(node: Node, env: Mapping[str, Node]) -> Node:
 @enclose.register
 def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
     return Pattern(pattern.rows, pattern.params, env,
-                   pattern.consumes, pattern.produces)
+                   pattern.consumes, pattern.produces,
+                   pattern.line, pattern.column, pattern.file)
 
 
 @singledispatch
@@ -93,20 +101,23 @@ def reflect(node: Node) -> Node:
 @reflect.register
 def _(row: Row) -> Node:
     return Row(map(reflect, reversed(row.stitches)), row.side,
-               row.consumes, row.produces)
+               row.consumes, row.produces, row.line, row.column, row.file)
 
 
 @reflect.register
 def _(fixed: FixedStitchRepeat) -> Node:
     return FixedStitchRepeat(map(reflect, reversed(fixed.stitches)),
-                             fixed.times, fixed.consumes, fixed.produces)
+                             fixed.times, fixed.consumes, fixed.produces,
+                             fixed.line, fixed.column, fixed.file)
 
 
 @reflect.register
 def _(expanding: ExpandingStitchRepeat) -> Node:
     return ExpandingStitchRepeat(map(reflect, reversed(expanding.stitches)),
                                  expanding.to_last,
-                                 expanding.consumes, expanding.produces)
+                                 expanding.consumes, expanding.produces,
+                                 expanding.line, expanding.column,
+                                 expanding.file)
 
 
 def do_call(call: Call, env: Mapping[str, Node]) -> Optional[Node]:
@@ -177,9 +188,12 @@ def _(fixed: FixedStitchRepeat, available: Optional[int] = None) -> Node:
     try:
         return FixedStitchRepeat(counted, fixed.times,
                                  fixed.times.value * consumes,
-                                 fixed.times.value * produces)
+                                 fixed.times.value * produces,
+                                 fixed.line, fixed.column, fixed.file)
     except TypeError:
-        return FixedStitchRepeat(counted, fixed.times)
+        return FixedStitchRepeat(counted, fixed.times,
+                                 line=fixed.line, column=fixed.column,
+                                 file=fixed.file)
 
 
 @_infer_counts.register
@@ -195,14 +209,17 @@ def _(expanding: ExpandingStitchRepeat, available: Optional[int] = None) \
     assert isinstance(fixed, FixedStitchRepeat)
     n = (available - expanding.to_last.value) // fixed.consumes
     return ExpandingStitchRepeat(fixed.stitches, expanding.to_last,
-                                 n * fixed.consumes, n * fixed.produces)
+                                 n * fixed.consumes, n * fixed.produces,
+                                 expanding.line, expanding.column,
+                                 expanding.file)
 
 
 @_infer_counts.register
 def _(row: Row, available: Optional[int] = None) -> Node:
     counted = _infer_counts.dispatch(FixedStitchRepeat)(row, available)
     return Row(counted.stitches, row.side,
-               counted.consumes, counted.produces)
+               counted.consumes, counted.produces,
+               row.line, row.column, row.file)
 
 
 @_infer_counts.register
@@ -213,7 +230,8 @@ def _(rep: RowRepeat, available: Optional[int] = None) -> Node:
         assert isinstance(row, Knittable)
         counted.append(row)
         available = row.produces
-    return RowRepeat(counted, rep.times, counted[0].consumes, available)
+    return RowRepeat(counted, rep.times, counted[0].consumes, available,
+                     rep.line, rep.column, rep.file)
 
 
 # noinspection PyUnusedLocal
@@ -225,14 +243,16 @@ def _(block: Block, available: Optional[int] = None) -> Node:
         counted = list(map(_infer_counts, block.patterns))
     return Block(counted,
                  sum(map(attrgetter("consumes"), counted)),
-                 sum(map(attrgetter("produces"), counted)))
+                 sum(map(attrgetter("produces"), counted)),
+                 block.line, block.column, block.file)
 
 
 @_infer_counts.register
 def _(pattern: Pattern, available: Optional[int] = None) -> Node:
     counted = _infer_counts.dispatch(RowRepeat)(pattern, available)
     return Pattern(counted.rows, pattern.params, pattern.env,
-                   counted.consumes, counted.produces)
+                   counted.consumes, counted.produces,
+                   pattern.line, pattern.column, pattern.file)
 
 
 @_infer_counts.register
@@ -241,7 +261,8 @@ def _(rep: FixedBlockRepeat, available: Optional[int] = None) -> Node:
     assert isinstance(counted, Knittable)
     return FixedBlockRepeat(counted, rep.times,
                             rep.times.value * counted.consumes,
-                            rep.times.value * counted.produces)
+                            rep.times.value * counted.produces,
+                            rep.line, rep.column, rep.file)
 
 
 @singledispatch
@@ -263,7 +284,8 @@ def _substitute(node: Node, env: Mapping[str, Node]) -> Node:
 def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
     # noinspection PyTypeChecker
     return Pattern(map(partial(_substitute, env=env), pattern.rows),
-                   (), pattern.env, pattern.consumes, pattern.produces)
+                   (), pattern.env, pattern.consumes, pattern.produces,
+                   pattern.line, pattern.column, pattern.file)
 
 
 @_substitute.register
@@ -309,7 +331,8 @@ def _(fixed: FixedStitchRepeat, unroll: bool = False) -> Node:
                 first.stitches,
                 NaturalLit(first.times.value * fixed.times.value),
                 first.consumes * fixed.times.value,
-                first.produces * fixed.times.value
+                first.produces * fixed.times.value,
+                fixed.line, fixed.column, fixed.file
             ),
             partial(_flatten, unroll=unroll)
         )
@@ -329,14 +352,16 @@ def _(row_repeat: RowRepeat, unroll: bool = False) -> Node:
             rows.append(row)
     return RowRepeat(rows, row_repeat.times,
                      rows[0].consumes if rows else 0,
-                     rows[-1].produces if rows else 0)
+                     rows[-1].produces if rows else 0,
+                     row_repeat.line, row_repeat.column, row_repeat.file)
 
 
 @_flatten.register
 def _(pattern: Pattern, unroll: bool = False) -> Node:
     flattened = _flatten.dispatch(RowRepeat)(pattern, unroll)
     return Pattern(flattened.rows, pattern.params, pattern.env,
-                   flattened.consumes, flattened.produces)
+                   flattened.consumes, flattened.produces,
+                   pattern.line, pattern.column, pattern.file)
 
 
 @_flatten.register
@@ -354,7 +379,8 @@ def _(rep: FixedBlockRepeat, unroll: bool = False) -> Node:
         lambda row: Row(
             [FixedStitchRepeat(row.stitches, rep.times,
                                row.consumes * rep.times.value,
-                               row.produces * rep.times.value)],
+                               row.produces * rep.times.value,
+                               row.line, row.column, row.file)],
             row.side,
             row.consumes * rep.times.value, row.produces * rep.times.value
         ),
@@ -363,7 +389,8 @@ def _(rep: FixedBlockRepeat, unroll: bool = False) -> Node:
     # noinspection PyTypeChecker
     return Pattern(map(partial(_flatten, unroll=unroll), rows),
                    pattern.params, pattern.env,
-                   pattern.consumes, pattern.produces)
+                   pattern.consumes, pattern.produces,
+                   pattern.line, pattern.column, pattern.file)
 
 
 # noinspection PyUnusedLocal
@@ -391,7 +418,8 @@ def _(fixed: FixedStitchRepeat, before: int) -> Node:
     return FixedStitchRepeat(map(_reverse,
                                  reversed(fixed.stitches),
                                  reversed(list(before_acc))),
-                             fixed.times, fixed.consumes, fixed.produces)
+                             fixed.times, fixed.consumes, fixed.produces,
+                             fixed.line, fixed.column, fixed.file)
 
 
 # noinspection PyUnusedLocal
@@ -399,7 +427,7 @@ def _(fixed: FixedStitchRepeat, before: int) -> Node:
 def _(stitch: StitchLit, before: int) -> Node:
     new_stitch = stitch.value.reverse
     if new_stitch is not None:
-        return StitchLit(new_stitch)
+        return StitchLit(new_stitch, stitch.line, stitch.column, stitch.file)
     else:
         raise InterpretError(stitch,
                              "Cannot reverse stitch " + str(stitch.value))
@@ -411,7 +439,9 @@ def _(expanding: ExpandingStitchRepeat, before: int) -> Node:
                      before)
     assert isinstance(fixed, FixedStitchRepeat)
     return ExpandingStitchRepeat(fixed.stitches, NaturalLit(before),
-                                 expanding.consumes, expanding.produces)
+                                 expanding.consumes, expanding.produces,
+                                 expanding.line, expanding.column,
+                                 expanding.file)
 
 
 @_reverse.register
@@ -421,7 +451,7 @@ def _(row: Row, before: int) -> Node:
                      before)
     assert isinstance(fixed, FixedStitchRepeat)
     return Row(fixed.stitches, row.side.flip() if row.side else None,
-               fixed.consumes, fixed.produces)
+               fixed.consumes, fixed.produces, row.line, row.column, row.file)
 
 
 # noinspection PyUnusedLocal
@@ -448,30 +478,38 @@ def _(pattern: Pattern, side: Side = Side.Right) -> Node:
     side = Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
     return Pattern(
         map(_infer_sides, pattern.rows, side.alternate()),
-        pattern.params,
-        pattern.env
+        pattern.params, pattern.env,
+        pattern.consumes, pattern.produces,
+        pattern.line, pattern.column, pattern.file
     )
 
 
 @_infer_sides.register
 def _(block: Block, side: Side = Side.Right) -> Node:
-    return Block(map(_infer_sides, block.patterns, side.alternate()))
+    return Block(map(_infer_sides, block.patterns, side.alternate()),
+                 block.consumes, block.produces,
+                 block.line, block.column, block.file)
 
 
 @_infer_sides.register
 def _(rep: FixedBlockRepeat, side: Side = Side.Right) -> Node:
-    return FixedBlockRepeat(_infer_sides(rep.block, side), rep.times)
+    return FixedBlockRepeat(_infer_sides(rep.block, side), rep.times,
+                            rep.consumes, rep.produces,
+                            rep.line, rep.column, rep.file)
 
 
 @_infer_sides.register
 def _(rep: RowRepeat, side: Side = Side.Right) -> Node:
-    return RowRepeat(map(_infer_sides, rep.rows, side.alternate()),
-                     rep.times)
+    return RowRepeat(map(_infer_sides, rep.rows, side.alternate()), rep.times,
+                     rep.consumes, rep.produces,
+                     rep.line, rep.column, rep.file)
 
 
 @_infer_sides.register
 def _(row: Row, side: Side = Side.Right) -> Node:
-    return Row(row.stitches, side if row.side is None else row.side)
+    return Row(row.stitches, side if row.side is None else row.side,
+               row.consumes, row.produces,
+               row.line, row.column, row.file)
 
 
 @singledispatch
@@ -523,7 +561,8 @@ def _(rep: RowRepeat, side: Side = Side.Right) -> Node:
         new_rows.append(_alternate_sides(row, side))
         if num_rows % 2: # num_rows is odd
             side = side.flip()
-    return RowRepeat(new_rows, rep.times, rep.consumes, rep.produces)
+    return RowRepeat(new_rows, rep.times, rep.consumes, rep.produces,
+                     rep.line, rep.column, rep.file)
 
 
 @_alternate_sides.register
@@ -531,7 +570,8 @@ def _(pattern: Pattern, side: Side = Side.Right) -> Node:
     new_patt = _alternate_sides.dispatch(RowRepeat)(pattern, side)
     return Pattern(
         new_patt.rows, pattern.params, pattern.env, 
-        pattern.consumes, pattern.produces
+        pattern.consumes, pattern.produces,
+        pattern.line, pattern.column, pattern.file
     )
 
 
@@ -616,7 +656,9 @@ def _increase_expanding_repeats(node: Node, n: int) -> Node:
 def _(expanding: ExpandingStitchRepeat, n: int) -> Node:
     return ExpandingStitchRepeat(expanding.stitches,
                                  NaturalLit(expanding.to_last.value + n),
-                                 expanding.consumes, expanding.produces)
+                                 expanding.consumes, expanding.produces,
+                                 expanding.line, expanding.column,
+                                 expanding.file)
 
 
 @singledispatch

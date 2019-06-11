@@ -38,19 +38,55 @@ class Side(Enum):
 
 class Node(ABC):
     """An AST node."""
-    pass
+
+    def __init__(self,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
+        """
+        Creates a new AST node.
+
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
+        """
+        self._line = line
+        self._column = column
+        self._file = file
+
+    @property
+    def line(self) -> Optional[int]:
+        """This node's line in the source file, if any."""
+        return self._line
+
+    @property
+    def column(self) -> Optional[int]:
+        """This node's column in the source file, if any."""
+        return self._column
+
+    @property
+    def file(self) -> Optional[str]:
+        """This node's source file name, if any."""
+        return self._file
 
 
 class Document(Node):
     """An AST node describing a complete KnitScript document."""
 
-    def __init__(self, stmts: Iterable[Node]) \
-            -> None:
+    def __init__(self,
+                 stmts: Iterable[Node],
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new document node.
 
         :param stmts: the statements in the document
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._stmts = tuple(stmts)
 
     @property
@@ -62,13 +98,22 @@ class Document(Node):
 class Using(Node):
     """An AST node representing a using statement."""
 
-    def __init__(self, names: Iterable[str], module: str):
+    def __init__(self,
+                 names: Iterable[str],
+                 module: str,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new using statement node.
 
         :param names: the names to import
         :param module: the name of the module to import them from
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._names = tuple(names)
         self._module = module
 
@@ -86,13 +131,22 @@ class Using(Node):
 class PatternDef(Node):
     """An AST node that defines a named pattern."""
 
-    def __init__(self, name: str, pattern: Node) -> None:
+    def __init__(self,
+                 name: str,
+                 pattern: Node,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new pattern definition node.
 
         :param name: the name of the pattern
         :param pattern: the pattern expression
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._name = name
         self._pattern = pattern
 
@@ -110,13 +164,21 @@ class PatternDef(Node):
 class NaturalLit(Node):
     """An AST node for a natural number (non-negative integer) literal."""
 
-    def __init__(self, value: int) -> None:
+    def __init__(self,
+                 value: int,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new natural number literal.
 
         :param value: the value of this literal
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         :raise ValueError: if the value is negative
         """
+        super().__init__(line, column, file)
         if value < 0:
             raise ValueError("value must be non-negative")
         self._value = value
@@ -136,12 +198,20 @@ class NaturalLit(Node):
 class StringLit(Node):
     """An AST node for a string literal."""
 
-    def __init__(self, value: str) -> None:
+    def __init__(self,
+                 value: str,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new string literal.
 
         :param value: the value of this literal
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._value = value
 
     @property
@@ -158,7 +228,10 @@ class Knittable(Node):
 
     def __init__(self,
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new knitting action expression.
 
@@ -168,7 +241,11 @@ class Knittable(Node):
         :param produces:
             the number of stitches this expression produces for the next row,
             if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._consumes = consumes
         self._produces = produces
 
@@ -188,13 +265,20 @@ class Knittable(Node):
 class StitchLit(Knittable):
     """An AST node for a stitch literal."""
 
-    def __init__(self, value: Stitch) -> None:
+    def __init__(self,
+                 value: Stitch,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new stitch literal.
 
         :param value: the value of this literal
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(value.consumes, value.produces)
+        super().__init__(value.consumes, value.produces, line, column, file)
         self._value = value
 
     @property
@@ -215,7 +299,10 @@ class FixedStitchRepeat(Knittable):
                  stitches: Iterable[Node],
                  times: Node,
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new fixed stitch repeat expression.
 
@@ -225,8 +312,11 @@ class FixedStitchRepeat(Knittable):
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(consumes, produces)
+        super().__init__(consumes, produces, line, column, file)
         self._stitches = tuple(stitches)
         self._times = times
 
@@ -251,7 +341,10 @@ class ExpandingStitchRepeat(Knittable):
                  stitches: Iterable[Node],
                  to_last: Node = NaturalLit(0),
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new expanding stitch repeat expression.
 
@@ -261,8 +354,11 @@ class ExpandingStitchRepeat(Knittable):
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(consumes, produces)
+        super().__init__(consumes, produces, line, column, file)
         self._stitches = tuple(stitches)
         self._to_last = to_last
 
@@ -284,7 +380,10 @@ class Row(FixedStitchRepeat):
                  stitches: Iterable[Node],
                  side: Optional[Side] = None,
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new row expression.
 
@@ -296,8 +395,13 @@ class Row(FixedStitchRepeat):
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(stitches, NaturalLit(1), consumes, produces)
+        super().__init__(stitches, NaturalLit(1),
+                         consumes, produces,
+                         line, column, file)
         self._side = side
 
     @property
@@ -316,7 +420,10 @@ class RowRepeat(Knittable):
                  rows: Iterable[Node],
                  times: Node,
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new row repeat expression.
 
@@ -326,8 +433,11 @@ class RowRepeat(Knittable):
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(consumes, produces)
+        super().__init__(consumes, produces, line, column, file)
         self._rows = tuple(rows)
         self._times = times
 
@@ -348,7 +458,10 @@ class Block(Knittable):
     def __init__(self,
                  patterns: Iterable[Node],
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new block concatenation expression.
 
@@ -357,8 +470,11 @@ class Block(Knittable):
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(consumes, produces)
+        super().__init__(consumes, produces, line, column, file)
         self._patterns = tuple(patterns)
 
     @property
@@ -375,8 +491,10 @@ class Pattern(RowRepeat):
                  params: Iterable[str] = (),
                  env: Optional[Mapping[str, Node]] = None,
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) \
-            -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new pattern expression.
 
@@ -387,8 +505,13 @@ class Pattern(RowRepeat):
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(rows, NaturalLit(1), consumes, produces)
+        super().__init__(rows, NaturalLit(1),
+                         consumes, produces,
+                         line, column, file)
         self._params = tuple(params)
         self._env = env
 
@@ -412,7 +535,10 @@ class FixedBlockRepeat(Knittable):
                  block: Node,
                  times: Node,
                  consumes: Optional[int] = None,
-                 produces: Optional[int] = None) -> None:
+                 produces: Optional[int] = None,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new fixed block repeat expression.
 
@@ -422,8 +548,11 @@ class FixedBlockRepeat(Knittable):
             the number of stitches this expression consumes, if known
         :param produces:
             the number of stitches this expression produces, if known
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
-        super().__init__(consumes, produces)
+        super().__init__(consumes, produces, line, column, file)
         self._block = block
         self._times = times
 
@@ -441,12 +570,20 @@ class FixedBlockRepeat(Knittable):
 class Get(Node):
     """An AST node representing a variable lookup."""
 
-    def __init__(self, name: str) -> None:
+    def __init__(self,
+                 name: str,
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new get expression.
 
         :param name: the name of the variable to lookup
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._name = name
 
     @property
@@ -461,13 +598,22 @@ class Get(Node):
 class Call(Node):
     """An AST node representing a call to a pattern or texture."""
 
-    def __init__(self, target: Node, args: Iterable[Node]) -> None:
+    def __init__(self,
+                 target: Node,
+                 args: Iterable[Node],
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new call expression.
 
         :param target: the expression to call
         :param args: the arguments to send to the target expression
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._target = target
         self._args = tuple(args)
 
@@ -488,13 +634,20 @@ class Call(Node):
 class NativeFunction(Node):
     """An AST node representing a native Python function."""
 
-    def __init__(self, function: Callable[[Node, ...], Optional[Node]]) \
-            -> None:
+    def __init__(self,
+                 function: Callable[[Node, ...], Optional[Node]],
+                 line: Optional[int] = None,
+                 column: Optional[int] = None,
+                 file: Optional[str] = None) -> None:
         """
         Creates a new native function node.
 
         :param function: the native function
+        :param line: this node's line in the source file, if any
+        :param column: this node's column in the source file, if any
+        :param file: this node's source file name, if any
         """
+        super().__init__(line, column, file)
         self._function = function
 
     @property
