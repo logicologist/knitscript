@@ -22,4 +22,13 @@ end
 
 show (bumpy)
 
+pattern widewaves
+  row: CO 10.
+  slippedWaves, slippedWaves, slippedWaves, slippedWaves, slippedWaves.
+  row: BO to end.
+end
 
+show (widewaves)
+
+
+end

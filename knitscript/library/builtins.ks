@@ -65,6 +65,13 @@ pattern seersucker
   row: P, K, P 2.
 end
 
+pattern slippedWaves
+  row: K 2.
+  row: K, SL.
+  row: K 2.
+  row: SL, K.
+end
+
 
 
 -- Library functions
