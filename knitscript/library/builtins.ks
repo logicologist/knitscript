@@ -47,6 +47,13 @@ pattern pineTrees
   row: P to end.
 end
 
+pattern oldShale
+  row: K 18.
+  row: P 18.
+  row: P2TOG 3, (YO, K) 6, P2TOG 3.
+  row: P 18.
+end
+
 
 
 -- Library functions
