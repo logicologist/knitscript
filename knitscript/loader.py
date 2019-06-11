@@ -65,11 +65,15 @@ def _show(out: Optional[TextIO],
     assert isinstance(pattern, Pattern)
     pattern = prepare_pattern(pattern)
     if description:
-        out.write(f"\033[1m{description}\033[0m\n\n")
+        out.write(f"\n\033[1m{description}\033[0m\n\n")
     out.write(f"{export_text(pattern)}\n\n")
     for error in verify_pattern(pattern):
         out.write(f"error: {error}\n")
-    out.write("\n")
+
+
+def _note(out: Optional[TextIO], message: Node) -> None:
+    if out is not None:
+        out.write(f"{message}\n")
 
 
 def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
@@ -77,6 +81,7 @@ def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
     return {
         "reflect": NativeFunction(reflect),
         "show": NativeFunction(partial(_show, out)),
+        "note": NativeFunction(partial(_note, out)),
         **_load(FileStream(os.path.join(os.path.dirname(__file__),
                                         "library",
                                         "builtins.ks")),

@@ -18,4 +18,5 @@ pattern basicScarf (n)
   row: BO to end.
 end
 
+note ("This is an example of a simple knitting pattern with a parameter.")
 show (basicScarf (5), "Basic scarf with 5 repeats")
