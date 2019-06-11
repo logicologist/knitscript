@@ -54,6 +54,24 @@ pattern oldShale
   row: P 18.
 end
 
+pattern seersucker
+  row: K, P, K, P.
+  row: K, P, K, P.
+  row: P, K 3.
+  row: P 3, K.
+  row: K, P, K, P.
+  row: K, P, K, P.
+  row: K 2, P, K.
+  row: P, K, P 2.
+end
+
+pattern slippedWaves
+  row: K 2.
+  row: K, SL.
+  row: K 2.
+  row: SL, K.
+end
+
 
 
 -- Library functions
