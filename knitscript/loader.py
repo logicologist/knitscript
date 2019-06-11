@@ -5,10 +5,11 @@ from typing import Mapping, Optional, TextIO
 from antlr4 import CommonTokenStream, FileStream, InputStream
 
 from knitscript.astgen import build_ast
-from knitscript.astnodes import Call, Document, NativeFunction, Node, \
-    Pattern, PatternDef, Using
+from knitscript.astnodes import Call, Document, NativeFunction, NaturalLit, \
+    Node, Pattern, PatternDef, Using
 from knitscript.exporter import export_text
-from knitscript.interpreter import do_call, enclose, reflect, prepare_pattern
+from knitscript.interpreter import do_call, enclose, fill, reflect, \
+    prepare_pattern
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 from knitscript.verifier import verify_pattern
@@ -76,12 +77,20 @@ def _note(out: Optional[TextIO], message: Node) -> None:
         out.write(f"{message}\n")
 
 
+def _fill(pattern: Node, width: Node, height: Node) -> Node:
+    assert isinstance(pattern, Pattern)
+    assert isinstance(width, NaturalLit)
+    assert isinstance(height, NaturalLit)
+    return fill(pattern, width.value, height.value)
+
+
 def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
     # noinspection PyTypeChecker
     return {
         "reflect": NativeFunction(reflect),
         "show": NativeFunction(partial(_show, out)),
         "note": NativeFunction(partial(_note, out)),
+        "fill": NativeFunction(_fill),
         **_load(FileStream(os.path.join(os.path.dirname(__file__),
                                         "library",
                                         "builtins.ks")),

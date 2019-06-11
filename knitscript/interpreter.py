@@ -149,6 +149,37 @@ def do_call(call: Call, env: Mapping[str, Node]) -> Optional[Node]:
         return target.function(*args)
 
 
+def fill(pattern: Pattern, width: int, height: int) -> Node:
+    """
+    Repeats a pattern horizontally and vertically to fill a box.
+
+    :param pattern: the pattern to repeat
+    :param width: the width of the box (number of stitches)
+    :param height: the height of the box (number of rows)
+    :return: the repeated pattern
+    """
+    pattern = _infer_counts(pattern)
+    assert isinstance(pattern, Pattern)
+    stitches = max(map(attrgetter("consumes"), pattern.rows))
+    rows = _count_rows(pattern)
+    if (width % stitches != 0 or width < stitches or
+            height % rows != 0 or height < rows):
+        raise InterpretError(
+            f"{stitches}×{rows} pattern does not fit evenly into " +
+            f"{width}×{height} fill box",
+            pattern
+        )
+    n = width // stitches
+    m = height // rows
+    return RowRepeat([FixedBlockRepeat(Block([pattern],
+                                             pattern.consumes,
+                                             pattern.produces),
+                                       NaturalLit(n),
+                                       pattern.consumes * n,
+                                       pattern.produces * n)],
+                     NaturalLit(m), pattern.consumes * n, pattern.produces * m)
+
+
 @singledispatch
 def _infer_counts(node: Node, available: Optional[int] = None) -> Node:
     """

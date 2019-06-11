@@ -157,3 +157,11 @@ test(lambda: check_output("test/merge-finding-lcm.ks",
                           "rep from ** 2 times\n" +
                           "RS: BO 8. (0 sts)"),
      "Merging parallel row repeats should find the least common multiple")
+test(lambda: check_output("test/fill.ks",
+                          "WS: CO 10. (10 sts)\n" +
+                          "**\n" +
+                          "RS: [K, P] 5. (10 sts)\n"
+                          "WS: [P, K] 5. (10 sts)\n" +
+                          "rep from ** 4 times\n" +
+                          "RS: BO 10. (0 sts)"),
+     "Test fill function")
