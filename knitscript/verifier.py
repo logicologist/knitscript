@@ -171,6 +171,19 @@ def _(stitch: StitchLit) -> Sequence:
     return [stitch.value]
 
 
+def _unroll_slip(stitch: Stitch) -> Sequence[Stitch]:
+    if stitch == Stitch.SLIP:
+        return [Stitch.SLIP]
+    elif stitch == Stitch.SLIP_PURLWISE:
+        return [Stitch.SLIP]
+    elif stitch == Stitch.SLIP_2_KNITWISE:
+        return [Stitch.SLIP, Stitch.SLIP]
+    elif stitch == Stitch.SLIP_2_PURLWISE:
+        return [Stitch.SLIP, Stitch.SLIP]
+    else:
+        return [stitch]
+
+
 @singledispatch
 def _verify_psso(node: Node) -> Generator[KnitError, None, None]:
     """
@@ -191,6 +204,7 @@ def _(rep: RowRepeat) -> Generator[KnitError, None, None]:
 @_verify_psso.register
 def _(row: Row) -> Generator[KnitError, None, None]:
     stitches = list(_unroll_row(row))
+    stitches = [item for st in stitches for item in _unroll_slip(st)]
     num_stitches = len(stitches)
     i = 0
     for _ in range(num_stitches):
