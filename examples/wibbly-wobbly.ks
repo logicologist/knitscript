@@ -25,7 +25,7 @@ pattern downWobbly
   row: KFB, K 1, KFB.
   row: P to end.
   repeat 2
-    row: KFB, K to end, KFB.
+    row: KFB, K to last 1, KFB.
     row: P to end.
   end
 end
