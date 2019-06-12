@@ -438,24 +438,29 @@ def _(block: Block, unroll: bool = False) -> Node:
 
 @_flatten.register
 def _(rep: FixedBlockRepeat, unroll: bool = False) -> Node:
-    pattern = _flatten(rep.block, unroll)
+    pattern = _flatten(_repeat_across(_flatten(rep.block, unroll),
+                                      rep.times.value), unroll)
     assert isinstance(pattern, Pattern)
-    rows = map(
-        lambda row: Row(
-            [FixedStitchRepeat(row.stitches, rep.times,
-                               row.consumes * rep.times.value,
-                               row.produces * rep.times.value,
-                               row.line, row.column, row.file)],
-            row.side,
-            row.consumes * rep.times.value, row.produces * rep.times.value
-        ),
-        pattern.rows
-    )
     # noinspection PyTypeChecker
-    return Pattern(map(partial(_flatten, unroll=unroll), rows),
-                   pattern.params, pattern.env,
-                   pattern.consumes, pattern.produces,
+    return Pattern(pattern.rows, pattern.params, pattern.env,
+                   pattern.consumes * rep.times.value,
+                   pattern.produces * rep.times.value,
                    pattern.line, pattern.column, pattern.file)
+
+
+@singledispatch
+def _repeat_across(node: Node, times: int) -> Node:
+    # noinspection PyTypeChecker
+    return ast_map(node, partial(_repeat_across, times=times))
+
+
+@_repeat_across.register
+def _(row: Row, times: int) -> Node:
+    return Row([FixedStitchRepeat(row.stitches, NaturalLit(times),
+                                  row.consumes * times,
+                                  row.produces * times,
+                                  row.line, row.column, row.file)],
+               row.side, row.consumes * times, row.produces * times)
 
 
 # noinspection PyUnusedLocal
