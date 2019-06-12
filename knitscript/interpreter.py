@@ -326,11 +326,13 @@ def _(row: Row, available: Optional[int] = None) -> Node:
 @infer_counts.register
 def _(rep: RowRepeat, available: Optional[int] = None) -> Node:
     counted = []
-    for row in rep.rows:
-        row = infer_counts(row, available)
-        assert isinstance(row, Knittable)
-        counted.append(row)
-        available = row.produces
+    for _ in range(max(1, rep.times.value)):
+        for row in rep.rows:
+            row = infer_counts(row, available)
+            assert isinstance(row, Knittable)
+            available = row.produces
+            if len(counted) < len(rep.rows):
+                counted.append(row)
     return RowRepeat(counted, rep.times, counted[0].consumes, available,
                      rep.line, rep.column, rep.file)
 
