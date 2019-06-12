@@ -10,6 +10,11 @@ pattern stst
   row: P.
 end
 
+pattern reverseStst
+  row: P.
+  row: K.
+end
+
 pattern rib (a, b)
   row: K a, P b.
   row: K b, P a.
@@ -32,6 +37,13 @@ pattern basketweave
   row RS: P 4, K 2, P 2.
   row RS: P 4, K 2, P 2.
   row RS: K 8.
+end
+
+pattern stripes
+  row RS: K.
+  row RS: K.
+  row WS: P.
+  row WS: P.
 end
 
 pattern oldShale
