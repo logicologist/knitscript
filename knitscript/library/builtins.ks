@@ -23,6 +23,17 @@ end
 
 -- Fancier stitch textures
 
+pattern basketweave
+  row RS: K 2, P 6.
+  row RS: K 2, P 6.
+  row RS: K 2, P 6.
+  row RS: K 8.
+  row RS: P 4, K 2, P 2.
+  row RS: P 4, K 2, P 2.
+  row RS: P 4, K 2, P 2.
+  row RS: K 8.
+end
+
 pattern oldShale
   row: K 18.
   row: P 18.

@@ -30,4 +30,10 @@ end
 
 show (widewaves)
 
+pattern basket
+  row: CO 16.
+  basketweave 2.
+  row: BO to end.
+end
 
+show (basket)
