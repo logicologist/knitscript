@@ -8,6 +8,8 @@ Our proposal: https://docs.google.com/document/d/1HJaMU6nQh7hZbXyaBIFYdoHr-XjVUf
 
 Our design doc: https://docs.google.com/document/d/1bXGWBJ_lnPc5Xc-QCefcFH5KNZkcsYDslpOo9RWE-is/edit?usp=sharing
 
+Our final project report: https://docs.google.com/document/d/1aYORpi4gq3Y1R5aTd2yqlDE1VDverKlRFNv3xR3BcdQ/edit?usp=sharing
+
 ## Getting started ##
 
 This project requires Python version 3.7 or higher.
