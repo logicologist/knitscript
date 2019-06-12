@@ -113,7 +113,7 @@ pattern pad (p, before, after)
   end
 end
 
-pattern garterBorder(p, topBottom, leftRight)
+pattern garterBorder (p, topBottom, leftRight)
   fill (garter, leftRight, topBottom),
     fill (garter, width (p), topBottom),
     fill (garter, leftRight, topBottom).
@@ -123,4 +123,12 @@ pattern garterBorder(p, topBottom, leftRight)
   fill (garter, leftRight, topBottom),
     fill (garter, width (p), topBottom),
     fill (garter, leftRight, topBottom).
+end
+
+-- Adds cast-on and bind-off stitches to the beginning and end of a pattern.
+-- The pattern can't have any expanding stitch repeats in the first row.
+pattern standalone (p)
+  row: CO width (p).
+  p.
+  row: BO to end.
 end
