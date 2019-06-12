@@ -56,9 +56,9 @@ def prepare_pattern(pattern: Pattern) -> Pattern:
     :param pattern: the pattern to prepare
     :return: the pattern prepared for exporting
     """
-    pattern = _substitute(pattern, pattern.env)
+    pattern = substitute(pattern, pattern.env)
     pattern = _infer_sides(pattern)
-    pattern = _infer_counts(pattern)
+    pattern = infer_counts(pattern)
     pattern = _flatten(pattern)
     pattern = _alternate_sides(
         pattern, Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
@@ -85,6 +85,41 @@ def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
     return Pattern(pattern.rows, pattern.params, env,
                    pattern.consumes, pattern.produces,
                    pattern.line, pattern.column, pattern.file)
+
+
+@singledispatch
+def substitute(node: Node, env: Mapping[str, Node]) -> Node:
+    """
+    Substitutes all variables and calls in the AST with their equivalent
+    expressions.
+
+    :param node: the AST to transform
+    :param env: the environment
+    :return:
+        the transformed expression with all variables and calls substituted out
+    """
+    # noinspection PyTypeChecker
+    return ast_map(node, partial(substitute, env=env))
+
+
+@substitute.register
+def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
+    # noinspection PyTypeChecker
+    return Pattern(map(partial(substitute, env=env), pattern.rows),
+                   (), pattern.env, pattern.consumes, pattern.produces,
+                   pattern.line, pattern.column, pattern.file)
+
+
+@substitute.register
+def _(get: Get, env: Mapping[str, Node]) -> Node:
+    return env[get.name]
+
+
+@substitute.register
+def _(call: Call, env: Mapping[str, Node]) -> Node:
+    result = do_call(call, env)
+    assert result is not None
+    return result
 
 
 @singledispatch
@@ -130,9 +165,9 @@ def do_call(call: Call, env: Mapping[str, Node]) -> Optional[Node]:
     """
     target = call.target
     if isinstance(target, Get):
-        target = _substitute(target, env)
+        target = substitute(target, env)
     # noinspection PyTypeChecker
-    args = map(partial(_substitute, env=env), call.args)
+    args = map(partial(substitute, env=env), call.args)
     assert isinstance(target, Pattern) or isinstance(target,
                                                      NativeFunction)
     if isinstance(target, Pattern):
@@ -142,15 +177,80 @@ def do_call(call: Call, env: Mapping[str, Node]) -> Optional[Node]:
                 f"expected {len(target.params)}",
                 call
             )
-        return _substitute(target,
-                           {**target.env,
-                            **dict(zip(target.params, args))})
+        return substitute(target,
+                          {**target.env,
+                           **dict(zip(target.params, args))})
     elif isinstance(target, NativeFunction):
         return target.function(*args)
 
 
+def fill(pattern: Pattern, width: int, height: int) -> Node:
+    """
+    Repeats a pattern horizontally and vertically to fill a box.
+
+    :param pattern: the pattern to repeat
+    :param width: the width of the box (number of stitches)
+    :param height: the height of the box (number of rows)
+    :return: the repeated pattern
+    """
+    pattern = infer_counts(pattern)
+    assert isinstance(pattern, Pattern)
+    stitches = max(map(attrgetter("consumes"), pattern.rows))
+    rows = count_rows(pattern)
+    if (width % stitches != 0 or width < stitches or
+            height % rows != 0 or height < rows):
+        raise InterpretError(
+            f"{stitches}×{rows} pattern does not fit evenly into " +
+            f"{width}×{height} fill box",
+            pattern
+        )
+    n = width // stitches
+    m = height // rows
+    return Pattern(
+        [RowRepeat([FixedBlockRepeat(Block([pattern],
+                                           pattern.consumes,
+                                           pattern.produces),
+                                     NaturalLit(n),
+                                     pattern.consumes * n,
+                                     pattern.produces * n)],
+                   NaturalLit(m), pattern.consumes * n, pattern.produces * n)],
+        pattern.params, pattern.env, pattern.consumes * n, pattern.produces * n
+    )
+
+
 @singledispatch
-def _infer_counts(node: Node, available: Optional[int] = None) -> Node:
+def count_rows(node: Node) -> int:
+    """
+    Recursively counts rows in the subexpression.
+
+    :param node: the expression to count rows of.
+    :return: the number of rows in the expression.
+    """
+    return ast_map(node, count_rows)
+
+
+@count_rows.register
+def _(row: Row) -> int:
+    return 1
+
+
+@count_rows.register
+def _(rep: RowRepeat) -> int:
+    return sum(map(count_rows, rep.rows)) * rep.times.value
+
+
+@count_rows.register
+def _(block: Block) -> int:
+    return max(map(count_rows, block.patterns))
+
+
+@count_rows.register
+def _(rep: FixedBlockRepeat) -> int:
+    return count_rows(rep.block)
+
+
+@singledispatch
+def infer_counts(node: Node, available: Optional[int] = None) -> Node:
     """
     Tries to count the number of stitches that each node consumes and produces.
     If not enough information is available for a particular node, its stitch
@@ -164,16 +264,16 @@ def _infer_counts(node: Node, available: Optional[int] = None) -> Node:
         filled in
     """
     # noinspection PyTypeChecker
-    return ast_map(node, partial(_infer_counts, available=available))
+    return ast_map(node, partial(infer_counts, available=available))
 
 
-@_infer_counts.register
+@infer_counts.register
 def _(fixed: FixedStitchRepeat, available: Optional[int] = None) -> Node:
     counted = []
     consumes = 0
     produces = 0
     for stitch in fixed.stitches:
-        stitch = _infer_counts(
+        stitch = infer_counts(
             stitch,
             available - consumes if available is not None else None
         )
@@ -196,13 +296,13 @@ def _(fixed: FixedStitchRepeat, available: Optional[int] = None) -> Node:
                                  file=fixed.file)
 
 
-@_infer_counts.register
+@infer_counts.register
 def _(expanding: ExpandingStitchRepeat, available: Optional[int] = None) \
         -> Node:
     if available is None:
         raise InterpretError("ambiguous use of expanding stitch repeat",
                              expanding)
-    fixed = _infer_counts(
+    fixed = infer_counts(
         FixedStitchRepeat(expanding.stitches, NaturalLit(1)),
         available - expanding.to_last.value
     )
@@ -214,19 +314,19 @@ def _(expanding: ExpandingStitchRepeat, available: Optional[int] = None) \
                                  expanding.file)
 
 
-@_infer_counts.register
+@infer_counts.register
 def _(row: Row, available: Optional[int] = None) -> Node:
-    counted = _infer_counts.dispatch(FixedStitchRepeat)(row, available)
+    counted = infer_counts.dispatch(FixedStitchRepeat)(row, available)
     return Row(counted.stitches, row.side,
                counted.consumes, counted.produces,
                row.line, row.column, row.file)
 
 
-@_infer_counts.register
+@infer_counts.register
 def _(rep: RowRepeat, available: Optional[int] = None) -> Node:
     counted = []
     for row in rep.rows:
-        row = _infer_counts(row, available)
+        row = infer_counts(row, available)
         assert isinstance(row, Knittable)
         counted.append(row)
         available = row.produces
@@ -235,69 +335,34 @@ def _(rep: RowRepeat, available: Optional[int] = None) -> Node:
 
 
 # noinspection PyUnusedLocal
-@_infer_counts.register
+@infer_counts.register
 def _(block: Block, available: Optional[int] = None) -> Node:
     if len(block.patterns) == 1:
-        counted = [_infer_counts(block.patterns[0], available)]
+        counted = [infer_counts(block.patterns[0], available)]
     else:
-        counted = list(map(_infer_counts, block.patterns))
+        counted = list(map(infer_counts, block.patterns))
     return Block(counted,
                  sum(map(attrgetter("consumes"), counted)),
                  sum(map(attrgetter("produces"), counted)),
                  block.line, block.column, block.file)
 
 
-@_infer_counts.register
+@infer_counts.register
 def _(pattern: Pattern, available: Optional[int] = None) -> Node:
-    counted = _infer_counts.dispatch(RowRepeat)(pattern, available)
+    counted = infer_counts.dispatch(RowRepeat)(pattern, available)
     return Pattern(counted.rows, pattern.params, pattern.env,
                    counted.consumes, counted.produces,
                    pattern.line, pattern.column, pattern.file)
 
 
-@_infer_counts.register
+@infer_counts.register
 def _(rep: FixedBlockRepeat, available: Optional[int] = None) -> Node:
-    counted = _infer_counts(rep.block, available)
+    counted = infer_counts(rep.block, available)
     assert isinstance(counted, Knittable)
     return FixedBlockRepeat(counted, rep.times,
                             rep.times.value * counted.consumes,
                             rep.times.value * counted.produces,
                             rep.line, rep.column, rep.file)
-
-
-@singledispatch
-def _substitute(node: Node, env: Mapping[str, Node]) -> Node:
-    """
-    Substitutes all variables and calls in the AST with their equivalent
-    expressions.
-
-    :param node: the AST to transform
-    :param env: the environment
-    :return:
-        the transformed expression with all variables and calls substituted out
-    """
-    # noinspection PyTypeChecker
-    return ast_map(node, partial(_substitute, env=env))
-
-
-@_substitute.register
-def _(pattern: Pattern, env: Mapping[str, Node]) -> Node:
-    # noinspection PyTypeChecker
-    return Pattern(map(partial(_substitute, env=env), pattern.rows),
-                   (), pattern.env, pattern.consumes, pattern.produces,
-                   pattern.line, pattern.column, pattern.file)
-
-
-@_substitute.register
-def _(get: Get, env: Mapping[str, Node]) -> Node:
-    return env[get.name]
-
-
-@_substitute.register
-def _(call: Call, env: Mapping[str, Node]) -> Node:
-    result = do_call(call, env)
-    assert result is not None
-    return result
 
 
 @singledispatch
@@ -513,27 +578,6 @@ def _(row: Row, side: Side = Side.Right) -> Node:
 
 
 @singledispatch
-def _count_rows(node: Node) -> int:
-    """
-    Recursively counts rows in the subexpression.
-
-    :param node: the expression to count rows of.
-    :return: the number of rows in the expression.
-    """
-    return ast_map(node, _count_rows)
-
-
-@_count_rows.register
-def _(row: Row) -> int:
-    return 1
-
-
-@_count_rows.register
-def _(rep: RowRepeat) -> int:
-    return sum(map(_count_rows, rep.rows)) * rep.times.value
-
-
-@singledispatch
 def _alternate_sides(node: Node, side: Side = Side.Right) -> Node:
     """
     Ensures that every row alternates between right and wrong side, starting
@@ -557,7 +601,7 @@ def _(row: Row, side: Side = Side.Right) -> Node:
 def _(rep: RowRepeat, side: Side = Side.Right) -> Node:
     new_rows = []
     for row in rep.rows:
-        num_rows = _count_rows(row) # TODO this is somewhat inefficient
+        num_rows = count_rows(row) # TODO this is somewhat inefficient
         new_rows.append(_alternate_sides(row, side))
         if num_rows % 2: # num_rows is odd
             side = side.flip()
@@ -608,16 +652,16 @@ def _(*reps: RowRepeat) -> Knittable:
                          rows[0].consumes, rows[-1].produces)
 
     # Find the smallest number of rows that all row repeats can be expanded to.
-    num_rows = _lcm(*map(lambda rep: sum(map(_count_rows, rep.rows)), reps))
+    num_rows = _lcm(*map(lambda rep: sum(map(count_rows, rep.rows)), reps))
 
     def expand(rep: RowRepeat) -> Iterator[Node]:
         times = min(rep.times.value,
-                    num_rows // sum(map(_count_rows, rep.rows)))
+                    num_rows // sum(map(count_rows, rep.rows)))
         return chain.from_iterable(repeat(rep.rows, times))
 
     rows = list(starmap(_merge_across, _padded_zip(*map(expand, reps))))
     return RowRepeat(rows,
-                     NaturalLit(ceil(max(map(_count_rows, reps)) / num_rows)),
+                     NaturalLit(ceil(max(map(count_rows, reps)) / num_rows)),
                      rows[0].consumes, rows[-1].produces)
 
 

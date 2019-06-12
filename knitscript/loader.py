@@ -1,14 +1,16 @@
 import os
 from functools import partial
+from operator import attrgetter
 from typing import Mapping, Optional, TextIO
 
 from antlr4 import CommonTokenStream, FileStream, InputStream
 
 from knitscript.astgen import build_ast
-from knitscript.astnodes import Call, Document, NativeFunction, Node, \
-    Pattern, PatternDef, Using
+from knitscript.astnodes import Call, Document, NativeFunction, NaturalLit, \
+    Node, Pattern, PatternDef, Using
 from knitscript.exporter import export_text
-from knitscript.interpreter import do_call, enclose, reflect, prepare_pattern
+from knitscript.interpreter import count_rows, do_call, enclose, fill, \
+    infer_counts, prepare_pattern, reflect, substitute
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 from knitscript.verifier import verify_pattern
@@ -76,15 +78,42 @@ def _note(out: Optional[TextIO], message: Node) -> None:
         out.write(f"{message}\n")
 
 
+def _fill(pattern: Node, width: Node, height: Node) -> Node:
+    assert isinstance(pattern, Pattern)
+    assert isinstance(width, NaturalLit)
+    assert isinstance(height, NaturalLit)
+    return fill(pattern, width.value, height.value)
+
+
+def _width(pattern: Node) -> Node:
+    assert isinstance(pattern, Pattern)
+    pattern = infer_counts(substitute(pattern, pattern.env))
+    assert isinstance(pattern, Pattern)
+    return NaturalLit(max(map(attrgetter("consumes"), pattern.rows)))
+
+
+def _height(pattern: Node) -> Node:
+    assert isinstance(pattern, Pattern)
+    pattern = substitute(pattern, pattern.env)
+    return NaturalLit(count_rows(pattern))
+
+
 def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
     # noinspection PyTypeChecker
-    return {
+    env = {
         "reflect": NativeFunction(reflect),
         "show": NativeFunction(partial(_show, out)),
         "note": NativeFunction(partial(_note, out)),
+        "fill": NativeFunction(_fill),
+        "width": NativeFunction(_width),
+        "height": NativeFunction(_height)
+    }
+    # noinspection PyTypeChecker
+    return {
+        **env,
         **_load(FileStream(os.path.join(os.path.dirname(__file__),
                                         "library",
                                         "builtins.ks")),
-                {},
+                env,
                 os.path.join(os.path.dirname(__file__), "library"))
     }

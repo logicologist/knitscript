@@ -23,7 +23,7 @@ class Stitch(Enum):
     KNIT_FRONT_BACK = ("KFB", 1, 2, lambda: Stitch.PURL_FRONT_BACK)
     PURL_FRONT_BACK = ("PFB", 1, 2, lambda: Stitch.KNIT_FRONT_BACK)
     MAKE_1_LEFT = ("M1", 0, 1, lambda: Stitch.MAKE_1_RIGHT)
-    MAKE_1_RIGHT = ("M1-R", 0, 1, lambda: Stitch.MAKE_1_LEFT)
+    MAKE_1_RIGHT = ("M1_R", 0, 1, lambda: Stitch.MAKE_1_LEFT)
     # Decreases
     KNIT2TOG = ("K2TOG", 2, 1, lambda: Stitch.SLIP_SLIP_PURL)
     PURL2TOG = ("P2TOG", 2, 1, lambda: Stitch.SLIP_SLIP_KNIT)
