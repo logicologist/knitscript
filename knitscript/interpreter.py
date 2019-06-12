@@ -60,6 +60,7 @@ def prepare_pattern(pattern: Pattern) -> Pattern:
     pattern = _infer_sides(pattern)
     pattern = infer_counts(pattern)
     pattern = _flatten(pattern)
+    pattern = infer_counts(pattern)
     pattern = _alternate_sides(
         pattern, Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
     )
