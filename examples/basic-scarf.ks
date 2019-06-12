@@ -1,4 +1,3 @@
--- This is a work-around since we don't have row number lists yet.
 pattern interlude
   row: K, P to last 1, K.
 end
