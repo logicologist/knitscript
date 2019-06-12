@@ -18,4 +18,6 @@ This project also requires ANTLR4 for Python. See [here](antlr.org/download.html
 
 When running KnitScript for the first time, run `python setup.py build`. To compile a .ks file called `myfilename.ks`, run `python -m knitscript myfilename.ks`.
 
+Running `python setup.py develop` allows a .ks file to be run simply with the command `knitscript myfilename.ks`.
+
 To learn how to use KnitScript, please see our language tutorial here: https://docs.google.com/document/d/1TqBz_DOn-wV0VecZOt3qUNojs47AlXf_VJXSXezxab4/edit?usp=sharing

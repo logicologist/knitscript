@@ -1,6 +1,6 @@
 pattern squares
-  tile(slippedWaves, 4, 2), tile(stst, 8, 4).
-  tile(seed, 4, 4), tile(rib(1,1), 4, 4).
+  fill (slippedWaves, 8, 8), fill (stst, 8, 8).
+  fill (seed, 8, 8), fill (rib (1, 1), 8, 8).
 end
 
 show (standalone (garterBorder (squares, 4, 2)))
