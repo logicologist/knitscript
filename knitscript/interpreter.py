@@ -64,6 +64,7 @@ def prepare_pattern(pattern: Pattern) -> Pattern:
     pattern = _alternate_sides(
         pattern, Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
     )
+    pattern = _combine_stitches(pattern)
     assert isinstance(pattern, Pattern)
     return pattern
 
@@ -734,3 +735,49 @@ def _padded_zip(*rows: Node) -> Iterable[Sequence[Node]]:
 
 def _lcm(*nums: int) -> int:
     return reduce(lambda x, y: (x * y) // gcd(x, y), nums, 1)
+
+
+@singledispatch
+def _combine_stitches(node: Node) -> Node:
+    return ast_map(node, _combine_stitches)
+
+
+@_combine_stitches.register
+def _(row: Row) -> Node:
+    # TODO: Clean this up. :(
+    def combine(stitches, stitch):
+        if len(stitches) == 0:
+            return [stitch]
+
+        if isinstance(stitch, StitchLit):
+            current_stitch = stitch.value
+            current_times = 1
+        elif isinstance(stitch, FixedStitchRepeat) and len(stitch.stitches) == 1:
+            current_stitch = stitch.stitches[0].value
+            current_times = stitch.times.value
+        else:
+            return stitches + [stitch]
+
+        last = stitches[-1]
+        if isinstance(last, StitchLit):
+            last_stitch = last.value
+            last_times = 1
+        elif isinstance(last, FixedStitchRepeat) and len(last.stitches) == 1:
+            last_stitch = last.stitches[0].value
+            last_times = last.times.value
+        else:
+            return stitches + [stitch]
+
+        if last_stitch == current_stitch:
+            times = current_times + last_times
+            return stitches[:-1] + [
+                FixedStitchRepeat([StitchLit(current_stitch)],
+                                  NaturalLit(times),
+                                  current_stitch.consumes * times,
+                                  current_stitch.produces * times)]
+        else:
+            return stitches + [stitch]
+
+    # noinspection PyTypeChecker
+    return Row(reduce(combine, row.stitches, []), row.side,
+               row.consumes, row.produces)
