@@ -42,8 +42,8 @@ end
 pattern stripes
   row RS: K.
   row RS: K.
-  row WS: P.
-  row WS: P.
+  row RS: P.
+  row RS: P.
 end
 
 pattern oldShale
