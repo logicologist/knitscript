@@ -406,8 +406,25 @@ def _(fixed: FixedStitchRepeat, unroll: bool = False) -> Node:
             partial(_flatten, unroll=unroll)
         )
     else:
+        stitches = []
         # noinspection PyTypeChecker
-        return ast_map(fixed, partial(_flatten, unroll=unroll))
+        for stitch in map(partial(_flatten, unroll=unroll), fixed.stitches):
+            if (isinstance(stitch, FixedStitchRepeat) and
+                    stitch.times.value == 1):
+                # Un-nest fixed stitch repeats that only repeat once.
+                stitches.extend(stitch.stitches)
+            else:
+                stitches.append(stitch)
+        return FixedStitchRepeat(stitches, fixed.times,
+                                 fixed.consumes, fixed.produces,
+                                 fixed.line, fixed.column, fixed.file)
+
+
+@_flatten.register
+def _(row: Row, unroll: bool = False) -> Node:
+    fixed = _flatten.dispatch(FixedStitchRepeat)(row, unroll)
+    return Row(fixed.stitches, row.side, row.consumes, row.produces,
+               row.line, row.column, row.file)
 
 
 @_flatten.register
