@@ -25,3 +25,8 @@ When running KnitScript for the first time, run `python setup.py build`. To comp
 Running `python setup.py develop` allows a .ks file to be run simply with the command `knitscript myfilename.ks`.
 
 To learn how to use KnitScript, please see our language tutorial here: https://docs.google.com/document/d/1TqBz_DOn-wV0VecZOt3qUNojs47AlXf_VJXSXezxab4/edit?usp=sharing
+
+## License ##
+
+KnitScript is open-sourced under the MIT license.
+
