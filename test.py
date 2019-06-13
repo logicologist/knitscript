@@ -102,16 +102,16 @@ test(lambda: check_output("test/nested-stitch-repeats-with-block.ks",
      "substitution")
 test(lambda: check_output("test/reflection.ks",
                           "WS: CO 9. (9 sts)\n" +
-                          "RS: K, [K, K, P] 2, K, K. (9 sts)\n" +
+                          "RS: K, [K 2, P] 2, K 2. (9 sts)\n" +
                           "WS: BO 9. (0 sts)"),
      "Should be able to reflect patterns horizontally")
 test(lambda: verify_error("test/bad-block.ks"),
      "Should catch invalid block combinations")
 test(lambda: check_output("test/spiral-square.ks",
                           "WS: CO 3. (3 sts)\n" +
-                          "RS: P, P, K. (3 sts)\n" +
+                          "RS: P 2, K. (3 sts)\n" +
                           "WS: K, SL, K. (3 sts)\n" +
-                          "RS: K, P, P. (3 sts)\n" +
+                          "RS: K, P 2. (3 sts)\n" +
                           "WS: BO 3. (0 sts)"),
      "Should support advanced block concatenation using empty rows")
 test(lambda: expect_except("test/reversing-psso.ks", InterpretError),
@@ -133,14 +133,14 @@ test(
 )
 test(lambda: check_output("test/merge-with-unrolling.ks",
                           "WS: CO 4. (4 sts)\n" +
-                          "RS: P, P, K, P. (4 sts)\n" +
-                          "WS: P, K, K, K. (4 sts)\n" +
+                          "RS: P 2, K, P. (4 sts)\n" +
+                          "WS: P, K 3. (4 sts)\n" +
                           "RS: BO 4. (0 sts)"),
      "Blocks with mixed rows and row repeats should be unrolled")
 test(lambda: check_output("test/merge-without-unrolling.ks",
                           "WS: CO 12. (12 sts)\n" +
                           "**\n" +
-                          "RS: K, K 10, K. (12 sts)\n" +
+                          "RS: K 12. (12 sts)\n" +
                           "WS: K, P 10, K. (12 sts)\n" +
                           "rep from ** 10 times\n" +
                           "RS: BO 12. (0 sts)"),
@@ -148,12 +148,12 @@ test(lambda: check_output("test/merge-without-unrolling.ks",
 test(lambda: check_output("test/merge-finding-lcm.ks",
                           "WS: CO 8. (8 sts)\n" +
                           "**\n" +
-                          "RS: P 2, P 2, K, K, K, K. (8 sts)\n" +
-                          "WS: P, P, P, P, K 2, K 2. (8 sts)\n" +
-                          "RS: K2TOG, YO, K2TOG, YO, K, K, K, K. (8 sts)\n" +
-                          "WS: P, P, P, P, K 2, K 2. (8 sts)\n" +
-                          "RS: P 2, P 2, K, K, K, K. (8 sts)\n" +
-                          "WS: P, P, P, P, YO, SSP, YO, SSP. (8 sts)\n" +
+                          "RS: P 4, K 4. (8 sts)\n" +
+                          "WS: P 4, K 4. (8 sts)\n" +
+                          "RS: K2TOG, YO, K2TOG, YO, K 4. (8 sts)\n" +
+                          "WS: P 4, K 4. (8 sts)\n" +
+                          "RS: P 4, K 4. (8 sts)\n" +
+                          "WS: P 4, YO, SSP, YO, SSP. (8 sts)\n" +
                           "rep from ** 2 times\n" +
                           "RS: BO 8. (0 sts)"),
      "Merging parallel row repeats should find the least common multiple")
