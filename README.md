@@ -10,6 +10,10 @@ Our design doc: https://docs.google.com/document/d/1bXGWBJ_lnPc5Xc-QCefcFH5KNZkc
 
 Our final project report: https://docs.google.com/document/d/1aYORpi4gq3Y1R5aTd2yqlDE1VDverKlRFNv3xR3BcdQ/edit?usp=sharing
 
+Our poster content: https://drive.google.com/file/d/1F9-DcAWweqWQZeE_HwzfticYpjIXfc7i/view?usp=sharing
+
+Our demo video: https://drive.google.com/file/d/1QSRcMQy7tzoCxKIZ2CbPNWYG9alXEeUx/view?usp=sharing
+
 ## Getting started ##
 
 This project requires Python version 3.7 or higher.
