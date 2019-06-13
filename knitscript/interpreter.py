@@ -4,7 +4,7 @@ from functools import partial, singledispatch, reduce
 from itertools import accumulate, chain, repeat, starmap, zip_longest
 from math import ceil, gcd
 from operator import attrgetter
-from typing import Iterable, Iterator, Mapping, Optional, Sequence
+from typing import Iterable, Iterator, Mapping, Optional, Sequence, Tuple
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NativeFunction, \
@@ -751,7 +751,7 @@ def _padded_zip(*rows: Node) -> Iterable[Sequence[Node]]:
 
 
 def _lcm(*nums: int) -> int:
-    return reduce(lambda x, y: (x * y) // gcd(x, y), nums, 1)
+    return reduce(lambda x, y: x * y // gcd(x, y), nums, 1)
 
 
 @singledispatch
@@ -761,45 +761,41 @@ def _combine_stitches(node: Node) -> Node:
 
 @_combine_stitches.register
 def _(fixed: FixedStitchRepeat) -> Node:
-    # TODO: Clean this up. :(
-    def combine(stitches, stitch):
-        if len(stitches) == 0:
-            return [stitch]
+    # noinspection PyUnusedLocal
+    @singledispatch
+    def get_stitch(node: Node) -> Tuple[Stitch, int]:
+        raise TypeError()
 
-        if isinstance(stitch, StitchLit):
-            current_stitch = stitch.value
-            current_times = 1
-        elif isinstance(stitch, FixedStitchRepeat) and len(stitch.stitches) == 1:
-            current_stitch = stitch.stitches[0].value
-            current_times = stitch.times.value
-        else:
-            return stitches + [stitch]
+    @get_stitch.register
+    def _(stitch: StitchLit) -> Tuple[Stitch, int]:
+        return stitch.value, 1
 
-        last = stitches[-1]
-        if isinstance(last, StitchLit):
-            last_stitch = last.value
-            last_times = 1
-        elif isinstance(last, FixedStitchRepeat) and len(last.stitches) == 1:
-            last_stitch = last.stitches[0].value
-            last_times = last.times.value
-        else:
-            return stitches + [stitch]
+    @get_stitch.register
+    def _(rep: FixedStitchRepeat) -> Tuple[Stitch, int]:
+        if len(rep.stitches) != 1:
+            raise ValueError()
+        return rep.stitches[0].value, rep.times.value
 
-        if last_stitch == current_stitch:
-            times = current_times + last_times
-            return stitches[:-1] + [
-                FixedStitchRepeat([StitchLit(current_stitch)],
-                                  NaturalLit(times),
-                                  current_stitch.consumes * times,
-                                  current_stitch.produces * times)]
-        else:
-            return stitches + [stitch]
+    def combine(acc, node):
+        try:
+            current_stitch, current_times = get_stitch(node)
+            last_stitch, last_times = get_stitch(acc[-1])
+        except (IndexError, TypeError, ValueError):
+            return acc + [node]
+        if current_stitch != last_stitch:
+            return acc + [node]
+
+        times = current_times + last_times
+        return acc[:-1] + [FixedStitchRepeat([StitchLit(current_stitch)],
+                                             NaturalLit(times),
+                                             current_stitch.consumes * times,
+                                             current_stitch.produces * times)]
 
     # noinspection PyTypeChecker
-    return FixedStitchRepeat(reduce(combine,
-                                    map(_combine_stitches, fixed.stitches),
-                                    []),
-                             fixed.times, fixed.consumes, fixed.produces)
+    return FixedStitchRepeat(
+        reduce(combine, map(_combine_stitches, fixed.stitches), []),
+        fixed.times, fixed.consumes, fixed.produces
+    )
 
 
 @_combine_stitches.register
