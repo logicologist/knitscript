@@ -89,7 +89,7 @@ def _width(pattern: Node) -> Node:
     assert isinstance(pattern, Pattern)
     pattern = infer_counts(substitute(pattern, pattern.env))
     assert isinstance(pattern, Pattern)
-    return NaturalLit(max(map(attrgetter("consumes"), pattern.rows)))
+    return NaturalLit(pattern.consumes)
 
 
 def _height(pattern: Node) -> Node:

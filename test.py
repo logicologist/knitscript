@@ -165,3 +165,13 @@ test(lambda: check_output("test/fill.ks",
                           "rep from ** 4 times\n" +
                           "RS: BO 10. (0 sts)"),
      "Test fill function")
+test(lambda: check_output("test/standalone-triangle.ks",
+                          "WS: CO 3. (3 sts)\n" +
+                          "RS: KFB, K, KFB. (5 sts)\n" +
+                          "WS: P 5. (5 sts)\n" +
+                          "RS: KFB, K 3, KFB. (7 sts)\n" +
+                          "WS: P 7. (7 sts)\n" +
+                          "RS: KFB, K 5, KFB. (9 sts)\n" +
+                          "WS: P 9. (9 sts)\n" +
+                          "RS: *BO; rep from * to end. (0 sts)"),
+     "Should be able to make a triangular pattern standalone")
