@@ -760,7 +760,7 @@ def _combine_stitches(node: Node) -> Node:
 
 
 @_combine_stitches.register
-def _(row: Row) -> Node:
+def _(fixed: FixedStitchRepeat) -> Node:
     # TODO: Clean this up. :(
     def combine(stitches, stitch):
         if len(stitches) == 0:
@@ -796,5 +796,24 @@ def _(row: Row) -> Node:
             return stitches + [stitch]
 
     # noinspection PyTypeChecker
-    return Row(reduce(combine, row.stitches, []), row.side,
-               row.consumes, row.produces)
+    return FixedStitchRepeat(reduce(combine,
+                                    map(_combine_stitches, fixed.stitches),
+                                    []),
+                             fixed.times, fixed.consumes, fixed.produces)
+
+
+@_combine_stitches.register
+def _(expand: ExpandingStitchRepeat) -> Node:
+    fixed = _combine_stitches(FixedStitchRepeat(expand.stitches,
+                                                NaturalLit(1)))
+    assert isinstance(fixed, FixedStitchRepeat)
+    return ExpandingStitchRepeat(fixed.stitches, expand.to_last,
+                                 expand.consumes, expand.produces,
+                                 expand.line, expand.column, expand.file)
+
+
+@_combine_stitches.register
+def _(row: Row) -> Node:
+    fixed = _combine_stitches.dispatch(FixedStitchRepeat)(row)
+    return Row(fixed.stitches, row.side, row.consumes, row.produces,
+               row.line, row.column, row.file)
