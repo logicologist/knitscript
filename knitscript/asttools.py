@@ -1,8 +1,10 @@
+from dataclasses import replace
 from functools import reduce, singledispatch
 from typing import Callable, Iterable, Sequence, TypeVar, Union
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
-    FixedBlockRepeat, FixedStitchRepeat, Node, Pattern, Row, RowRepeat, Using
+    FixedBlockRepeat, FixedStitchRepeat, NaturalLit, Node, Pattern, Row, \
+    RowRepeat, Using
 
 _T = TypeVar("_T")
 
@@ -20,61 +22,51 @@ def ast_map(node: Node, function: Callable[[Node], Node]) -> Node:
 
 
 @ast_map.register
-def _(fixed: FixedStitchRepeat, function: Callable[[Node], Node]) -> Node:
-    return FixedStitchRepeat(map(function, fixed.stitches),
-                             function(fixed.times),
-                             fixed.consumes, fixed.produces,
-                             fixed.line, fixed.column, fixed.file)
+def _(rep: FixedStitchRepeat, function: Callable[[Node], Node]) -> Node:
+    return replace(rep,
+                   stitches=list(map(function, rep.stitches)),
+                   times=function(rep.times))
 
 
 @ast_map.register
-def _(expanding: ExpandingStitchRepeat, function: Callable[[Node], Node]) \
-        -> Node:
-    return ExpandingStitchRepeat(map(function, expanding.stitches),
-                                 function(expanding.to_last),
-                                 expanding.consumes, expanding.produces,
-                                 expanding.line, expanding.column,
-                                 expanding.file)
+def _(rep: ExpandingStitchRepeat, function: Callable[[Node], Node]) -> Node:
+    return replace(rep,
+                   stitches=list(map(function, rep.stitches)),
+                   to_last=function(rep.to_last))
 
 
 @ast_map.register
 def _(row: Row, function: Callable[[Node], Node]) -> Node:
-    return Row(map(function, row.stitches), row.side,
-               row.consumes, row.produces, row.line, row.column, row.file)
+    return replace(row, stitches=list(map(function, row.stitches)))
 
 
 @ast_map.register
-def _(repeat: RowRepeat, function: Callable[[Node], Node]) -> Node:
-    return RowRepeat(map(function, repeat.rows), function(repeat.times),
-                     repeat.consumes, repeat.produces,
-                     repeat.line, repeat.column, repeat.file)
+def _(rep: RowRepeat, function: Callable[[Node], Node]) -> Node:
+    return replace(rep,
+                   rows=list(map(function, rep.rows)),
+                   times=function(rep.times))
 
 
 @ast_map.register
 def _(block: Block, function: Callable[[Node], Node]) -> Node:
-    return Block(map(function, block.patterns),
-                 block.consumes, block.produces,
-                 block.line, block.column, block.file)
+    return replace(block, patterns=list(map(function, block.patterns)))
 
 
 @ast_map.register
 def _(pattern: Pattern, function: Callable[[Node], Node]) -> Node:
-    return Pattern(map(function, pattern.rows), pattern.params, pattern.env,
-                   pattern.consumes, pattern.produces,
-                   pattern.line, pattern.column, pattern.file)
+    return replace(pattern, rows=list(map(function, pattern.rows)))
 
 
 @ast_map.register
-def _(repeat: FixedBlockRepeat, function: Callable[[Node], Node]) -> Node:
-    return FixedBlockRepeat(function(repeat.block), function(repeat.times),
-                            repeat.consumes, repeat.produces,
-                            repeat.line, repeat.column, repeat.file)
+def _(rep: FixedBlockRepeat, function: Callable[[Node], Node]) -> Node:
+    return replace(rep, block=function(rep.block), times=function(rep.times))
 
 
 @ast_map.register
 def _(call: Call, function: Callable[[Node], Node]) -> Node:
-    return Call(function(call.target), map(function, call.args),
-                call.line, call.column, call.file)
+    return replace(call,
+                   target=function(call.target),
+                   args=list(map(function, call.args)))
 
 
 # noinspection PyUnusedLocal
@@ -154,6 +146,42 @@ def _(call: Call, function: Callable[[Node, _T], _T], initializer: _T) -> _T:
                            call.args, initializer))
 
 
+# noinspection PyUnusedLocal
+@singledispatch
+def to_fixed_repeat(node: Node) -> Node:
+    """
+    Converts this node into an equivalent fixed stitch or row repeat, if
+    possible.
+
+    :param node: the node to convert
+    :return: a fixed stitch repeat containing the same stitches as this node
+    """
+    raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+@to_fixed_repeat.register
+def _(row: Row) -> Node:
+    return FixedStitchRepeat(stitches=row.stitches, times=NaturalLit.of(1),
+                             consumes=row.consumes, produces=row.produces,
+                             line=row.line, column=row.column, file=row.file)
+
+
+@to_fixed_repeat.register
+def _(rep: ExpandingStitchRepeat) -> Node:
+    return FixedStitchRepeat(stitches=rep.stitches, times=NaturalLit.of(1),
+                             consumes=None, produces=None,
+                             line=rep.line, column=rep.column, file=rep.file)
+
+
+@to_fixed_repeat.register
+def _(pattern: Pattern, times: int = 1) -> Node:
+    return RowRepeat(rows=pattern.rows, times=NaturalLit.of(times),
+                     consumes=pattern.consumes, produces=pattern.produces,
+                     line=pattern.line,
+                     column=pattern.column,
+                     file=pattern.file)
+
+
 @singledispatch
 def pretty_print(node: Node, level: int = 0, end: str = "\n") -> None:
     """
@@ -170,7 +198,7 @@ def pretty_print(node: Node, level: int = 0, end: str = "\n") -> None:
 def _(using: Using, level: int = 0, end: str = "\n") -> None:
     _print_parent(type(using).__name__,
                   [],
-                  (list(map(str, using.pattern_names)), str(using.filename)),
+                  (list(map(str, using.names)), str(using.module)),
                   level,
                   end)
 

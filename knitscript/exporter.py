@@ -1,7 +1,8 @@
 from functools import singledispatch
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
-    NaturalLit, Node, Row, RowRepeat, StitchLit
+    Node, Pattern, Row, RowRepeat, StitchLit
+from knitscript.asttools import to_fixed_repeat
 
 
 @singledispatch
@@ -21,38 +22,42 @@ def _(stitch: StitchLit) -> str:
 
 
 @export_text.register
-def _(repeat: FixedStitchRepeat) -> str:
-    stitches = ", ".join(map(export_text, repeat.stitches))
-    if repeat.times == NaturalLit(1):
+def _(rep: FixedStitchRepeat) -> str:
+    stitches = ", ".join(map(export_text, rep.stitches))
+    if rep.times.value == 1:
         return stitches
-    elif len(repeat.stitches) == 1:
-        return f"{stitches} {repeat.times}"
+    elif len(rep.stitches) == 1:
+        return f"{stitches} {rep.times.value}"
     else:
-        return f"[{stitches}] {repeat.times}"
+        return f"[{stitches}] {rep.times.value}"
 
 
 @export_text.register
-def _(repeat: ExpandingStitchRepeat) -> str:
-    stitches = export_text(FixedStitchRepeat(repeat.stitches,
-                                             NaturalLit(1)))
-    if repeat.to_last == NaturalLit(0):
+def _(rep: ExpandingStitchRepeat) -> str:
+    stitches = export_text(to_fixed_repeat(rep))
+    if rep.to_last.value == 0:
         return f"*{stitches}; rep from * to end"
     else:
-        return f"*{stitches}; rep from * to last {repeat.to_last}"
+        return f"*{stitches}; rep from * to last {rep.to_last.value}"
 
 
 @export_text.register
 def _(row: Row) -> str:
     return (
-        f"{row.side}: {export_text.dispatch(FixedStitchRepeat)(row)}. " +
+        f"{row.side}: {export_text(to_fixed_repeat(row))}. " +
         f"({row.produces} sts)"
     )
 
 
 @export_text.register
-def _(repeat: RowRepeat) -> str:
-    rows = "\n".join(map(export_text, repeat.rows))
-    if repeat.times == NaturalLit(1):
+def _(rep: RowRepeat) -> str:
+    rows = "\n".join(map(export_text, rep.rows))
+    if rep.times.value == 1:
         return rows
     else:
-        return f"**\n{rows}\nrep from ** {repeat.times} times"
+        return f"**\n{rows}\nrep from ** {rep.times.value} times"
+
+
+@export_text.register
+def _(pattern: Pattern) -> str:
+    return export_text(to_fixed_repeat(pattern))

@@ -1,6 +1,5 @@
 import os
 from functools import partial
-from operator import attrgetter
 from typing import Mapping, Optional, TextIO
 
 from antlr4 import CommonTokenStream, FileStream, InputStream
@@ -89,24 +88,24 @@ def _width(pattern: Node) -> Node:
     assert isinstance(pattern, Pattern)
     pattern = infer_counts(substitute(pattern, pattern.env))
     assert isinstance(pattern, Pattern)
-    return NaturalLit(pattern.consumes)
+    return NaturalLit.of(pattern.consumes)
 
 
 def _height(pattern: Node) -> Node:
     assert isinstance(pattern, Pattern)
     pattern = substitute(pattern, pattern.env)
-    return NaturalLit(count_rows(pattern))
+    return NaturalLit.of(count_rows(pattern))
 
 
 def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
     # noinspection PyTypeChecker
     env = {
-        "reflect": NativeFunction(reflect),
-        "show": NativeFunction(partial(_show, out)),
-        "note": NativeFunction(partial(_note, out)),
-        "fill": NativeFunction(_fill),
-        "width": NativeFunction(_width),
-        "height": NativeFunction(_height)
+        "reflect": NativeFunction.of(reflect),
+        "show": NativeFunction.of(partial(_show, out)),
+        "note": NativeFunction.of(partial(_note, out)),
+        "fill": NativeFunction.of(_fill),
+        "width": NativeFunction.of(_width),
+        "height": NativeFunction.of(_height)
     }
     # noinspection PyTypeChecker
     return {

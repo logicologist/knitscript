@@ -3,7 +3,8 @@ from operator import attrgetter
 from typing import Generator, Sequence
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
-    Knittable, NaturalLit, Node, Pattern, RowRepeat, Row, StitchLit
+    Knittable, Node, Pattern, RowRepeat, Row, StitchLit
+from knitscript.asttools import to_fixed_repeat
 from knitscript.stitch import Stitch
 
 
@@ -99,10 +100,8 @@ def _(fixed: FixedStitchRepeat, available: int) \
 @verify_counts.register
 def _(expanding: ExpandingStitchRepeat, available: int) \
         -> Generator[KnitError, None, None]:
-    yield from verify_counts(
-        FixedStitchRepeat(expanding.stitches, NaturalLit(1)),
-        available - expanding.to_last.value
-    )
+    yield from verify_counts(to_fixed_repeat(expanding),
+                             available - expanding.to_last.value)
     n = (available - expanding.to_last.value) // expanding.consumes
     yield from _exactly(n * expanding.consumes,
                         available - expanding.to_last.value,
@@ -110,8 +109,12 @@ def _(expanding: ExpandingStitchRepeat, available: int) \
 
 
 @verify_counts.register
-def _(repeat: RowRepeat, available: int) \
-        -> Generator[KnitError, None, None]:
+def _(row: Row, available: int) -> Generator[KnitError, None, None]:
+    yield from verify_counts(to_fixed_repeat(row), available)
+
+
+@verify_counts.register
+def _(repeat: RowRepeat, available: int) -> Generator[KnitError, None, None]:
     start = available
     for row in repeat.rows:
         yield from verify_counts(row, available)
@@ -120,6 +123,11 @@ def _(repeat: RowRepeat, available: int) \
         available = row.produces
     if repeat.times.value > 1:
         yield from _exactly(start, available, repeat)
+
+
+@verify_counts.register
+def _(pattern: Pattern, available: int) -> Generator[KnitError, None, None]:
+    yield from verify_counts(to_fixed_repeat(pattern), available)
 
 
 def _at_least(expected: int, actual: int, node: Node) \
@@ -204,6 +212,11 @@ def _verify_psso(node: Node) -> Generator[KnitError, None, None]:
 
 
 @_verify_psso.register
+def _(pattern: Pattern) -> Generator[KnitError, None, None]:
+    return _verify_psso(to_fixed_repeat(pattern))
+
+
+@_verify_psso.register
 def _(rep: RowRepeat) -> Generator[KnitError, None, None]:
     for row in rep.rows:
         yield from _verify_psso(row)
@@ -241,6 +254,11 @@ def _verify_make(node: Node) -> Generator[KnitError, None, None]:
     :return: a generator procuding all errors of this kind, if any.
     """
     raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+@_verify_make.register
+def _(pattern: Pattern) -> Generator[KnitError, None, None]:
+    return _verify_make(to_fixed_repeat(pattern))
 
 
 @_verify_make.register
