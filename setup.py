@@ -22,5 +22,8 @@ setup(
         "console_scripts": ["knitscript=knitscript.__main__:main"]
     },
     install_requires=["antlr4-python3-runtime"],
+    extras_require={
+        "dev": ["pyinstaller"]
+    },
     cmdclass={"build_py": KnitScriptBuildPy}
 )

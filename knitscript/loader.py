@@ -1,4 +1,5 @@
 import os
+import pkgutil
 from functools import partial
 from typing import Mapping, Optional, TextIO
 
@@ -66,7 +67,7 @@ def _show(out: Optional[TextIO],
     assert isinstance(pattern, Pattern)
     pattern = prepare_pattern(pattern)
     if description:
-        out.write(f"\n\033[1m{description}\033[0m\n\n")
+        out.write(f"\n\033[1m{description.value}\033[0m\n\n")
     out.write(f"{export_text(pattern)}\n\n")
     for error in verify_pattern(pattern):
         out.write(f"error: {error}\n")
@@ -74,7 +75,7 @@ def _show(out: Optional[TextIO],
 
 def _note(out: Optional[TextIO], message: Node) -> None:
     if out is not None:
-        out.write(f"{message}\n")
+        out.write(f"{message.value}\n")
 
 
 def _fill(pattern: Node, width: Node, height: Node) -> Node:
@@ -110,9 +111,9 @@ def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
     # noinspection PyTypeChecker
     return {
         **env,
-        **_load(FileStream(os.path.join(os.path.dirname(__file__),
-                                        "library",
-                                        "builtins.ks")),
+        **_load(InputStream(pkgutil
+                            .get_data("knitscript.library", "builtins.ks")
+                            .decode("UTF-8")),
                 env,
                 os.path.join(os.path.dirname(__file__), "library"))
     }
