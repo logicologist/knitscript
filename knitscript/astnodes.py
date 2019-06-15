@@ -37,17 +37,27 @@ class Side(Enum):
 
 
 @dataclass(frozen=True)
+class Source:
+    """
+    A location in a source file.
+
+    :cvar line: the line in the source file
+    :cvar column: the column in the source file
+    :cvar file: the source file name
+    """
+    line: int
+    column: int
+    file: Optional[str]
+
+
+@dataclass(frozen=True)
 class Node:
     """
     An AST node.
 
-    :cvar line: this node's line in the source file
-    :cvar column: this node's column in the source file
-    :cvar file: this node's source file name
+    :cvar sources: the source file locations this node was created from
     """
-    line: Optional[int]
-    column: Optional[int]
-    file: Optional[str]
+    sources: Sequence[Source]
 
 
 @dataclass(frozen=True)
@@ -100,13 +110,12 @@ class NaturalLit(Node):
     @classmethod
     def of(cls, value: int) -> NaturalLit:
         """
-        Creates a natural literal representing this value, without any file
-        position information.
+        Creates a natural literal representing this value.
 
         :param value: the value of this literal
         :return: the literal representing this value
         """
-        return NaturalLit(value=value, line=None, column=None, file=None)
+        return NaturalLit(value=value, sources=[])
 
 
 @dataclass(frozen=True)
@@ -154,14 +163,12 @@ class NativeFunction(Node):
     def of(cls, function: Callable[[Node, ...], Optional[Node]]) \
             -> NativeFunction:
         """
-        Creates a native function node for the function, without any file
-        position information.
+        Creates a native function node for the function.
 
         :param function: the native function
         :return: a native function node for the function
         """
-        return NativeFunction(function=function,
-                              line=None, column=None, file=None)
+        return NativeFunction(function=function, sources=[])
 
 
 @dataclass(frozen=True)

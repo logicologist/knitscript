@@ -4,9 +4,10 @@ from typing import Callable, Iterable, Sequence, TypeVar, Union
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, NaturalLit, Node, Pattern, Row, \
-    RowRepeat, Using
+    RowRepeat, Source, Using
 
 _T = TypeVar("_T")
+
 
 # noinspection PyUnusedLocal
 @singledispatch
@@ -163,23 +164,21 @@ def to_fixed_repeat(node: Node) -> Node:
 def _(row: Row) -> Node:
     return FixedStitchRepeat(stitches=row.stitches, times=NaturalLit.of(1),
                              consumes=row.consumes, produces=row.produces,
-                             line=row.line, column=row.column, file=row.file)
+                             sources=row.sources)
 
 
 @to_fixed_repeat.register
 def _(rep: ExpandingStitchRepeat) -> Node:
     return FixedStitchRepeat(stitches=rep.stitches, times=NaturalLit.of(1),
                              consumes=None, produces=None,
-                             line=rep.line, column=rep.column, file=rep.file)
+                             sources=rep.sources)
 
 
 @to_fixed_repeat.register
 def _(pattern: Pattern, times: int = 1) -> Node:
     return RowRepeat(rows=pattern.rows, times=NaturalLit.of(times),
                      consumes=pattern.consumes, produces=pattern.produces,
-                     line=pattern.line,
-                     column=pattern.column,
-                     file=pattern.file)
+                     sources=pattern.sources)
 
 
 @singledispatch
@@ -285,3 +284,45 @@ def _print_parent(name: str,
         print()
         pretty_print(children, level + 1, end=",\n" + "  " * level)
     print(", ".join(map(str, args)) + ")", end=end)
+
+
+class Error(Exception):
+    """Base class for any error in a KnitScript document."""
+
+    def __init__(self, message: str, node: Node) -> None:
+        """
+        Creates a new KnitScript error.
+
+        :param message: a message describing the error
+        :param node: the node the error occurred at
+        """
+        self._message = message
+        self._node = node
+
+    @property
+    def message(self) -> str:
+        """A message describing the error."""
+        return self._message
+
+    @property
+    def node(self) -> Node:
+        """The node the error occurred at."""
+        return self._node
+
+    def __str__(self) -> str:
+        return (f"{self.message}\n" +
+                f"    in {type(self.node).__name__} " +
+                f"{_show_sources(self.node.sources)}")
+
+
+def _show_sources(sources: Union[Source, Sequence[Source]]) -> str:
+    if isinstance(sources, Source):
+        return (f"at line {sources.line}, column {sources.column}, in " +
+                (sources.file if sources.file is not None else "unknown file"))
+    elif not sources:
+        return "at unknown source"
+    elif len(sources) == 1:
+        return _show_sources(sources[0])
+    else:
+        return ("combined from sources:\n    - " +
+                "\n    - ".join(map(_show_sources, sources)))

@@ -5,49 +5,22 @@ from functools import partial, singledispatch, reduce
 from itertools import accumulate, chain, repeat, starmap, zip_longest
 from math import ceil, gcd
 from operator import attrgetter
-from typing import Iterable, Iterator, Mapping, Optional, Sequence, Tuple
+from typing import Callable, Iterable, Iterator, Mapping, Optional, Sequence, \
+    Tuple, TypeVar
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NativeFunction, \
     NaturalLit, Node, Pattern, Row, RowRepeat, Side, StitchLit
-from knitscript.asttools import ast_map, ast_reduce, to_fixed_repeat
+from knitscript.asttools import Error, ast_map, ast_reduce, to_fixed_repeat
 from knitscript.stitch import Stitch
 
+_T = TypeVar("_T")
 
-class InterpretError(Exception):
+
+class InterpretError(Error):
     """
     An error in a KnitScript document that prevents it from being interpreted.
     """
-
-    def __init__(self, message: str, node: Node) -> None:
-        """
-        Creates a new interpretation error.
-
-        :param message: a message describing the error
-        :param node: the node the error happened at
-        """
-        self._message = message
-        self._node = node
-
-    @property
-    def message(self) -> str:
-        """A message describing the error."""
-        return self._message
-
-    @property
-    def node(self) -> Node:
-        """The node the error happened at."""
-        return self._node
-
-    def __str__(self) -> str:
-        if self.node.line is not None:
-            position = (f"{type(self.node).__name__} at " +
-                        f"line {self.node.line}, " +
-                        f"column {self.node.column} " +
-                        f"in {self.node.file}")
-        else:
-            position = f"merged {type(self.node).__name__}"
-        return f"{self.message} ({position})"
 
 
 def prepare_pattern(pattern: Pattern) -> Pattern:
@@ -197,16 +170,14 @@ def fill(pattern: Pattern, width: int, height: int) -> Node:
                 block=Block(patterns=[pattern],
                             consumes=pattern.consumes,
                             produces=pattern.produces,
-                            line=pattern.line,
-                            column=pattern.column,
-                            file=pattern.file),
+                            sources=pattern.sources),
                 times=NaturalLit.of(n),
                 consumes=pattern.consumes * n, produces=pattern.produces * n,
-                line=pattern.line, column=pattern.column, file=pattern.file
+                sources=pattern.sources
             )],
             times=NaturalLit.of(m),
             consumes=pattern.consumes * n, produces=pattern.produces * n,
-            line=pattern.line, column=pattern.column, file=pattern.file
+            sources=pattern.sources
         )],
         consumes=pattern.consumes * n, produces=pattern.produces * n
     )
@@ -475,9 +446,7 @@ def _(row: Row, times: int) -> Node:
                                                times=NaturalLit.of(times),
                                                consumes=row.consumes * times,
                                                produces=row.produces * times,
-                                               line=row.line,
-                                               column=row.column,
-                                               file=row.file)],
+                                               sources=row.sources)],
                    consumes=row.consumes * times,
                    produces=row.produces * times)
 
@@ -642,7 +611,7 @@ def _(*patterns: Pattern) -> Knittable:
     # parameters of the combined pattern can be empty.
     return Pattern(rows=rep.rows, params=[], env=None,
                    consumes=rep.consumes, produces=rep.produces,
-                   line=None, column=None, file=None)
+                   sources=list(_flat_map(attrgetter("sources"), patterns)))
 
 
 @_merge_across.register
@@ -664,7 +633,7 @@ def _(*reps: RowRepeat) -> Knittable:
         return RowRepeat(rows=rows,
                          times=NaturalLit.of(1),
                          consumes=rows[0].consumes, produces=rows[-1].produces,
-                         line=None, column=None, file=None)
+                         sources=list(_flat_map(attrgetter("sources"), reps)))
 
     # Find the smallest number of rows that all row repeats can be expanded to.
     num_rows = _lcm(*map(lambda rep: sum(map(count_rows, rep.rows)), reps))
@@ -679,7 +648,7 @@ def _(*reps: RowRepeat) -> Knittable:
         rows=rows,
         times=NaturalLit.of(ceil(max(map(count_rows, reps)) / num_rows)),
         consumes=rows[0].consumes, produces=rows[-1].produces,
-        line=None, column=None, file=None
+        sources=list(_flat_map(attrgetter("sources"), reps))
     )
 
 
@@ -706,7 +675,7 @@ def _(*rows: Row) -> Knittable:
         side=side,
         consumes=sum(map(attrgetter("consumes"), rows)),
         produces=sum(map(attrgetter("produces"), rows)),
-        line=None, column=None, file=None
+        sources=list(_flat_map(attrgetter("sources"), rows))
     )
 
 
@@ -748,9 +717,9 @@ def _(stitch: StitchLit, acc: bool = True) -> bool:
 
 
 def _padded_zip(*rows: Node) -> Iterable[Sequence[Node]]:
-    return zip_longest(*rows, fillvalue=Row(stitches=[], side=Side.Right,
-                                            consumes=0, produces=0,
-                                            line=None, column=None, file=None))
+    return zip_longest(*rows,
+                       fillvalue=Row(stitches=[], side=Side.Right,
+                                     consumes=0, produces=0, sources=[]))
 
 
 def _lcm(*nums: int) -> int:
@@ -794,11 +763,11 @@ def _(rep: FixedStitchRepeat) -> Node:
                 stitches=[StitchLit(value=current_stitch,
                                     consumes=current_stitch.consumes,
                                     produces=current_stitch.produces,
-                                    line=None, column=None, file=None)],
+                                    sources=acc[-1].sources + node.sources)],
                 times=NaturalLit.of(times),
                 consumes=current_stitch.consumes * times,
                 produces=current_stitch.produces * times,
-                line=acc[-1].line, column=acc[-1].column, file=acc[-1].file
+                sources=acc[-1].sources + node.sources
             )
         ]
 
@@ -823,3 +792,8 @@ def _(row: Row) -> Node:
     assert fixed.consumes == row.consumes
     assert fixed.produces == row.produces
     return replace(row, stitches=fixed.stitches)
+
+
+def _flat_map(function: Callable[..., Iterable[_T]], *iterables) \
+        -> Iterator[_T]:
+    return chain.from_iterable(map(function, *iterables))

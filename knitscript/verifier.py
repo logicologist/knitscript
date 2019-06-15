@@ -4,42 +4,12 @@ from typing import Generator, Sequence
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
     Knittable, Node, Pattern, RowRepeat, Row, StitchLit
-from knitscript.asttools import to_fixed_repeat
+from knitscript.asttools import Error, to_fixed_repeat
 from knitscript.stitch import Stitch
 
 
-class KnitError:
+class KnitError(Error):
     """Describes a knitting error in a pattern."""
-
-    def __init__(self, message: str, node: Node) -> None:
-        """
-        Creates a new description of a knitting error in a pattern.
-
-        :param message: a message describing the error
-        :param node: the node the error occurred at
-        """
-        self._message = message
-        self._node = node
-
-    @property
-    def message(self) -> str:
-        """A message describing the error."""
-        return self._message
-
-    @property
-    def node(self) -> Node:
-        """The node the error occurred at."""
-        return self._node
-
-    def __str__(self) -> str:
-        if self.node.line is not None:
-            position = (f"{type(self.node).__name__} at " +
-                        f"line {self.node.line}, " +
-                        f"column {self.node.column} " +
-                        f"in {self.node.file}")
-        else:
-            position = f"merged {type(self.node).__name__}"
-        return f"{self.message} ({position})"
 
 
 def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:
