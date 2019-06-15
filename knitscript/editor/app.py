@@ -1,8 +1,8 @@
 from functools import wraps
 from io import StringIO
-from tkinter import BOTH, END, NSEW, Text, Tk, YES
+from tkinter import BOTH, DISABLED, END, FLAT, NORMAL, NSEW, Text, Tk, YES
 from tkinter.font import Font
-from tkinter.ttk import Frame
+from tkinter.ttk import Frame, Separator
 from typing import Callable, TypeVar
 
 from knitscript.loader import load_text
@@ -23,19 +23,23 @@ class Application(Frame):
         self.pack(expand=YES, fill=BOTH)
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
-        self.grid_columnconfigure(1, weight=1)
+        self.grid_columnconfigure(2, weight=1)
 
         preview_frame = Frame(self, width=500, height=500)
-        preview_frame.grid(row=0, column=1, sticky=NSEW)
+        preview_frame.grid(row=0, column=2, sticky=NSEW)
         preview_frame.pack_propagate(False)
-        preview = Text(preview_frame)
+        preview = Text(preview_frame, state=DISABLED, relief=FLAT,
+                       bg="SystemMenu")
         preview.configure(font=Font(family="Segoe UI"))
         preview.pack(expand=YES, fill=BOTH)
+
+        sep = Separator(self)
+        sep.grid(row=0, column=1)
 
         editor_frame = Frame(self, width=500, height=500)
         editor_frame.grid(row=0, column=0, sticky=NSEW)
         editor_frame.pack_propagate(False)
-        editor = Text(editor_frame)
+        editor = Text(editor_frame, relief=FLAT)
 
         @_debounce(master, 500)
         def update(_event=None) -> None:
@@ -46,7 +50,9 @@ class Application(Frame):
             except Exception as e:
                 # TODO: Catching all exceptions is too broad.
                 output.write(f"error: {e}\n")
+            preview.configure(state=NORMAL)
             preview.replace(1.0, END, output.getvalue())
+            preview.configure(state=DISABLED)
 
         editor.bind("<Key>", update)
         editor.configure(font=Font(family="Consolas"), undo=True)
