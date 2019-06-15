@@ -19,7 +19,8 @@ setup(
     version="0.1",
     packages=find_packages(),
     entry_points={
-        "console_scripts": ["knitscript=knitscript.__main__:main"]
+        "console_scripts": ["knitscript=knitscript.__main__:main"],
+        "gui_scripts": ["knitscript-editor=knitscript.editor.__main__:main"]
     },
     install_requires=["antlr4-python3-runtime"],
     extras_require={

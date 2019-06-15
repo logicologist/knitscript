@@ -24,7 +24,7 @@ class LoadError(Exception):
 def load_file(filename: str, out: Optional[TextIO] = None) \
         -> Mapping[str, Node]:
     """
-    Loads the environment from a document.
+    Loads the environment from a document in a file.
 
     :param filename: the filename of the document
     :param out:
@@ -35,6 +35,19 @@ def load_file(filename: str, out: Optional[TextIO] = None) \
     return _load(FileStream(filename),
                  _get_default_env(out),
                  os.path.dirname(filename))
+
+
+def load_text(text: str, out: Optional[TextIO] = None) -> Mapping[str, Node]:
+    """
+    Loads the environment from a document in a string.
+
+    :param text: the contents of the document
+    :param out:
+        the stream to use for any output the document produces, or None if
+        output should be suppressed
+    :return: the document's environment
+    """
+    return _load(InputStream(text), _get_default_env(out), ".")
 
 
 def _load(in_: InputStream, env: Mapping[str, Node], base_dir: str) \
