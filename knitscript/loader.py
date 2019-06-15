@@ -32,7 +32,7 @@ def load_file(filename: str, out: Optional[TextIO] = None) \
         output should be suppressed
     :return: the document's environment
     """
-    return _load(FileStream(filename),
+    return _load(FileStream(os.path.abspath(filename)),
                  _get_default_env(out),
                  os.path.dirname(filename))
 
@@ -47,10 +47,10 @@ def load_text(text: str, out: Optional[TextIO] = None) -> Mapping[str, Node]:
         output should be suppressed
     :return: the document's environment
     """
-    return _load(InputStream(text), _get_default_env(out), ".")
+    return _load(InputStream(text), _get_default_env(out), None)
 
 
-def _load(in_: InputStream, env: Mapping[str, Node], base_dir: str) \
+def _load(in_: InputStream, env: Mapping[str, Node], base_dir: Optional[str]) \
         -> Mapping[str, Node]:
     lexer = KnitScriptLexer(in_)
     parser = KnitScriptParser(CommonTokenStream(lexer))
@@ -59,6 +59,8 @@ def _load(in_: InputStream, env: Mapping[str, Node], base_dir: str) \
     env = dict(env)
     for stmt in document.stmts:
         if isinstance(stmt, Using):
+            if base_dir is None:
+                raise LoadError("importing module without search path")
             used_env = load_file(os.path.join(base_dir, stmt.module + ".ks"))
             for name in stmt.names:
                 env[name] = used_env[name]
@@ -122,11 +124,8 @@ def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
         "height": NativeFunction.of(_height)
     }
     # noinspection PyTypeChecker
-    return {
-        **env,
-        **_load(InputStream(pkgutil
-                            .get_data("knitscript.library", "builtins.ks")
-                            .decode("UTF-8")),
-                env,
-                os.path.join(os.path.dirname(__file__), "library"))
-    }
+    builtins = InputStream(pkgutil
+                           .get_data("knitscript.library", "builtins.ks")
+                           .decode("UTF-8"))
+    builtins.name = "builtins"
+    return {**env, **_load(builtins, env, None)}

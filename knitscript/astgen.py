@@ -2,7 +2,7 @@ from functools import singledispatch
 from operator import attrgetter
 from typing import Collection, Union
 
-from antlr4 import ParserRuleContext, Token
+from antlr4 import FileStream, ParserRuleContext, Token
 
 from knitscript.astnodes import Block, Call, Document, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, NaturalLit, Node, PatternDef, \
@@ -188,10 +188,9 @@ def _get_stitches(ctx: Union[KnitScriptParser.FixedStitchRepeatContext,
 
 
 def _get_source(token: Token) -> Source:
-    return Source(
-        line=token.line,
-        column=token.column,
-        file=(token.source[1].fileName
-              if len(token.source) > 1 and hasattr(token.source[1], "fileName")
-              else None)
-    )
+    file = None
+    if len(token.source) > 1 and isinstance(token.source[1], FileStream):
+        file = token.source[1].fileName
+    elif len(token.source) > 1:
+        file = token.source[1].name
+    return Source(line=token.line, column=token.column, file=file)
