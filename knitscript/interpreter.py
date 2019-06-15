@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from dataclasses import replace
 from functools import partial, singledispatch, reduce
-from itertools import accumulate, chain, repeat, starmap, zip_longest
+from itertools import accumulate, chain, starmap, zip_longest
 from math import ceil, gcd
 from operator import attrgetter
-from typing import Callable, Iterable, Iterator, Mapping, Optional, Sequence, \
-    Tuple, TypeVar
+from typing import Callable, Iterable, Iterator, Generator, Mapping, \
+    Optional, Sequence, Tuple, TypeVar
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NativeFunction, \
@@ -397,16 +397,16 @@ def _(row: Row, unroll: bool = False) -> Node:
 
 @_flatten.register
 def _(rep: RowRepeat, unroll: bool = False) -> Node:
-    rows = []
+    flattened_rows = []
     # noinspection PyTypeChecker
     for row in map(partial(_flatten, unroll=unroll), rep.rows):
         if isinstance(row, RowRepeat) and (unroll or row.times.value <= 1):
-            rows.extend(chain.from_iterable(repeat(row.rows, row.times.value)))
+            flattened_rows.extend(_repeat_rows(row.rows, row.times.value))
         elif isinstance(row, Pattern):
-            rows.extend(row.rows)
+            flattened_rows.extend(row.rows)
         else:
-            rows.append(row)
-    return replace(rep, rows=rows)
+            flattened_rows.append(row)
+    return replace(rep, rows=flattened_rows)
 
 
 @_flatten.register
@@ -558,7 +558,10 @@ def _(rep: RowRepeat, side: Side = Side.Right) -> Node:
 
 @_infer_sides.register
 def _(row: Row, side: Side = Side.Right) -> Node:
-    return replace(row, side=side if row.side is None else row.side)
+    if row.side is None or row.inferred:
+        return replace(row, side=side, inferred=True)
+    else:
+        return row
 
 
 @singledispatch
@@ -645,7 +648,7 @@ def _(*reps: RowRepeat) -> Knittable:
     def expand(rep: RowRepeat) -> Iterator[Node]:
         times = min(rep.times.value,
                     num_rows // sum(map(count_rows, rep.rows)))
-        return chain.from_iterable(repeat(rep.rows, times))
+        return _repeat_rows(rep.rows, times)
 
     rows = list(starmap(_merge_across, _padded_zip(*map(expand, reps))))
     return RowRepeat(
@@ -674,9 +677,10 @@ def _(*rows: Row) -> Knittable:
                 range(len(rows)))
     rows = list(map(_increase_expanding_repeats, rows, after))
 
+    # noinspection PyUnresolvedReferences
     return Row(
         stitches=list(chain.from_iterable(map(attrgetter("stitches"), rows))),
-        side=side,
+        side=side, inferred=rows[0].inferred,
         consumes=sum(map(attrgetter("consumes"), rows)),
         produces=sum(map(attrgetter("produces"), rows)),
         sources=list(_flat_map(attrgetter("sources"), rows))
@@ -722,8 +726,10 @@ def _(stitch: StitchLit, acc: bool = True) -> bool:
 
 def _padded_zip(*rows: Node) -> Iterable[Sequence[Node]]:
     return zip_longest(*rows,
-                       fillvalue=Row(stitches=[], side=Side.Right,
-                                     consumes=0, produces=0, sources=[]))
+                       fillvalue=Row(stitches=[],
+                                     side=Side.Right, inferred=False,
+                                     consumes=0, produces=0,
+                                     sources=[]))
 
 
 def _lcm(*nums: int) -> int:
@@ -801,3 +807,33 @@ def _(row: Row) -> Node:
 def _flat_map(function: Callable[..., Iterable[_T]], *iterables) \
         -> Iterator[_T]:
     return chain.from_iterable(map(function, *iterables))
+
+
+def _repeat_rows(rows: Sequence[Node], times: int) \
+        -> Generator[Node, None, None]:
+    side = _starting_side(rows[0])
+    for _ in range(times):
+        for row in rows:
+            yield row
+        if len(rows) % 2 != 0:
+            # If there are an odd number of rows in a row repeat, the rows
+            # should not be reversed every other iteration. To prevent this,
+            # infer the side of every row again after flipping the starting
+            # side.
+            side = side.flip()
+            rows = list(map(_infer_sides, rows, side.alternate()))
+
+
+@singledispatch
+def _starting_side(node: Node) -> Side:
+    raise TypeError(f"unsupported node {type(node).__name__}")
+
+
+@_starting_side.register
+def _(rep: RowRepeat) -> Side:
+    return _starting_side(rep.rows[0])
+
+
+@_starting_side.register
+def _(row: Row) -> Side:
+    return row.side

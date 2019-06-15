@@ -228,9 +228,11 @@ class Row(Knittable):
     :cvar stitches: the stitches in the row
     :cvar side:
         the side of the fabric (RS or WS) this row is intended to be knitted on
+    :cvar inferred: whether the side has been inferred from context
     """
     stitches: Sequence[Node]
     side: Optional[Side]
+    inferred: bool
 
 
 @dataclass(frozen=True)

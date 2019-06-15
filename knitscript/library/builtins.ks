@@ -2,7 +2,6 @@
 
 pattern garter
   row: K.
-  row: K.
 end
 
 pattern stst

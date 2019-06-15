@@ -113,6 +113,7 @@ def _(row: KnitScriptParser.RowContext) -> Node:
                                       if row.stitchList() is not None
                                       else []))),
         side=Side(row.side().getText()) if row.side() is not None else None,
+        inferred=False,
         consumes=None, produces=None,
         sources=[_get_source(row.start)]
     )

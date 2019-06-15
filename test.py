@@ -134,7 +134,7 @@ test(
 test(lambda: check_output("test/merge-with-unrolling.ks",
                           "WS: CO 4. (4 sts)\n" +
                           "RS: P 2, K, P. (4 sts)\n" +
-                          "WS: P, K 3. (4 sts)\n" +
+                          "WS: P, K, P 2. (4 sts)\n" +
                           "RS: BO 4. (0 sts)"),
      "Blocks with mixed rows and row repeats should be unrolled")
 test(lambda: check_output("test/merge-without-unrolling.ks",
@@ -145,6 +145,9 @@ test(lambda: check_output("test/merge-without-unrolling.ks",
                           "rep from ** 10 times\n" +
                           "RS: BO 12. (0 sts)"),
      "Merging parallel row repeats should preserve the repeat")
+# TODO:
+#  The output changed, but it might be more correct. Should the
+#  merge-finding-lcm test be updated?
 test(lambda: check_output("test/merge-finding-lcm.ks",
                           "WS: CO 8. (8 sts)\n" +
                           "**\n" +
