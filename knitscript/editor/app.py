@@ -1,6 +1,6 @@
 from functools import wraps
 from io import StringIO
-from tkinter import BOTH, END, Text, Tk, YES
+from tkinter import BOTH, END, NSEW, Text, Tk, YES
 from tkinter.font import Font
 from tkinter.ttk import Frame
 from typing import Callable, TypeVar
@@ -20,17 +20,20 @@ class Application(Frame):
         :param master: the parent widget
         """
         super().__init__(master)
-        self.pack()
+        self.pack(expand=YES, fill=BOTH)
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_columnconfigure(1, weight=1)
 
-        preview_frame = Frame(self, width=600, height=500)
-        preview_frame.pack(side="right")
+        preview_frame = Frame(self, width=500, height=500)
+        preview_frame.grid(row=0, column=1, sticky=NSEW)
         preview_frame.pack_propagate(False)
         preview = Text(preview_frame)
         preview.configure(font=Font(family="Segoe UI"))
         preview.pack(expand=YES, fill=BOTH)
 
-        editor_frame = Frame(self, width=700, height=500)
-        editor_frame.pack(side="left")
+        editor_frame = Frame(self, width=500, height=500)
+        editor_frame.grid(row=0, column=0, sticky=NSEW)
         editor_frame.pack_propagate(False)
         editor = Text(editor_frame)
 
@@ -55,8 +58,9 @@ class Application(Frame):
                       "end\n" +
                       "\n" +
                       "show (hello)")
-        update()
         editor.pack(expand=YES, fill=BOTH)
+
+        update()
 
 
 def _debounce(widget, delay: int) \
