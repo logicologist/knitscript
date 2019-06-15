@@ -1,10 +1,11 @@
+import re
 from dataclasses import replace
 from functools import reduce, singledispatch
 from typing import Callable, Iterable, Sequence, TypeVar, Union
 
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
-    FixedBlockRepeat, FixedStitchRepeat, NaturalLit, Node, Pattern, Row, \
-    RowRepeat, Source, Using
+    FixedBlockRepeat, FixedStitchRepeat, Get, NaturalLit, Node, Pattern, Row, \
+    RowRepeat, Source, StitchLit, Using
 
 _T = TypeVar("_T")
 
@@ -311,7 +312,7 @@ class Error(Exception):
         return self._nodes
 
     def __str__(self) -> str:
-        trace = map(lambda node: f"in {type(node).__name__} " +
+        trace = map(lambda node: f"in {_friendly_name(node)} " +
                                  f"{_show_sources(node.sources)}",
                     self.nodes)
         return f"{self.message}\n    " + "\n    ".join(trace)
@@ -328,3 +329,23 @@ def _show_sources(sources: Union[Source, Sequence[Source]]) -> str:
     else:
         return ("combined from sources:\n    - " +
                 "\n    - ".join(map(_show_sources, sources)))
+
+
+@singledispatch
+def _friendly_name(node: Node) -> str:
+    return re.sub(r"([A-Z])", r" \1",  type(node).__name__).lower().lstrip()
+
+
+@_friendly_name.register
+def _(stitch: StitchLit) -> str:
+    return str(stitch.value)
+
+
+@_friendly_name.register
+def _(get: Get) -> str:
+    return get.name
+
+
+@_friendly_name.register
+def _(call: Call) -> str:
+    return f"call to {_friendly_name(call.target)}"
