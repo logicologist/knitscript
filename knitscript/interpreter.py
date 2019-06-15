@@ -83,7 +83,11 @@ def _(get: Get, env: Mapping[str, Node]) -> Node:
 
 @substitute.register
 def _(call: Call, env: Mapping[str, Node]) -> Node:
-    result = do_call(call, env)
+    try:
+        result = do_call(call, env)
+    except InterpretError as e:
+        # Re-raise the error with this node added to the call stack.
+        raise InterpretError(e.message, [*e.nodes, call])
     assert result is not None
     return result
 

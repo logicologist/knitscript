@@ -289,15 +289,16 @@ def _print_parent(name: str,
 class Error(Exception):
     """Base class for any error in a KnitScript document."""
 
-    def __init__(self, message: str, node: Node) -> None:
+    def __init__(self, message: str, nodes: Union[Node, Sequence[Node]]) \
+            -> None:
         """
         Creates a new KnitScript error.
 
         :param message: a message describing the error
-        :param node: the node the error occurred at
+        :param nodes: the node(s) the error occurred at
         """
         self._message = message
-        self._node = node
+        self._nodes = nodes if isinstance(nodes, Sequence) else [nodes]
 
     @property
     def message(self) -> str:
@@ -305,14 +306,15 @@ class Error(Exception):
         return self._message
 
     @property
-    def node(self) -> Node:
-        """The node the error occurred at."""
-        return self._node
+    def nodes(self) -> Sequence[Node]:
+        """The node(s) the error occurred at."""
+        return self._nodes
 
     def __str__(self) -> str:
-        return (f"{self.message}\n" +
-                f"    in {type(self.node).__name__} " +
-                f"{_show_sources(self.node.sources)}")
+        trace = map(lambda node: f"in {type(node).__name__} " +
+                                 f"{_show_sources(node.sources)}",
+                    self.nodes)
+        return f"{self.message}\n    " + "\n    ".join(trace)
 
 
 def _show_sources(sources: Union[Source, Sequence[Source]]) -> str:
