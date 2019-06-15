@@ -1,6 +1,6 @@
 from functools import wraps
 from io import StringIO
-from tkinter import END, Text, Tk
+from tkinter import BOTH, END, Text, Tk, YES
 from tkinter.font import Font
 from tkinter.ttk import Frame
 from typing import Callable, TypeVar
@@ -22,11 +22,17 @@ class Application(Frame):
         super().__init__(master)
         self.pack()
 
-        preview = Text(self)
+        preview_frame = Frame(self, width=600, height=500)
+        preview_frame.pack(side="right")
+        preview_frame.pack_propagate(False)
+        preview = Text(preview_frame)
         preview.configure(font=Font(family="Segoe UI"))
-        preview.pack(side="right")
+        preview.pack(expand=YES, fill=BOTH)
 
-        editor = Text(self)
+        editor_frame = Frame(self, width=700, height=500)
+        editor_frame.pack(side="left")
+        editor_frame.pack_propagate(False)
+        editor = Text(editor_frame)
 
         @_debounce(master, 500)
         def update(_event=None) -> None:
@@ -50,7 +56,7 @@ class Application(Frame):
                       "\n" +
                       "show (hello)")
         update()
-        editor.pack(side="left")
+        editor.pack(expand=YES, fill=BOTH)
 
 
 def _debounce(widget, delay: int) \
