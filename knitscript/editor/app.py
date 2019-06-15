@@ -46,7 +46,7 @@ class Application(Frame):
             preview.replace(1.0, END, output.getvalue())
 
         editor.bind("<Key>", update)
-        editor.configure(font=Font(family="Consolas"))
+        editor.configure(font=Font(family="Consolas"), undo=True)
         editor.insert(1.0,
                       "pattern hello\n" +
                       "  row: CO 12.\n" +
