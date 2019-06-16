@@ -46,6 +46,7 @@ class FileDocument(Frame):
         """
         self._file = file
         self.save()
+        self.event_generate("<<SavedAs>>")
 
     @property
     def file(self) -> Optional[TextIO]:

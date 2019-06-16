@@ -80,10 +80,8 @@ class _Window(Frame):
             self.master.title(self._document.name +
                               ("*" if self._document.modified else ""))
 
-        self._document.bind("<<Opened>>", lambda event: update_title(),
-                            add=True)
-        self._document.bind("<<Modified>>", lambda event: update_title(),
-                            add=True)
+        for name in "<<Opened>>", "<<Modified>>", "<<SavedAs>>":
+            self._document.bind(name, lambda event: update_title(), add=True)
 
         sep = Separator(self)
         sep.grid(row=0, column=1)
