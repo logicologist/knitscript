@@ -16,6 +16,9 @@ _DEFAULT_DOCUMENT = ("pattern hello\n" +
                      "end\n" +
                      "\n" +
                      "show (hello)")
+_EXTENSION = ".ks"
+_FILE_TYPES = [("KnitScript Document", "*" + _EXTENSION),
+               ("All Files", "*.*")]
 
 
 class Application(Frame):
@@ -34,6 +37,7 @@ class Application(Frame):
         menu = Menu(master)
         file_menu = Menu(menu, tearoff=0)
         file_menu.add_command(label="Open", command=window.open)
+        file_menu.add_command(label="Save As", command=window.save_as)
         menu.add_cascade(label="File", menu=file_menu)
         master.configure(menu=menu)
 
@@ -64,9 +68,18 @@ class _Window(Frame):
 
     def open(self) -> None:
         """Opens a file using a file dialog."""
-        file = filedialog.askopenfile()
+        file = filedialog.askopenfile(filetypes=_FILE_TYPES)
         if file is not None:
             self._editor.text = file.read()
+            file.close()
+
+    def save_as(self) -> None:
+        """Saves a file using a file dialog."""
+        file = filedialog.asksaveasfile(defaultextension=_EXTENSION,
+                                        filetypes=_FILE_TYPES)
+        if file is not None:
+            file.write(self._editor.text)
+            file.close()
 
 
 class _Editor(Frame):
