@@ -40,19 +40,25 @@ class Application(Frame):
 
         menu = Menu(master)
         file_menu = Menu(menu, tearoff=0)
-        file_menu.add_command(label="New", command=window.new)
-        file_menu.add_command(label="Open", command=window.open)
-        file_menu.add_command(label="Save", command=window.save)
+        file_menu.add_command(label="New", command=window.new,
+                              underline=0, accelerator="Ctrl+N")
+        self.master.bind_all("<Control-n>", lambda event: window.new())
+        file_menu.add_command(label="Open", command=window.open,
+                              underline=0, accelerator="Ctrl+O")
+        self.master.bind_all("<Control-o>", lambda event: window.open())
+        file_menu.add_command(label="Save", command=window.save,
+                              underline=0, accelerator="Ctrl+S")
+        self.master.bind_all("<Control-s>", lambda event: window.save())
         file_menu.entryconfigure(2, state=DISABLED)
         document.bind(
             "<<Modified>>",
             lambda event: file_menu.entryconfigure(
-                1, state=NORMAL if document.modified else DISABLED
+                2, state=NORMAL if document.modified else DISABLED
             ),
             add=True
         )
         file_menu.add_command(label="Save As", command=window.save_as)
-        menu.add_cascade(label="File", menu=file_menu)
+        menu.add_cascade(label="File", menu=file_menu, underline=0)
         master.configure(menu=menu)
 
 
@@ -165,6 +171,14 @@ class _Editor(Frame):
             font.configure(family="Consolas")
         self._text = Text(self, font=font, undo=True, relief=FLAT)
         self._text.pack(expand=YES, fill=BOTH)
+
+        # TODO:
+        #  This is kind of a hack to stop Ctrl-O from inserting a new line. :/
+        def on_open(_event):
+            self.master.open()
+            return "break"
+
+        self._text.bind("<Control-o>", on_open)
 
         def on_text_key() -> None:
             document.text = self._text.get("1.0", END)
