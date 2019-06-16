@@ -142,7 +142,7 @@ test(lambda: check_output("test/merge-without-unrolling.ks",
                           "**\n" +
                           "RS: K 12. (12 sts)\n" +
                           "WS: K, P 10, K. (12 sts)\n" +
-                          "rep from ** 10 times\n" +
+                          "rep from ** 5 times\n" +
                           "RS: BO 12. (0 sts)"),
      "Merging parallel row repeats should preserve the repeat")
 test(lambda: check_output("test/merge-finding-lcm.ks",

@@ -32,7 +32,6 @@ def prepare_pattern(pattern: Pattern) -> Pattern:
     """
     pattern = substitute(pattern, pattern.env)
     pattern = _infer_sides(pattern)
-    pattern = _normalize_row_repeats(pattern)
     pattern = infer_counts(pattern)
     pattern = _flatten(pattern)
     # TODO:
@@ -407,7 +406,7 @@ def _(rep: RowRepeat, unroll: bool = False) -> Node:
             flattened_rows.extend(row.rows)
         else:
             flattened_rows.append(row)
-    return replace(rep, rows=flattened_rows)
+    return _normalize_row_repeat(replace(rep, rows=flattened_rows))
 
 
 @_flatten.register
@@ -851,17 +850,13 @@ def _(row: Row, acc: bool = False) -> bool:
     return acc or row.side is not None and not row.inferred
 
 
-@singledispatch
-def _normalize_row_repeats(node: Node) -> Node:
-    return ast_map(node, _normalize_row_repeats)
-
-
-@_normalize_row_repeats.register
-def _(rep: RowRepeat) -> Node:
+def _normalize_row_repeat(rep: RowRepeat) -> RowRepeat:
     # Make sure every row repeat has an even number of rows inside of it, so
     # the knitter doesn't have to reverse rows in their head every other
     # iteration.
-    if _has_explicit_sides(rep) and sum(map(count_rows, rep.rows)) % 2 != 0:
+    if (rep.times.value > 1 and
+            _has_explicit_sides(rep) and
+            sum(map(count_rows, rep.rows)) % 2 != 0):
         twice = replace(rep,
                         rows=list(_repeat_rows(rep.rows, 2)),
                         times=NaturalLit.of(rep.times.value // 2))
@@ -869,6 +864,7 @@ def _(rep: RowRepeat) -> Node:
             return twice
         else:
             return RowRepeat(rows=[twice, *rep.rows], times=NaturalLit.of(1),
-                             consumes=None, produces=None, sources=rep.sources)
+                             consumes=rep.consumes, produces=rep.produces,
+                             sources=rep.sources)
     else:
         return rep

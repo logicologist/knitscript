@@ -5,13 +5,11 @@ pattern garter
 end
 
 pattern stst
-  row: K.
-  row: P.
+  row RS: K.
 end
 
 pattern reverseStst
-  row: P.
-  row: K.
+  row RS: P.
 end
 
 pattern rib (a, b)
