@@ -42,6 +42,14 @@ class Application(Frame):
         file_menu = Menu(menu, tearoff=0)
         file_menu.add_command(label="Open", command=window.open)
         file_menu.add_command(label="Save", command=window.save)
+        file_menu.entryconfigure(1, state=DISABLED)
+        document.bind(
+            "<<Modified>>",
+            lambda event: file_menu.entryconfigure(
+                1, state=NORMAL if document.modified else DISABLED
+            ),
+            add=True
+        )
         file_menu.add_command(label="Save As", command=window.save_as)
         menu.add_cascade(label="File", menu=file_menu)
         master.configure(menu=menu)
