@@ -2,7 +2,8 @@ import os
 from functools import wraps
 from io import StringIO
 from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, Misc, \
-    NORMAL, NSEW, RIGHT, Text, Y, YES, Widget, filedialog, messagebox
+    NORMAL, NS, NSEW, RIGHT, Text, VERTICAL, Y, YES, Widget, filedialog, \
+    messagebox
 from tkinter.font import nametofont
 from tkinter.ttk import Frame, Scrollbar, Separator
 from typing import Callable, TypeVar
@@ -90,8 +91,8 @@ class _Window(Frame):
         for name in "<<Opened>>", "<<Modified>>", "<<SavedAs>>":
             self._document.bind(name, lambda event: update_title(), add=True)
 
-        sep = Separator(self)
-        sep.grid(row=0, column=1)
+        sep = Separator(self, orient=VERTICAL)
+        sep.grid(row=0, column=1, sticky=NS)
 
         preview = _Preview(self, self._document, width=500, height=500)
         preview.grid(row=0, column=2, sticky=NSEW)
