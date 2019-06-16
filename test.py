@@ -175,3 +175,36 @@ test(lambda: check_output("test/standalone-triangle.ks",
                           "WS: P 9. (9 sts)\n" +
                           "RS: *BO; rep from * to end. (0 sts)"),
      "Should be able to make a triangular pattern standalone")
+test(lambda: check_output("test/unroll-odd-row-repeats-explicit-sides.ks",
+                          "WS: CO. (1 sts)\n" +
+                          "**\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "rep from ** 4 times\n" +
+                          "**\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "rep from ** 2 times\n" +
+                          "**\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "rep from ** 2 times\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "**\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "rep from ** 2 times\n" +
+                          "WS: BO. (0 sts)"),
+     "Row repeats with an odd number of rows and explicit sides should be " +
+     "unrolled once")

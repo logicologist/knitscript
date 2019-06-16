@@ -32,8 +32,13 @@ def prepare_pattern(pattern: Pattern) -> Pattern:
     """
     pattern = substitute(pattern, pattern.env)
     pattern = _infer_sides(pattern)
+    pattern = _normalize_row_repeats(pattern)
     pattern = infer_counts(pattern)
     pattern = _flatten(pattern)
+    # TODO:
+    #  Fix counting when unrolling row repeats with a net increase/decrease in
+    #  the number of stitches each iteration, so we don't have to run
+    #  infer_counts twice.
     pattern = infer_counts(pattern)
     pattern = _alternate_sides(
         pattern, Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
@@ -837,3 +842,36 @@ def _(rep: RowRepeat) -> Side:
 @_starting_side.register
 def _(row: Row) -> Side:
     return row.side
+
+
+@singledispatch
+def _has_explicit_sides(node: Node, acc: bool = False) -> bool:
+    return ast_reduce(node, _has_explicit_sides, acc)
+
+
+@_has_explicit_sides.register
+def _(row: Row, acc: bool = False) -> bool:
+    return acc or row.side is not None and not row.inferred
+
+
+@singledispatch
+def _normalize_row_repeats(node: Node) -> Node:
+    return ast_map(node, _normalize_row_repeats)
+
+
+@_normalize_row_repeats.register
+def _(rep: RowRepeat) -> Node:
+    # Make sure every row repeat has an even number of rows inside of it, so
+    # the knitter doesn't have to reverse rows in their head every other
+    # iteration.
+    if _has_explicit_sides(rep) and sum(map(count_rows, rep.rows)) % 2 != 0:
+        twice = replace(rep,
+                        rows=list(_repeat_rows(rep.rows, 2)),
+                        times=NaturalLit.of(rep.times.value // 2))
+        if rep.times.value % 2 == 0:
+            return twice
+        else:
+            return RowRepeat(rows=[twice, *rep.rows], times=NaturalLit.of(1),
+                             consumes=None, produces=None, sources=rep.sources)
+    else:
+        return rep
