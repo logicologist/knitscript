@@ -145,9 +145,6 @@ test(lambda: check_output("test/merge-without-unrolling.ks",
                           "rep from ** 10 times\n" +
                           "RS: BO 12. (0 sts)"),
      "Merging parallel row repeats should preserve the repeat")
-# TODO:
-#  The output changed, but it might be more correct. Should the
-#  merge-finding-lcm test be updated?
 test(lambda: check_output("test/merge-finding-lcm.ks",
                           "WS: CO 8. (8 sts)\n" +
                           "**\n" +

@@ -7,9 +7,9 @@ end
 
 pattern right
   repeat 4
-    row: P 2, P 2.
-    row: K 2, K 2.
-    row: K2TOG, YO, K2TOG, YO.
+    row RS: P 2, P 2.
+    row WS: K 2, K 2.
+    row RS: K2TOG, YO, K2TOG, YO.
   end
 end
 
