@@ -36,7 +36,7 @@ class Application(Frame):
         document = FileDocument(master)
         document.text = _DEFAULT_DOCUMENT
         window = _Window(master, document)
-        window.pack()
+        window.pack(expand=YES, fill=BOTH)
 
         menu = Menu(master)
         file_menu = Menu(menu, tearoff=0)
