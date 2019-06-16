@@ -62,7 +62,7 @@ test(lambda: verify_error("test/double-expanding-repeat-2.ks"),
 # technically legit even though nobody writes patterns this way
 test(lambda: not verify_error("test/double-expanding-repeat.ks"),
      "Should allow okay double expanding repeat")
-test(lambda: expect_except("test/patterns-lexical-scoping.ks", KeyError),
+test(lambda: expect_except("test/patterns-lexical-scoping.ks", InterpretError),
      "Patterns shouldn't be able to reference variables outside their " +
      "environment")
 test(lambda: check_output("test/tile.ks",

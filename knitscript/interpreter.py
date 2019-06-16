@@ -82,7 +82,10 @@ def substitute(node: Node, env: Mapping[str, Node]) -> Node:
 
 @substitute.register
 def _(get: Get, env: Mapping[str, Node]) -> Node:
-    return env[get.name]
+    try:
+        return env[get.name]
+    except KeyError:
+        raise InterpretError(f"\"{get.name}\" is not defined", get)
 
 
 @substitute.register

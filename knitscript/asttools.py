@@ -343,9 +343,12 @@ def _(stitch: StitchLit) -> str:
 
 @_friendly_name.register
 def _(get: Get) -> str:
-    return get.name
+    return f"reference to {get.name}"
 
 
 @_friendly_name.register
 def _(call: Call) -> str:
-    return f"call to {_friendly_name(call.target)}"
+    if isinstance(call.target, Get):
+        return f"call to {call.target.name}"
+    else:
+        return f"call to {_friendly_name(call.target)}"
