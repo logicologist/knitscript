@@ -1,10 +1,10 @@
 import os
 from functools import wraps
 from io import StringIO
-from tkinter import BOTH, DISABLED, END, Event, FLAT, Menu, Misc, NORMAL, \
-    NSEW, Text, YES, Widget, filedialog, messagebox
+from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, Misc, \
+    NORMAL, NSEW, RIGHT, Text, Y, YES, Widget, filedialog, messagebox
 from tkinter.font import nametofont
-from tkinter.ttk import Frame, Separator
+from tkinter.ttk import Frame, Scrollbar, Separator
 from typing import Callable, TypeVar
 
 from knitscript.editor.document import FileDocument
@@ -170,7 +170,11 @@ class _Editor(Frame):
         if os.name == "nt":
             font.configure(family="Consolas")
         self._text = Text(self, font=font, undo=True, relief=FLAT)
-        self._text.pack(expand=YES, fill=BOTH)
+
+        scrollbar = Scrollbar(self, command=self._text.yview)
+        self._text.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=RIGHT, expand=YES, fill=Y)
+        self._text.pack(side=LEFT, expand=YES, fill=BOTH)
 
         # TODO:
         #  This is kind of a hack to stop Ctrl-O from inserting a new line. :/
@@ -229,7 +233,11 @@ class _Preview(Frame):
         font.configure(size=11)
         self._text = Text(self, font=font, state=DISABLED, relief=FLAT,
                           bg="SystemMenu")
-        self._text.pack(expand=YES, fill=BOTH)
+
+        scrollbar = Scrollbar(self, command=self._text.yview)
+        self._text.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side=RIGHT, expand=YES, fill=Y)
+        self._text.pack(side=LEFT, expand=YES, fill=BOTH)
 
         self._document = document
         self._document.bind("<<Opened>>", self._preview, add=True)
