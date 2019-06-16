@@ -208,3 +208,12 @@ test(lambda: check_output("test/unroll-odd-row-repeats-explicit-sides.ks",
                           "WS: BO. (0 sts)"),
      "Row repeats with an odd number of rows and explicit sides should be " +
      "unrolled once")
+test(lambda: check_output("test/row-repeat-not-equivalent.ks",
+                          "WS: CO 2. (2 sts)\n"
+                          "RS: K 2. (2 sts)\n" +
+                          "WS: K 2. (2 sts)\n" +
+                          "RS: K 2. (2 sts)\n" +
+                          "WS: P, K. (2 sts)\n" +
+                          "RS: BO 2. (0 sts)"),
+     "Row repeats of a pattern with an odd number of rows are not " +
+     "equivalent to calling that pattern twice in 2 rows")
