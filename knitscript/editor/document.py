@@ -1,6 +1,6 @@
 from tkinter import Misc
 from tkinter.ttk import Frame
-from typing import TextIO, Optional
+from typing import Optional, TextIO
 
 
 class FileDocument(Frame):

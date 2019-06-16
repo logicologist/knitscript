@@ -3,7 +3,7 @@ from functools import wraps
 from io import StringIO
 from tkinter import BOTH, DISABLED, END, Event, FLAT, Menu, Misc, NORMAL, \
     NSEW, Text, YES, Widget, filedialog
-from tkinter.font import Font
+from tkinter.font import nametofont
 from tkinter.ttk import Frame, Separator
 from typing import Callable, TypeVar
 
@@ -122,8 +122,12 @@ class _Editor(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-        self._text = Text(self, font=Font(family="Consolas"), undo=True,
-                          relief=FLAT)
+
+        font = nametofont("TkFixedFont").copy()
+        font.configure(size=11)
+        if os.name == "nt":
+            font.configure(family="Consolas")
+        self._text = Text(self, font=font, undo=True, relief=FLAT)
         self._text.pack(expand=YES, fill=BOTH)
 
         def on_text_key() -> None:
@@ -171,8 +175,10 @@ class _Preview(Frame):
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
 
-        self._text = Text(self, state=DISABLED, relief=FLAT, bg="SystemMenu")
-        self._text.configure(font=Font(family="Segoe UI"))
+        font = nametofont("TkDefaultFont").copy()
+        font.configure(size=11)
+        self._text = Text(self, font=font, state=DISABLED, relief=FLAT,
+                          bg="SystemMenu")
         self._text.pack(expand=YES, fill=BOTH)
 
         self._document = document
