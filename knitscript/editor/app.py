@@ -1,12 +1,13 @@
 import os
 from functools import wraps
 from io import StringIO
-from tkinter import BOTH, DISABLED, END, FLAT, Menu, NORMAL, NSEW, Text, Tk, \
-    YES, Widget, filedialog
+from tkinter import BOTH, DISABLED, END, Event, FLAT, Menu, Misc, NORMAL, \
+    NSEW, Text, YES, Widget, filedialog
 from tkinter.font import Font
 from tkinter.ttk import Frame, Separator
 from typing import Callable, TypeVar
 
+from knitscript.editor.document import FileDocument
 from knitscript.loader import load_text
 
 _T = TypeVar("_T")
@@ -25,14 +26,16 @@ _FILE_TYPES = [("KnitScript Document", "*" + _EXTENSION),
 class Application(Frame):
     """The editor application."""
 
-    def __init__(self, master: Tk) -> None:
+    def __init__(self, master: Misc) -> None:
         """
         Creates the editor application.
 
-        :param master: the toplevel Tk widget
+        :param master: the parent widget
         """
         super().__init__(master)
-        window = _Window(master)
+        document = FileDocument(master)
+        document.text = _DEFAULT_DOCUMENT
+        window = _Window(master, document)
         window.pack()
 
         menu = Menu(master)
@@ -47,131 +50,109 @@ class Application(Frame):
 class _Window(Frame):
     """The editor window."""
 
-    def __init__(self, master: Tk):
+    def __init__(self, master: Misc, document: FileDocument) -> None:
         """
         Creates the editor window.
 
-        :param master: the toplevel Tk widget
+        :param master: the parent widget
+        :param document: the model for the current KnitScript document
         """
         super().__init__(master)
+        self.master.title("New Document")
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(2, weight=1)
 
-        self._editor = _Editor(self, width=500, height=500)
+        self._document = document
+        self._editor = _Editor(self, self._document, width=500, height=500)
         self._editor.text = _DEFAULT_DOCUMENT
         self._editor.grid(row=0, column=0, sticky=NSEW)
-        self._file = None
-        self._title = "New Document"
 
-        def on_modified(_event):
-            self._modified = self._editor.modified
+        def update_title():
+            title = (os.path.basename(self._document.file.name)
+                     if self._document.file is not None
+                     else "New Document")
+            self.master.title(title + ("*" if self._document.modified else ""))
 
-        self._editor.bind("<<Modified>>", on_modified)
+        self._document.bind("<<Opened>>", lambda event: update_title(),
+                            add=True)
+        self._document.bind("<<Modified>>", lambda event: update_title(),
+                            add=True)
 
         sep = Separator(self)
         sep.grid(row=0, column=1)
 
-        preview = _Preview(self, self._editor, width=500, height=500)
+        preview = _Preview(self, self._document, width=500, height=500)
         preview.grid(row=0, column=2, sticky=NSEW)
 
     def open(self) -> None:
         """Opens a file using a file dialog."""
         file = filedialog.askopenfile("r+", filetypes=_FILE_TYPES)
         if file is not None:
-            if self._file is not None:
-                self._file.close()
-            self._file = file
-            self._editor.text = self._file.read()
-            self._title = os.path.basename(self._file.name)
-            self._modified = False
+            self._document.open(file)
 
     def save(self) -> None:
         """
         Saves the current file if there is one. Otherwise, opens the save as
         dialog.
         """
-        if self._file is None:
+        if self._document.file is None:
             self.save_as()
         else:
-            self._file.seek(0)
-            self._file.write(self._editor.text)
-            self._file.truncate()
-            self._modified = False
+            self._document.save()
 
     def save_as(self) -> None:
         """Saves a file using a file dialog."""
         file = filedialog.asksaveasfile(defaultextension=_EXTENSION,
                                         filetypes=_FILE_TYPES)
         if file is not None:
-            self._title = os.path.basename(file.name)
-            self._file = file
-            self.save()
-
-    @property
-    def _modified(self) -> bool:
-        return self._editor.modified
-
-    @_modified.setter
-    def _modified(self, value) -> None:
-        if value != self._editor.modified:
-            self._editor.modified = value
-        self._title = self._title
-
-    @property
-    def _title(self) -> str:
-        return self.__title
-
-    @_title.setter
-    def _title(self, value) -> None:
-        self.__title = value
-        self.master.title(self.__title + ("*" if self._modified else ""))
+            self._document.save_as(file)
 
 
 class _Editor(Frame):
     """A text editor widget."""
 
-    def __init__(self, master: Widget, **kwargs) -> None:
+    def __init__(self, master: Widget, document: FileDocument, **kwargs) \
+            -> None:
         """
         Creates a text editor widget.
 
         :param master: the parent widget
+        :param document: the model for the current KnitScript document
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-        self._text = Text(self,
-                          font=Font(family="Consolas"), undo=True, relief=FLAT)
+        self._text = Text(self, font=Font(family="Consolas"), undo=True,
+                          relief=FLAT)
         self._text.pack(expand=YES, fill=BOTH)
-        self._text.bind("<Key>",
-                        lambda _event: self.event_generate("<<Typed>>"))
 
-        def bind_modified():
+        def on_text_key() -> None:
+            document.text = self._text.get("1.0", END)
+            document.modified = self._text.edit_modified()
+
+        self._text.bind("<Key>", lambda event: self.after_idle(on_text_key),
+                        add=True)
+
+        def bind_text_modified():
+            def on_text_modified(_event: Event) -> None:
+                document.modified = self._text.edit_modified()
+
             self._text.edit_modified(False)
-            self._text.bind("<<Modified>>",
-                            lambda _event: self.event_generate("<<Modified>>"))
+            self._text.bind("<<Modified>>", on_text_modified, add=True)
 
-        self.after_idle(bind_modified)
+        self._text.insert("1.0", document.text)
+        self.after_idle(bind_text_modified)
 
-    @property
-    def text(self) -> str:
-        """The text in the editor."""
-        return self._text.get("1.0", END)
+        def on_document_opened(_event: Event) -> None:
+            self._text.replace("1.0", END, document.text)
+            self._text.edit_modified(False)
 
-    @text.setter
-    def text(self, value: str) -> None:
-        self._text.replace("1.0", END, value)
-        self.event_generate("<<Set>>")
+        def on_document_modified(_event: Event):
+            if document.modified != self._text.edit_modified():
+                self._text.edit_modified(document.modified)
 
-    @property
-    def modified(self) -> bool:
-        """
-        Whether the editor has been modified since the last save.
-        """
-        return self._text.edit_modified()
-
-    @modified.setter
-    def modified(self, value) -> None:
-        self._text.edit_modified(value)
+        document.bind("<<Opened>>", on_document_opened, add=True)
+        document.bind("<<Modified>>", on_document_modified, add=True)
 
 
 class _Preview(Frame):
@@ -179,13 +160,13 @@ class _Preview(Frame):
     A live preview widget that displays the output of a KnitScript document.
     """
 
-    def __init__(self, master: Widget, source: _Editor, **kwargs) -> None:
+    def __init__(self, master: Widget, document: FileDocument, **kwargs) \
+            -> None:
         """
         Creates a live preview widget.
 
         :param master: the parent widget
-        :param source:
-            the text editor widget containing the KnitScript document
+        :param document: the model for the current KnitScript document
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
@@ -194,15 +175,16 @@ class _Preview(Frame):
         self._text.configure(font=Font(family="Segoe UI"))
         self._text.pack(expand=YES, fill=BOTH)
 
-        self._source = source
-        self._source.bind("<<Set>>", self._update)
-        self._source.bind("<<Typed>>", _debounce(master, 500)(self._update))
-        self._update()
+        self._document = document
+        self._document.bind("<<Opened>>", self._preview, add=True)
+        self._document.bind("<<Set>>", _debounce(master, 500)(self._preview),
+                            add=True)
+        self._preview()
 
-    def _update(self, _event=None) -> None:
+    def _preview(self, _event: Event = None) -> None:
         output = StringIO()
         try:
-            load_text(self._source.text, output)
+            load_text(self._document.text, output)
         except Exception as e:
             # TODO: Catching all exceptions is too broad.
             output.write(f"error: {e}\n")
