@@ -15,8 +15,17 @@ class FileDocument(Frame):
         """
         super().__init__(master)
         self._file = None
-        self._text = None
+        self._text = ""
         self._modified = False
+
+    def new(self) -> None:
+        """Resets the current document without saving."""
+        if self._file is not None:
+            self._file.close()
+        self._file = None
+        self._text = ""
+        self._modified = False
+        self.event_generate("<<Opened>>")
 
     def open(self, file: TextIO) -> None:
         """

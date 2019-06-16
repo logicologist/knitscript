@@ -40,9 +40,10 @@ class Application(Frame):
 
         menu = Menu(master)
         file_menu = Menu(menu, tearoff=0)
+        file_menu.add_command(label="New", command=window.new)
         file_menu.add_command(label="Open", command=window.open)
         file_menu.add_command(label="Save", command=window.save)
-        file_menu.entryconfigure(1, state=DISABLED)
+        file_menu.entryconfigure(2, state=DISABLED)
         document.bind(
             "<<Modified>>",
             lambda event: file_menu.entryconfigure(
@@ -94,6 +95,11 @@ class _Window(Frame):
                 self.master.destroy()
 
         self.master.protocol("WM_DELETE_WINDOW", on_delete)
+
+    def new(self) -> None:
+        """Resets the current document without saving."""
+        if self._can_reset_document():
+            self._document.new()
 
     def open(self) -> None:
         """Opens a file using a file dialog."""
