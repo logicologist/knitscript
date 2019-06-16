@@ -1,3 +1,4 @@
+import os
 from tkinter import Misc
 from tkinter.ttk import Frame
 from typing import Optional, TextIO
@@ -50,6 +51,13 @@ class FileDocument(Frame):
     def file(self) -> Optional[TextIO]:
         """The file for the current document."""
         return self._file
+
+    @property
+    def name(self) -> str:
+        """The name of the current document."""
+        return (os.path.basename(self._file.name)
+                if self._file is not None
+                else "New Document")
 
     @property
     def text(self) -> str:

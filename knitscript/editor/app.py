@@ -2,7 +2,7 @@ import os
 from functools import wraps
 from io import StringIO
 from tkinter import BOTH, DISABLED, END, Event, FLAT, Menu, Misc, NORMAL, \
-    NSEW, Text, YES, Widget, filedialog
+    NSEW, Text, YES, Widget, filedialog, messagebox
 from tkinter.font import nametofont
 from tkinter.ttk import Frame, Separator
 from typing import Callable, TypeVar
@@ -58,21 +58,19 @@ class _Window(Frame):
         :param document: the model for the current KnitScript document
         """
         super().__init__(master)
-        self.master.title("New Document")
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(2, weight=1)
 
         self._document = document
+        self.master.title(self._document.name)
         self._editor = _Editor(self, self._document, width=500, height=500)
         self._editor.text = _DEFAULT_DOCUMENT
         self._editor.grid(row=0, column=0, sticky=NSEW)
 
         def update_title():
-            title = (os.path.basename(self._document.file.name)
-                     if self._document.file is not None
-                     else "New Document")
-            self.master.title(title + ("*" if self._document.modified else ""))
+            self.master.title(self._document.name +
+                              ("*" if self._document.modified else ""))
 
         self._document.bind("<<Opened>>", lambda event: update_title(),
                             add=True)
@@ -85,28 +83,54 @@ class _Window(Frame):
         preview = _Preview(self, self._document, width=500, height=500)
         preview.grid(row=0, column=2, sticky=NSEW)
 
+        def on_delete():
+            if self._can_reset_document():
+                self.master.destroy()
+
+        self.master.protocol("WM_DELETE_WINDOW", on_delete)
+
     def open(self) -> None:
         """Opens a file using a file dialog."""
-        file = filedialog.askopenfile("r+", filetypes=_FILE_TYPES)
-        if file is not None:
-            self._document.open(file)
+        if self._can_reset_document():
+            file = filedialog.askopenfile("r+", filetypes=_FILE_TYPES)
+            if file is not None:
+                self._document.open(file)
 
-    def save(self) -> None:
+    def save(self) -> bool:
         """
         Saves the current file if there is one. Otherwise, opens the save as
         dialog.
+
+        :return: True if the file was saved, or False if the user canceled
         """
         if self._document.file is None:
-            self.save_as()
+            return self.save_as()
         else:
             self._document.save()
+            return True
 
-    def save_as(self) -> None:
-        """Saves a file using a file dialog."""
+    def save_as(self) -> bool:
+        """
+        Saves a file using a file dialog.
+
+        :return: True if the file was saved, or False if the user canceled
+        """
         file = filedialog.asksaveasfile(defaultextension=_EXTENSION,
                                         filetypes=_FILE_TYPES)
         if file is not None:
             self._document.save_as(file)
+        return file is not None
+
+    def _can_reset_document(self) -> bool:
+        if not self._document.modified:
+            return True
+        response = messagebox.askyesnocancel(
+            "KnitScript",
+            f"Do you want to save changes to {self._document.name}?"
+        )
+        if response:
+            return self.save()
+        return response is not None
 
 
 class _Editor(Frame):
