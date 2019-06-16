@@ -193,39 +193,35 @@ def fill(pattern: Pattern, width: int, height: int) -> Node:
 
 
 @singledispatch
-def count_rows(node: Node) -> int:
+def count_rows(node: Node, acc: int = 0) -> int:
     """
-    Recursively counts rows in the subexpression.
+    Counts the number of rows in the AST.
 
-    :param node: the expression to count rows of.
-    :return: the number of rows in the expression.
+    :param node: the AST to count the rows in
+    :param acc: the initial number of rows
+    :return: the number of rows in the AST
     """
-    return ast_map(node, count_rows)
+    return ast_reduce(node, count_rows, acc)
 
 
 @count_rows.register
-def _(row: Row) -> int:
-    return 1
+def _(_row: Row, acc: int = 0) -> int:
+    return acc + 1
 
 
 @count_rows.register
-def _(rep: RowRepeat) -> int:
-    return sum(map(count_rows, rep.rows)) * rep.times.value
+def _(rep: RowRepeat, acc: int = 0) -> int:
+    return acc + sum(map(count_rows, rep.rows)) * rep.times.value
 
 
 @count_rows.register
-def _(pattern: Pattern) -> int:
-    return count_rows(to_fixed_repeat(pattern))
+def _(pattern: Pattern, acc: int = 0) -> int:
+    return count_rows(to_fixed_repeat(pattern), acc)
 
 
 @count_rows.register
-def _(block: Block) -> int:
-    return max(map(count_rows, block.patterns))
-
-
-@count_rows.register
-def _(rep: FixedBlockRepeat) -> int:
-    return count_rows(rep.block)
+def _(block: Block, acc: int = 0) -> int:
+    return acc + max(map(count_rows, block.patterns))
 
 
 @singledispatch
@@ -757,6 +753,7 @@ def _(rep: FixedStitchRepeat) -> Node:
     def _(stitch: StitchLit) -> Tuple[Stitch, int]:
         return stitch.value, 1
 
+    # noinspection PyShadowingNames
     @get_stitch.register
     def _(rep: FixedStitchRepeat) -> Tuple[Stitch, int]:
         if len(rep.stitches) != 1:
