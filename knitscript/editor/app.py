@@ -174,7 +174,7 @@ class _Editor(Frame):
 
         scrollbar = Scrollbar(self, command=self._text.yview)
         self._text.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=RIGHT, expand=YES, fill=Y)
+        scrollbar.pack(side=RIGHT, fill=Y)
         self._text.pack(side=LEFT, expand=YES, fill=BOTH)
 
         # TODO:
@@ -237,7 +237,7 @@ class _Preview(Frame):
 
         scrollbar = Scrollbar(self, command=self._text.yview)
         self._text.configure(yscrollcommand=scrollbar.set)
-        scrollbar.pack(side=RIGHT, expand=YES, fill=Y)
+        scrollbar.pack(side=RIGHT, fill=Y)
         self._text.pack(side=LEFT, expand=YES, fill=BOTH)
 
         self._document = document
