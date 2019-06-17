@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Generator, Mapping, Optional, Sequence
 
@@ -57,7 +57,7 @@ class Node:
 
     :cvar sources: the source file locations this node was created from
     """
-    sources: Sequence[Source]
+    sources: Sequence[Source] = field(compare=False)
 
 
 @dataclass(frozen=True)

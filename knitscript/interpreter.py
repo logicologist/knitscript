@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import replace
 from functools import partial, singledispatch, reduce
-from itertools import accumulate, chain, starmap, zip_longest
+from itertools import accumulate, chain, starmap, takewhile, zip_longest
 from math import ceil, gcd
 from operator import attrgetter
 from typing import Callable, Iterable, Iterator, Generator, Mapping, \
@@ -34,15 +34,13 @@ def prepare_pattern(pattern: Pattern) -> Pattern:
     pattern = _infer_sides(pattern)
     pattern = infer_counts(pattern)
     pattern = _flatten(pattern)
-    # TODO:
-    #  Fix counting when unrolling row repeats with a net increase/decrease in
-    #  the number of stitches each iteration, so we don't have to run
-    #  infer_counts twice.
-    pattern = infer_counts(pattern)
+    pattern = infer_counts(pattern)  # Re-count unrolled row repeats.
+    pattern = _combine_stitches(pattern)
     pattern = _alternate_sides(
         pattern, Side.Wrong if _starts_with_cast_ons(pattern) else Side.Right
     )
-    pattern = _combine_stitches(pattern)
+    pattern = _roll_repeated_rows(pattern)
+    pattern = _flatten(pattern)  # Flatten newly rolled up row repeats.
     assert isinstance(pattern, Pattern)
     return pattern
 
@@ -361,7 +359,7 @@ def _flatten(node: Node, unroll: bool = False) -> Node:
 def _(rep: FixedStitchRepeat, unroll: bool = False) -> Node:
     # Cases where the only node a fixed stitch repeat contains is another fixed
     # stitch repeat should be flattened by multiplying the repeat times
-    # together, because the unflattened output is confusing.
+    # together.
     if (rep.times.value != 1
             and len(rep.stitches) == 1
             and isinstance(rep.stitches[0], FixedStitchRepeat)):
@@ -409,6 +407,18 @@ def _(rep: RowRepeat, unroll: bool = False) -> Node:
             flattened_rows.extend(row.rows)
         else:
             flattened_rows.append(row)
+
+    if (rep.times.value > 1 and
+            len(flattened_rows) == 1 and
+            isinstance(flattened_rows[0], RowRepeat)):
+        # Cases where the only node a row repeat contains is another row
+        # repeat should be flattened by multiplying the repeat times together.
+        return _normalize_row_repeat(
+            replace(rep,
+                    rows=flattened_rows[0].rows,
+                    times=NaturalLit.of(rep.times.value *
+                                        flattened_rows[0].times.value))
+        )
     return _normalize_row_repeat(replace(rep, rows=flattened_rows))
 
 
@@ -629,16 +639,16 @@ def _(*reps: RowRepeat) -> Knittable:
     if not all(map(lambda item: len(set(map(type, item))) == 1,
                    _padded_zip(*map(attrgetter("rows"), reps)))):
         # Unroll all row repeats if we see a row and a row repeat side-by-side.
-        # There may be a smarter way to do it where we only unroll the
-        # misplaced row repeat instead of all of them, but that's more
-        # complicated. :(
+        # This is conservative, but repetitive output can be fixed up by
+        # _roll_repeated_rows.
         #
         # noinspection PyTypeChecker
         rows = list(
-            starmap(_merge_across,
-                    _padded_zip(*map(attrgetter("rows"),
-                                     map(partial(_flatten, unroll=True),
-                                         reps))))
+            starmap(
+                _merge_across,
+                _padded_zip(*map(attrgetter("rows"),
+                                 map(partial(_flatten, unroll=True), reps)))
+            )
         )
         return RowRepeat(rows=rows,
                          times=NaturalLit.of(1),
@@ -871,3 +881,43 @@ def _normalize_row_repeat(rep: RowRepeat) -> RowRepeat:
                              sources=rep.sources)
     else:
         return rep
+
+
+@singledispatch
+def _roll_repeated_rows(node: Node) -> Node:
+    return ast_map(node, _roll_repeated_rows)
+
+
+@_roll_repeated_rows.register
+def _(rep: RowRepeat) -> Node:
+    def roll(rows):
+        if not rows:
+            return []
+        for size in range(1, len(rows) // 2 + 1):
+            chunked = _chunks(rows, size)
+            first = next(chunked)
+            times = len(list(takewhile(lambda row: row == first, chunked)))
+            if times > 0:
+                rolled = RowRepeat(
+                    rows=first, times=NaturalLit.of(times + 1),
+                    consumes=first[0].consumes,
+                    produces=first[-1].produces,
+                    sources=list(_flat_map(attrgetter("sources"), first))
+                )
+                return [rolled, *roll(rows[size * (times + 1):])]
+        return [rows[0], *roll(rows[1:])]
+
+    return replace(rep, rows=roll(list(map(_roll_repeated_rows, rep.rows))))
+
+
+@_roll_repeated_rows.register
+def _(pattern: Pattern) -> Node:
+    rolled = _roll_repeated_rows(to_fixed_repeat(pattern))
+    assert isinstance(rolled, RowRepeat)
+    return replace(pattern, rows=rolled.rows)
+
+
+def _chunks(sequence: Sequence[_T], n: int) \
+        -> Generator[Sequence[_T], None, None]:
+    for i in range(0, len(sequence), n):
+        yield sequence[i:i + n]

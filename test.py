@@ -185,19 +185,7 @@ test(lambda: check_output("test/unroll-odd-row-repeats-explicit-sides.ks",
                           "**\n" +
                           "RS: K. (1 sts)\n" +
                           "WS: P. (1 sts)\n" +
-                          "RS: K. (1 sts)\n" +
-                          "WS: P. (1 sts)\n" +
-                          "RS: K. (1 sts)\n" +
-                          "WS: P. (1 sts)\n" +
-                          "rep from ** 2 times\n" +
-                          "**\n" +
-                          "RS: K. (1 sts)\n" +
-                          "WS: P. (1 sts)\n" +
-                          "RS: K. (1 sts)\n" +
-                          "WS: P. (1 sts)\n" +
-                          "RS: K. (1 sts)\n" +
-                          "WS: P. (1 sts)\n" +
-                          "rep from ** 2 times\n" +
+                          "rep from ** 12 times\n" +
                           "RS: K. (1 sts)\n" +
                           "WS: P. (1 sts)\n" +
                           "RS: K. (1 sts)\n" +
