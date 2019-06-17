@@ -8,6 +8,7 @@ from antlr4 import CommonTokenStream, FileStream, InputStream
 from knitscript.astgen import build_ast
 from knitscript.astnodes import Call, Document, NativeFunction, NaturalLit, \
     Node, Pattern, PatternDef, Using
+from knitscript.asttools import Error
 from knitscript.exporter import export_text
 from knitscript.interpreter import count_rows, do_call, enclose, fill, \
     infer_counts, prepare_pattern, reflect, substitute
@@ -16,7 +17,7 @@ from knitscript.parser.KnitScriptParser import KnitScriptParser
 from knitscript.verifier import verify_pattern
 
 
-class LoadError(Exception):
+class LoadError(Error):
     """An error that occurred while loading a document."""
     pass
 
@@ -37,7 +38,9 @@ def load_file(filename: str, out: Optional[TextIO] = None) \
                  os.path.dirname(filename))
 
 
-def load_text(text: str, out: Optional[TextIO] = None) -> Mapping[str, Node]:
+def load_text(text: str,
+              out: Optional[TextIO] = None,
+              base_dir: Optional[str] = None) -> Mapping[str, Node]:
     """
     Loads the environment from a document in a string.
 
@@ -45,9 +48,10 @@ def load_text(text: str, out: Optional[TextIO] = None) -> Mapping[str, Node]:
     :param out:
         the stream to use for any output the document produces, or None if
         output should be suppressed
+    :param base_dir: the base directory to use for importing modules
     :return: the document's environment
     """
-    return _load(InputStream(text), _get_default_env(out), None)
+    return _load(InputStream(text), _get_default_env(out), base_dir)
 
 
 def _load(in_: InputStream, env: Mapping[str, Node], base_dir: Optional[str]) \
@@ -60,7 +64,10 @@ def _load(in_: InputStream, env: Mapping[str, Node], base_dir: Optional[str]) \
     for stmt in document.stmts:
         if isinstance(stmt, Using):
             if base_dir is None:
-                raise LoadError("importing module without search path")
+                raise LoadError(
+                    "no module base directory (did you save the document?)",
+                    stmt
+                )
             used_env = load_file(os.path.join(base_dir, stmt.module + ".ks"))
             for name in stmt.names:
                 env[name] = used_env[name]
@@ -70,7 +77,8 @@ def _load(in_: InputStream, env: Mapping[str, Node], base_dir: Optional[str]) \
             result = do_call(stmt, env)
             assert result is None
         else:
-            raise LoadError(f"unsupported statement {type(stmt).__name__}")
+            raise LoadError(f"unsupported statement {type(stmt).__name__}",
+                            stmt)
     return env
 
 

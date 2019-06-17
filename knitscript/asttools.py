@@ -290,8 +290,9 @@ def _print_parent(name: str,
 class Error(Exception):
     """Base class for any error in a KnitScript document."""
 
-    def __init__(self, message: str, nodes: Union[Node, Sequence[Node]]) \
-            -> None:
+    def __init__(self,
+                 message: str,
+                 nodes: Union[Node, Sequence[Node], None] = None) -> None:
         """
         Creates a new KnitScript error.
 
@@ -299,7 +300,12 @@ class Error(Exception):
         :param nodes: the node(s) the error occurred at
         """
         self._message = message
-        self._nodes = nodes if isinstance(nodes, Sequence) else [nodes]
+        if nodes is None:
+            self._nodes = []
+        elif isinstance(nodes, Sequence):
+            self._nodes = nodes
+        else:
+            self._nodes = [nodes]
 
     @property
     def message(self) -> str:

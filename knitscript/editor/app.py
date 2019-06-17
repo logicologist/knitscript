@@ -249,7 +249,10 @@ class _Preview(Frame):
     def _preview(self, _event: Event = None) -> None:
         output = StringIO()
         try:
-            load_text(self._document.text, output)
+            load_text(self._document.text, output,
+                      (os.path.dirname(self._document.file.name)
+                       if self._document.file is not None
+                       else None))
         except Exception as e:
             # TODO: Catching all exceptions is too broad.
             output.write(f"error: {e}\n")
