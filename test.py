@@ -205,3 +205,17 @@ test(lambda: check_output("test/row-repeat-not-equivalent.ks",
                           "RS: BO 2. (0 sts)"),
      "Row repeats of a pattern with an odd number of rows are not " +
      "equivalent to calling that pattern twice in 2 rows")
+test(lambda: check_output("test/roll-repetitive-rows.ks",
+                          "WS: CO. (1 sts)\n" +
+                          "**\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: K. (1 sts)\n"
+                          "rep from ** 2 times\n" +
+                          "**\n" +
+                          "RS: P. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: K. (1 sts)\n" +
+                          "rep from ** 3 times\n" +
+                          "RS: BO. (0 sts)"),
+     "Repetitive rows should be converted into row repeats")

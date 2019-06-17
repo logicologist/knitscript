@@ -890,6 +890,10 @@ def _roll_repeated_rows(node: Node) -> Node:
 
 @_roll_repeated_rows.register
 def _(rep: RowRepeat) -> Node:
+    # TODO: Right now, this will only create row repeats with an even number of
+    #  rows, since a row is never equal to the next row using naive equality
+    #  (because the sides are different, at least). Maybe should investigate
+    #  whether that's an OK limitation or not.
     def roll(rows):
         if not rows:
             return []
