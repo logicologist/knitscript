@@ -209,13 +209,25 @@ test(lambda: check_output("test/roll-repetitive-rows.ks",
                           "WS: CO. (1 sts)\n" +
                           "**\n" +
                           "RS: K. (1 sts)\n" +
-                          "WS: K. (1 sts)\n"
-                          "rep from ** 2 times\n" +
+                          "rep from ** 4 times\n" +
                           "**\n" +
                           "RS: P. (1 sts)\n" +
                           "WS: P. (1 sts)\n" +
                           "RS: K. (1 sts)\n" +
                           "WS: K. (1 sts)\n" +
                           "rep from ** 3 times\n" +
-                          "RS: BO. (0 sts)"),
+                          "**\n" +
+                          "RS: P. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "RS: K. (1 sts)\n" +
+                          "rep from ** 3 times\n"
+                          "WS: BO. (0 sts)"),
      "Repetitive rows should be converted into row repeats")
+test(lambda: check_output("test/rolling-ambiguous-repeats.ks",
+                          "WS: CO. (1 sts)\n" +
+                          "**\n" +
+                          "RS: K. (1 sts)\n" +
+                          "WS: P. (1 sts)\n" +
+                          "rep from ** 2 times\n" +
+                          "RS: BO. (0 sts)"),
+     "Repetitive row rolling should not create ambiguous row repeats")

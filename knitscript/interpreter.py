@@ -867,48 +867,74 @@ def _normalize_row_repeat(rep: RowRepeat) -> RowRepeat:
     # Make sure every row repeat has an even number of rows inside of it, so
     # the knitter doesn't have to reverse rows in their head every other
     # iteration.
-    if (rep.times.value > 1 and
+    if not (rep.times.value > 1 and
             _has_explicit_sides(rep) and
             sum(map(count_rows, rep.rows)) % 2 != 0):
-        twice = replace(rep,
-                        rows=list(_repeat_rows(rep.rows, 2)),
-                        times=NaturalLit.of(rep.times.value // 2))
-        if rep.times.value % 2 == 0:
-            return twice
-        else:
-            return RowRepeat(rows=[twice, *rep.rows], times=NaturalLit.of(1),
-                             consumes=rep.consumes, produces=rep.produces,
-                             sources=rep.sources)
-    else:
         return rep
+    twice = replace(rep,
+                    rows=list(_repeat_rows(rep.rows, 2)),
+                    times=NaturalLit.of(rep.times.value // 2))
+    if rep.times.value % 2 == 0:
+        return twice
+    else:
+        return RowRepeat(rows=[twice, *rep.rows], times=NaturalLit.of(1),
+                         consumes=rep.consumes, produces=rep.produces,
+                         sources=rep.sources)
 
 
 @singledispatch
 def _roll_repeated_rows(node: Node) -> Node:
+    """
+    Tries to find repeated sequences of rows to roll up into a row repeat.
+
+    It uses a naive algorithm that can give weird output in cases where
+    multiple overlapping sequences could be rolled up, but should work OK in
+    most cases.
+
+    **Note:** This ignores sides when comparing rows for equality (so RS: K and
+    WS: K are considered equal), which mimics the way odd-numbered row repeats
+    are knitted, but this means that :ref:`alternate_sides` must be run before
+    this function.
+
+    :param node: the AST to search for repeated rows
+    :return: the AST with repeated rows rolled up
+    """
     return ast_map(node, _roll_repeated_rows)
 
 
 @_roll_repeated_rows.register
 def _(rep: RowRepeat) -> Node:
-    # TODO: Right now, this will only create row repeats with an even number of
-    #  rows, since a row is never equal to the next row using naive equality
-    #  (because the sides are different, at least). Maybe should investigate
-    #  whether that's an OK limitation or not.
+    def _eq_ignore_sides(nodes1: Sequence[Node], nodes2: Sequence[Node]) \
+            -> bool:
+        @singledispatch
+        def all_to_rs(node: Node) -> Node:
+            return ast_map(node, all_to_rs)
+
+        @all_to_rs.register
+        def _(row: Row) -> Node:
+            return replace(row, side=Side.Right)
+
+        return list(map(all_to_rs, nodes1)) == list(map(all_to_rs, nodes2))
+
     def roll(rows):
         if not rows:
             return []
         for size in range(1, len(rows) // 2 + 1):
-            chunked = _chunks(rows, size)
-            first = next(chunked)
-            times = len(list(takewhile(lambda row: row == first, chunked)))
+            sections = _chunks(rows, size)
+            first = next(sections)
+            # noinspection PyTypeChecker
+            times = len(list(takewhile(partial(_eq_ignore_sides, first),
+                                       sections)))
             if times > 0:
                 rolled = RowRepeat(
                     rows=first, times=NaturalLit.of(times + 1),
-                    consumes=first[0].consumes,
-                    produces=first[-1].produces,
+                    consumes=first[0].consumes, produces=first[-1].produces,
                     sources=list(_flat_map(attrgetter("sources"), first))
                 )
-                return [rolled, *roll(rows[size * (times + 1):])]
+                # Only roll up if the total number of rows is greater than some
+                # threshold to avoid creating lots of little row repeats.
+                if count_rows(rolled) >= 4:
+                    return [rolled, *roll(rows[size * (times + 1):])]
         return [rows[0], *roll(rows[1:])]
 
     return replace(rep, rows=roll(list(map(_roll_repeated_rows, rep.rows))))
