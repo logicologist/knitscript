@@ -318,7 +318,7 @@ class Error(Exception):
         return self._nodes
 
     def __str__(self) -> str:
-        trace = map(lambda node: f"in {_friendly_name(node)} " +
+        trace = map(lambda node: f"at {_friendly_name(node)} " +
                                  f"{_show_sources(node.sources)}",
                     self.nodes)
         return f"{self.message}\n    " + "\n    ".join(trace)
@@ -326,10 +326,10 @@ class Error(Exception):
 
 def _show_sources(sources: Union[Source, Sequence[Source]]) -> str:
     if isinstance(sources, Source):
-        return (f"at line {sources.line}, column {sources.column}, in " +
+        return (f"on line {sources.line}, column {sources.column}, in " +
                 (sources.file if sources.file is not None else "unknown file"))
     elif not sources:
-        return "at unknown source"
+        return ""
     elif len(sources) == 1:
         return _show_sources(sources[0])
     else:
