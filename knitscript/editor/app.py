@@ -1,6 +1,7 @@
 import os
 import platform
 from functools import wraps
+from idlelib.redirector import WidgetRedirector
 from io import StringIO
 from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, Misc, \
     NORMAL, NS, NSEW, RIGHT, Text, VERTICAL, Y, YES, Widget, filedialog, \
@@ -218,6 +219,7 @@ class _Preview(Frame):
     A live preview widget that displays the output of a KnitScript document.
     """
 
+    # noinspection PyShadowingNames
     def __init__(self, master: Widget, document: FileDocument, **kwargs) \
             -> None:
         """
@@ -228,8 +230,11 @@ class _Preview(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-        self._text = Text(self, font=_get_default_font(), state=DISABLED,
-                          relief=FLAT, bg="SystemMenu")
+        self._text = Text(self, font=_get_default_font(), relief=FLAT,
+                          bg="SystemMenu", highlightthickness=0)
+        redirector = WidgetRedirector(self._text)
+        redirector.register("insert", lambda *args, **kwargs: "break")
+        redirector.register("delete", lambda *args, **kwargs: "break")
 
         scrollbar = Scrollbar(self, command=self._text.yview)
         self._text.configure(yscrollcommand=scrollbar.set)
@@ -252,9 +257,7 @@ class _Preview(Frame):
         except Exception as e:
             # TODO: Catching all exceptions is too broad.
             output.write(f"error: {e}\n")
-        self._text.configure(state=NORMAL)
-        self._text.replace(1.0, END, output.getvalue())
-        self._text.configure(state=DISABLED)
+        self._text.replace("1.0", END, output.getvalue())
 
 
 def _debounce(widget, delay: int) \
