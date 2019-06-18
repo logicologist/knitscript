@@ -168,7 +168,8 @@ class _Editor(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-        self._text = Text(self, font=_get_fixed_font(), undo=True, relief=FLAT)
+        self._text = Text(self, font=_get_fixed_font(), undo=True, relief=FLAT,
+                          highlightthickness=0)
 
         scrollbar = Scrollbar(self, command=self._text.yview)
         self._text.configure(yscrollcommand=scrollbar.set)
