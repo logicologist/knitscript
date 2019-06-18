@@ -89,7 +89,7 @@ class _Window(Frame):
 
         def update_title():
             self.master.title(self._document.name +
-                              ("*" if self._document.modified else ""))
+                              (" — Edited" if self._document.modified else ""))
 
         for name in "<<Opened>>", "<<Modified>>", "<<SavedAs>>":
             self._document.bind(name, lambda event: update_title(), add=True)

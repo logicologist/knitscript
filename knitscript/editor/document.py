@@ -67,7 +67,7 @@ class FileDocument(Frame):
         """The name of the current document."""
         return (os.path.basename(self._file.name)
                 if self._file is not None
-                else "New Document")
+                else "Untitled")
 
     @property
     def text(self) -> str:
