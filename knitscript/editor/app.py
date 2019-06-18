@@ -1,10 +1,11 @@
 import os
+import platform
 from functools import wraps
 from io import StringIO
 from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, Misc, \
     NORMAL, NS, NSEW, RIGHT, Text, VERTICAL, Y, YES, Widget, filedialog, \
     messagebox
-from tkinter.font import nametofont
+from tkinter.font import Font, nametofont
 from tkinter.ttk import Frame, Scrollbar, Separator
 from typing import Callable, TypeVar
 
@@ -12,6 +13,7 @@ from knitscript.editor.document import FileDocument
 from knitscript.loader import load_text
 
 _T = TypeVar("_T")
+
 _DEFAULT_DOCUMENT = ("pattern hello\n" +
                      "  row: CO 12.\n" +
                      "  row: K to end.\n" +
@@ -19,6 +21,7 @@ _DEFAULT_DOCUMENT = ("pattern hello\n" +
                      "end\n" +
                      "\n" +
                      "show (hello)")
+
 _EXTENSION = ".ks"
 _FILE_TYPES = [("KnitScript Document", "*" + _EXTENSION),
                ("All Files", "*.*")]
@@ -165,12 +168,7 @@ class _Editor(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-
-        font = nametofont("TkFixedFont").copy()
-        font.configure(size=11)
-        if os.name == "nt":
-            font.configure(family="Consolas")
-        self._text = Text(self, font=font, undo=True, relief=FLAT)
+        self._text = Text(self, font=_get_fixed_font(), undo=True, relief=FLAT)
 
         scrollbar = Scrollbar(self, command=self._text.yview)
         self._text.configure(yscrollcommand=scrollbar.set)
@@ -229,11 +227,8 @@ class _Preview(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-
-        font = nametofont("TkDefaultFont").copy()
-        font.configure(size=11)
-        self._text = Text(self, font=font, state=DISABLED, relief=FLAT,
-                          bg="SystemMenu")
+        self._text = Text(self, font=_get_default_font(), state=DISABLED,
+                          relief=FLAT, bg="SystemMenu")
 
         scrollbar = Scrollbar(self, command=self._text.yview)
         self._text.configure(yscrollcommand=scrollbar.set)
@@ -288,3 +283,17 @@ def _debounce(widget, delay: int) \
         return wrapper
 
     return decorator
+
+
+def _get_default_font() -> Font:
+    font = nametofont("TkDefaultFont").copy()
+    font.configure(size=13 if platform.system() == "Darwin" else 11)
+    return font
+
+
+def _get_fixed_font() -> Font:
+    font = nametofont("TkFixedFont").copy()
+    font.configure(size=13 if platform.system() == "Darwin" else 11)
+    if platform.system() == "Windows":
+        font.configure(family="Consolas")
+    return font
