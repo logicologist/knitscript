@@ -2,7 +2,7 @@ from functools import singledispatch
 from operator import attrgetter
 from typing import Collection, Union
 
-from antlr4 import FileStream, ParserRuleContext, Token
+from antlr4 import FileStream, ParserRuleContext
 
 from knitscript.astnodes import Block, Call, Document, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, NaturalLit, Node, PatternDef, \
@@ -25,7 +25,7 @@ def build_ast(ctx: ParserRuleContext) -> Node:
 @build_ast.register
 def _(document: KnitScriptParser.DocumentContext) -> Node:
     return Document(stmts=list(map(build_ast, document.stmts)),
-                    sources=[_get_source(document.start)])
+                    sources=[_get_source(document)])
 
 
 @build_ast.register
@@ -37,7 +37,7 @@ def _(stmt: KnitScriptParser.StmtContext) -> Node:
 def _(using: KnitScriptParser.UsingContext) -> Node:
     return Using(names=list(map(lambda name: name.text, using.names)),
                  module=using.module.text,
-                 sources=[_get_source(using.start)])
+                 sources=[_get_source(using)])
 
 
 @build_ast.register
@@ -50,8 +50,8 @@ def _(pattern: KnitScriptParser.PatternDefContext) -> Node:
         pattern=Pattern(rows=list(map(build_ast, pattern.items)),
                         params=params, env=None,
                         consumes=None, produces=None,
-                        sources=[_get_source(pattern.start)]),
-        sources=[_get_source(pattern.start)]
+                        sources=[_get_source(pattern)]),
+        sources=[_get_source(pattern)]
     )
 
 
@@ -64,7 +64,7 @@ def _(item: KnitScriptParser.ItemContext) -> Node:
 def _(block: KnitScriptParser.BlockContext) -> Node:
     return Block(patterns=list(map(build_ast, block.patternList().patterns)),
                  consumes=None, produces=None,
-                 sources=[_get_source(block.start)])
+                 sources=[_get_source(block)])
 
 
 @build_ast.register
@@ -82,20 +82,20 @@ def _(repeat: KnitScriptParser.FixedPatternRepeatContext) -> Node:
                 else list(map(build_ast, repeat.patternList().patterns))
             ),
             consumes=None, produces=None,
-            sources=[_get_source(repeat.start)]
+            sources=[_get_source(repeat)]
         ),
         times=build_ast(repeat.times),
         consumes=None, produces=None,
-        sources=[_get_source(repeat.start)]
+        sources=[_get_source(repeat)]
     )
 
 
 @build_ast.register
 def _(call: KnitScriptParser.CallContext) -> Node:
     return Call(target=Get(name=call.ID().getText(),
-                           sources=[_get_source(call.start)]),
+                           sources=[_get_source(call)]),
                 args=list(map(build_ast, call.args) if call.args else []),
-                sources=[_get_source(call.start)])
+                sources=[_get_source(call)])
 
 
 @build_ast.register
@@ -103,7 +103,7 @@ def _(repeat: KnitScriptParser.RowRepeatContext) -> Node:
     return RowRepeat(rows=list(map(build_ast, repeat.items)),
                      times=build_ast(repeat.times),
                      consumes=None, produces=None,
-                     sources=[_get_source(repeat.start)])
+                     sources=[_get_source(repeat)])
 
 
 @build_ast.register
@@ -115,7 +115,7 @@ def _(row: KnitScriptParser.RowContext) -> Node:
         side=Side(row.side().getText()) if row.side() is not None else None,
         inferred=False,
         consumes=None, produces=None,
-        sources=[_get_source(row.start)]
+        sources=[_get_source(row)]
     )
 
 
@@ -132,7 +132,7 @@ def _(fixed: KnitScriptParser.FixedStitchRepeatContext) -> Node:
         stitches=list(map(build_ast, _get_stitches(fixed))),
         times=build_ast(fixed.times),
         consumes=None, produces=None,
-        sources=[_get_source(fixed.start)]
+        sources=[_get_source(fixed)]
     )
 
 
@@ -144,7 +144,7 @@ def _(expanding: KnitScriptParser.ExpandingStitchRepeatContext) -> Node:
                  if expanding.toLast
                  else NaturalLit.of(0)),
         consumes=None, produces=None,
-        sources=[_get_source(expanding.start)]
+        sources=[_get_source(expanding)]
     )
 
 
@@ -153,7 +153,7 @@ def _(stitch: KnitScriptParser.StitchContext) -> Node:
     value = Stitch.from_symbol(stitch.ID().getText())
     return StitchLit(value=value,
                      consumes=value.consumes, produces=value.produces,
-                     sources=[_get_source(stitch.start)])
+                     sources=[_get_source(stitch)])
 
 
 @build_ast.register
@@ -167,19 +167,19 @@ def _(expr: KnitScriptParser.ExprContext) -> Node:
 @build_ast.register
 def _(variable: KnitScriptParser.VariableContext) -> Node:
     return Get(name=variable.ID().getText(),
-               sources=[_get_source(variable.start)])
+               sources=[_get_source(variable)])
 
 
 @build_ast.register
 def _(natural: KnitScriptParser.NaturalContext) -> Node:
     return NaturalLit(value=int(natural.getText()),
-                      sources=[_get_source(natural.start)])
+                      sources=[_get_source(natural)])
 
 
 @build_ast.register
 def _(string: KnitScriptParser.StringContext) -> Node:
     return StringLit(value=string.getText()[1:-1],
-                     sources=[_get_source(string.start)])
+                     sources=[_get_source(string)])
 
 
 def _get_stitches(ctx: Union[KnitScriptParser.FixedStitchRepeatContext,
@@ -188,10 +188,8 @@ def _get_stitches(ctx: Union[KnitScriptParser.FixedStitchRepeatContext,
     return [ctx.stitch()] if ctx.stitch() else ctx.stitchList().stitches
 
 
-def _get_source(token: Token) -> Source:
-    file = None
-    if len(token.source) > 1 and isinstance(token.source[1], FileStream):
-        file = token.source[1].fileName
-    elif len(token.source) > 1:
-        file = token.source[1].name
-    return Source(line=token.line, column=token.column, file=file)
+def _get_source(ctx: ParserRuleContext) -> Source:
+    file = (ctx.start.source[1].fileName
+            if isinstance(ctx.start.source[1], FileStream)
+            else ctx.start.source[1].name)
+    return Source(line=ctx.start.line, column=ctx.start.column, file=file)

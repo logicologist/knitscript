@@ -1,13 +1,17 @@
 import os
 import pkgutil
+from dataclasses import dataclass
 from functools import partial
-from typing import Mapping, Optional, TextIO
+from typing import Mapping, Optional, Sequence, TextIO, TypeVar, Union, \
+    overload
 
-from antlr4 import CommonTokenStream, FileStream, InputStream
+from antlr4 import CommonTokenStream, FileStream, InputStream, \
+    RecognitionException, Recognizer, Token
+from antlr4.error.ErrorListener import ErrorListener
 
 from knitscript.astgen import build_ast
 from knitscript.astnodes import Call, Document, NativeFunction, NaturalLit, \
-    Node, Pattern, PatternDef, Using
+    Node, Pattern, PatternDef, Source, Using
 from knitscript.asttools import Error
 from knitscript.exporter import export_text
 from knitscript.interpreter import count_rows, do_call, enclose, fill, \
@@ -15,6 +19,8 @@ from knitscript.interpreter import count_rows, do_call, enclose, fill, \
 from knitscript.parser.KnitScriptLexer import KnitScriptLexer
 from knitscript.parser.KnitScriptParser import KnitScriptParser
 from knitscript.verifier import verify_pattern
+
+_T_co = TypeVar("_T_co")
 
 
 class LoadError(Error):
@@ -34,6 +40,7 @@ def load_file(filename: str, out: Optional[TextIO] = None) \
     :return: the document's environment
     """
     return _load(FileStream(os.path.abspath(filename)),
+                 out,
                  _get_default_env(out),
                  os.path.dirname(filename))
 
@@ -51,24 +58,38 @@ def load_text(text: str,
     :param base_dir: the base directory to use for importing modules
     :return: the document's environment
     """
-    return _load(InputStream(text), _get_default_env(out), base_dir)
+    return _load(InputStream(text), out, _get_default_env(out), base_dir)
 
 
-def _load(in_: InputStream, env: Mapping[str, Node], base_dir: Optional[str]) \
-        -> Mapping[str, Node]:
+def _load(in_: InputStream,
+          out: Optional[TextIO],
+          env: Mapping[str, Node],
+          base_dir: Optional[str]) -> Mapping[str, Node]:
+    errors = _ErrorCollector()
     lexer = KnitScriptLexer(in_)
+    lexer.removeErrorListeners()
+    lexer.addErrorListener(errors)
     parser = KnitScriptParser(CommonTokenStream(lexer))
+    parser.removeErrorListeners()
+    parser.addErrorListener(errors)
     document = build_ast(parser.document())
-    assert isinstance(document, Document)
+    for error in errors:
+        out.write(f"error: {error.message}\n    " +
+                  f"on line {error.source.line}, " +
+                  f"column {error.source.column}, " +
+                  f"in {error.source.file}\n")
+
     env = dict(env)
+    assert isinstance(document, Document)
     for stmt in document.stmts:
         if isinstance(stmt, Using):
             if base_dir is None:
-                raise LoadError(
-                    "no module base directory (did you save the document?)",
-                    stmt
-                )
-            used_env = load_file(os.path.join(base_dir, stmt.module + ".ks"))
+                raise LoadError("no module base directory", stmt)
+            # TODO: We shouldn't pass the output stream to imported modules,
+            #  but then syntax errors would be silenced--need a way to show
+            #  syntax errors even without an output stream.
+            used_env = load_file(os.path.join(base_dir, stmt.module + ".ks"),
+                                 out)
             for name in stmt.names:
                 env[name] = used_env[name]
         elif isinstance(stmt, PatternDef):
@@ -131,9 +152,55 @@ def _get_default_env(out: Optional[TextIO]) -> Mapping[str, Node]:
         "width": NativeFunction.of(_width),
         "height": NativeFunction.of(_height)
     }
-    # noinspection PyTypeChecker
     builtins = InputStream(pkgutil
                            .get_data("knitscript.library", "builtins.ks")
                            .decode("UTF-8"))
     builtins.name = "builtins"
-    return {**env, **_load(builtins, env, None)}
+    return {**env, **_load(builtins, None, env, None)}
+
+
+@dataclass(frozen=True)
+class _SyntaxError:
+    source: Source
+    message: str
+
+
+class _ErrorCollector(ErrorListener, Sequence):
+    """Collects errors that occur during parsing."""
+
+    def __init__(self) -> None:
+        self._errors = []
+
+    def syntaxError(self,
+                    recognizer: Recognizer,
+                    token: Token,
+                    line: int,
+                    column: int,
+                    message: str,
+                    ex: RecognitionException) -> None:
+        stream = (token.source[1]
+                  if token is not None
+                  else recognizer.inputStream)
+        file = (stream.fileName
+                if isinstance(stream, FileStream)
+                else stream.name)
+        self._errors.append(_SyntaxError(Source(line, column, file), message))
+
+    @overload
+    def __getitem__(self, i: int) -> _T_co:
+        ...
+
+    @overload
+    def __getitem__(self, s: slice) -> Sequence[_T_co]:
+        ...
+
+    def __getitem__(self, i: Union[int, slice]) -> _T_co:
+        if isinstance(i, int):
+            return self._errors[i]
+        elif isinstance(i, slice):
+            return self._errors[i.start:i.stop:i.step]
+        else:
+            raise TypeError("item is not an int or slice")
+
+    def __len__(self) -> int:
+        return len(self._errors)
