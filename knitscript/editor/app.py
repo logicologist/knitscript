@@ -230,8 +230,13 @@ class _Preview(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-        self._text = Text(self, font=_get_default_font(), relief=FLAT,
-                          bg="SystemMenu", highlightthickness=0)
+        self._text = Text(self,
+                          font=_get_default_font(),
+                          relief=FLAT,
+                          bg=("systemSheetBackground"
+                              if platform.system() == "Darwin"
+                              else "systemMenu"),
+                          highlightthickness=0)
         redirector = WidgetRedirector(self._text)
         redirector.register("insert", lambda *args, **kwargs: "break")
         redirector.register("delete", lambda *args, **kwargs: "break")
