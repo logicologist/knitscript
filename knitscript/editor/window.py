@@ -68,8 +68,9 @@ class Window(Frame):
             if self._can_reset_document():
                 self.master.destroy()
 
-        self.master.protocol("WM_DELETE_WINDOW", on_delete)
         self.pack(expand=YES, fill=BOTH)
+        self.master.wm_protocol("WM_DELETE_WINDOW", on_delete)
+        self.master.createcommand("::tk::mac::Quit", on_delete)
 
     def new(self) -> None:
         """Resets the current document without saving."""
