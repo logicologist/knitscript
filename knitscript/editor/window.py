@@ -3,8 +3,8 @@ import platform
 from functools import wraps
 from idlelib.redirector import WidgetRedirector
 from io import StringIO
-from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, Misc, \
-    NORMAL, NS, NSEW, RIGHT, Text, VERTICAL, Y, YES, Widget, filedialog, \
+from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, NORMAL, NS, \
+    NSEW, RIGHT, Text, Tk, VERTICAL, Y, YES, Widget, filedialog, \
     messagebox
 from tkinter.font import Font, nametofont
 from tkinter.ttk import Frame, Scrollbar, Separator
@@ -28,62 +28,25 @@ _FILE_TYPES = [("KnitScript Document", "*" + _EXTENSION),
                ("All Files", "*.*")]
 
 
-class Application(Frame):
-    """The editor application."""
-
-    def __init__(self, master: Misc) -> None:
-        """
-        Creates the editor application.
-
-        :param master: the parent widget
-        """
-        super().__init__(master)
-        document = FileDocument(master)
-        document.text = _DEFAULT_DOCUMENT
-        window = _Window(master, document)
-        window.pack(expand=YES, fill=BOTH)
-
-        menu = Menu(master)
-        file_menu = Menu(menu, tearoff=0)
-        file_menu.add_command(label="New", command=window.new,
-                              underline=0, accelerator="Ctrl+N")
-        self.master.bind_all("<Control-n>", lambda event: window.new())
-        file_menu.add_command(label="Open", command=window.open,
-                              underline=0, accelerator="Ctrl+O")
-        self.master.bind_all("<Control-o>", lambda event: window.open())
-        file_menu.add_command(label="Save", command=window.save,
-                              underline=0, accelerator="Ctrl+S")
-        self.master.bind_all("<Control-s>", lambda event: window.save())
-        file_menu.entryconfigure(2, state=DISABLED)
-        document.bind(
-            "<<Modified>>",
-            lambda event: file_menu.entryconfigure(
-                2, state=NORMAL if document.modified else DISABLED
-            ),
-            add=True
-        )
-        file_menu.add_command(label="Save As", command=window.save_as)
-        menu.add_cascade(label="File", menu=file_menu, underline=0)
-        master.configure(menu=menu)
-
-
-class _Window(Frame):
+class Window(Frame):
     """The editor window."""
 
-    def __init__(self, master: Misc, document: FileDocument) -> None:
+    def __init__(self, master: Tk) -> None:
         """
         Creates the editor window.
 
         :param master: the parent widget
-        :param document: the model for the current KnitScript document
         """
         super().__init__(master)
+        self._document = FileDocument(master)
+        self._document.text = _DEFAULT_DOCUMENT
+        self.master.title(self._document.name)
+        self.master.configure(menu=self._create_menu())
+
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(2, weight=1)
 
-        self._document = document
-        self.master.title(self._document.name)
         self._editor = _Editor(self, self._document, width=500, height=500)
         self._editor.text = _DEFAULT_DOCUMENT
         self._editor.grid(row=0, column=0, sticky=NSEW)
@@ -106,6 +69,7 @@ class _Window(Frame):
                 self.master.destroy()
 
         self.master.protocol("WM_DELETE_WINDOW", on_delete)
+        self.pack(expand=YES, fill=BOTH)
 
     def new(self) -> None:
         """Resets the current document without saving."""
@@ -154,6 +118,30 @@ class _Window(Frame):
         if response:
             return self.save()
         return response is not None
+
+    def _create_menu(self) -> Menu:
+        menu = Menu(self.master)
+        file_menu = Menu(menu, tearoff=0)
+        file_menu.add_command(label="New", command=self.new,
+                              underline=0, accelerator="Ctrl+N")
+        self.master.bind_all("<Control-n>", lambda event: self.new())
+        file_menu.add_command(label="Open", command=self.open,
+                              underline=0, accelerator="Ctrl+O")
+        self.master.bind_all("<Control-o>", lambda event: self.open())
+        file_menu.add_command(label="Save", command=self.save,
+                              underline=0, accelerator="Ctrl+S")
+        self.master.bind_all("<Control-s>", lambda event: self.save())
+        file_menu.entryconfigure(2, state=DISABLED)
+        self._document.bind(
+            "<<Modified>>",
+            lambda event: file_menu.entryconfigure(
+                2, state=NORMAL if self._document.modified else DISABLED
+            ),
+            add=True
+        )
+        file_menu.add_command(label="Save As", command=self.save_as)
+        menu.add_cascade(label="File", menu=file_menu, underline=0)
+        return menu
 
 
 class _Editor(Frame):

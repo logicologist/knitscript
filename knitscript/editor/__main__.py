@@ -1,12 +1,12 @@
 from tkinter import Tk
 
-from knitscript.editor.app import Application
+from knitscript.editor.window import Window
 
 
 def main() -> None:
     """Runs the KnitScript editor."""
-    app = Application(Tk())
-    app.mainloop()
+    window = Window(Tk())
+    window.mainloop()
 
 
 if __name__ == "__main__":
