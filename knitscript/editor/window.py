@@ -175,7 +175,7 @@ class _Editor(Frame):
         self._text.bind("<Control-o>", on_open)
 
         def on_text_key() -> None:
-            document.text = self._text.get("1.0", END)
+            document.text = _strip_trailing_newline(self._text.get("1.0", END))
             document.modified = self._text.edit_modified()
 
         self._text.bind("<Key>", lambda event: self.after_idle(on_text_key),
@@ -296,3 +296,12 @@ def _get_fixed_font() -> Font:
     if platform.system() == "Windows":
         font.configure(family="Consolas")
     return font
+
+
+def _strip_trailing_newline(string: str) -> str:
+    if len(string) >= 2 and string[-2:] == "\r\n":
+        return string[:-2]
+    elif len(string) >= 1 and string[-1] == "\n":
+        return string[:-1]
+    else:
+        return string
