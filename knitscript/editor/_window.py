@@ -77,6 +77,7 @@ class Window(Frame):
         self._editor = _Editor(self, self._document, width=500, height=500)
         self._editor.text = _DEFAULT_DOCUMENT
         self._editor.grid(row=0, column=0, sticky=NSEW)
+        self._editor.focus_set()
 
         def update_title():
             self.master.title(self._document.name +
@@ -264,6 +265,7 @@ class _Editor(Frame):
         self._text.configure(yscrollcommand=scrollbar.set)
         scrollbar.pack(side=RIGHT, fill=Y)
         self._text.pack(side=LEFT, expand=YES, fill=BOTH)
+        self.bind("<FocusIn>", lambda event: self._text.focus_set())
 
         # TODO:
         #  This is kind of a hack to stop Ctrl-O from inserting a new line. :/
