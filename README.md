@@ -1,12 +1,6 @@
-KnitScript is a computer language that helps you design knitting patterns more
-easily, using modular sub-patterns that can be composed together. Instead of
-working at the level of individual stitches, patterns can be made by describing
-which textures should go where and how big those textures should be.
+KnitScript is a computer language that helps you design knitting patterns more easily, using modular sub-patterns that can be composed together. Instead of working at the level of individual stitches, patterns can be made by describing which textures should go where and how big those textures should be.
 
-For example, this KnitScript program describes a pattern with stockinette
-stitch, seed stitch, ribbing, and the slipped waves texture in each of the four
-corners (each corner is 8 stitches wide and 8 rows tall), surrounded by a
-garter stitch border:
+For example, this KnitScript program describes a pattern with stockinette stitch, seed stitch, ribbing, and the slipped waves texture in each of the four corners (each corner is 8 stitches wide and 8 rows tall), surrounded by a garter stitch border:
 
     pattern squares
       fill (slippedWaves, 8, 8), fill (stst, 8, 8).
@@ -15,8 +9,7 @@ garter stitch border:
 
     show (standalone (garterBorder (squares, 4, 2)))
 
-Running this program gives you these instructions that you can use to knit the
-pattern:
+Running this program gives you these instructions that you can use to knit the pattern:
 
     WS: CO 20. (20 sts)
     **
@@ -37,21 +30,13 @@ pattern:
     rep from ** 4 times
     RS: *BO; rep from * to end. (0 sts)
 
-KnitScript verifies that every pattern is correct. If the pattern runs out of
-stitches, has too many stitches left over, or uses a stitch incorrectly,
-KnitScript will tell you what the problem is.
+KnitScript verifies that every pattern is correct. If the pattern runs out of stitches, has too many stitches left over, or uses a stitch incorrectly, KnitScript will tell you what the problem is.
 
-Read the [KnitScript tutorial][tutorial] and watch the [demo video][demo] to
-learn more, and download the
-[KnitScript editor](https://bitbucket.org/logicologist/knitscript/downloads/)
-for Windows or Mac to start creating your own patterns (**NOTE:** the
-KnitScript editor hasn't been released yet).
+Read the [KnitScript tutorial][tutorial] and watch the [demo video][demo] to learn more, and download the [KnitScript editor](https://bitbucket.org/logicologist/knitscript/downloads/) for Windows or Mac to start creating your own patterns (**NOTE:** the KnitScript editor hasn't been released yet).
 
 # Further Reading
 
-KnitScript started as a student project in the spring of 2019 for
-[CSE 402][cse402], a class at the University of Washington about
-domain-specific languages. You can read our reports and poster slides here:
+KnitScript started as a student project in the spring of 2019 for [CSE 402][cse402], a class at the University of Washington about domain-specific languages. You can read our reports and poster slides here:
 
 * [Project Proposal][proposal]
 * [Design Document][design-doc]
@@ -64,17 +49,12 @@ To run KnitScript using the source code in this repository, you need:
 
 * [Python](https://www.python.org/) 3.7 or later
 * [ANTLR](https://www.antlr.org/download.html) 4
-    - Either `antlr4` or `antlr` should be in your PATH. This should happen
-      automatically if you install ANTLR using Homebrew on Mac or Chocolatey on
-      Windows.
+    - Either `antlr4` or `antlr` should be in your PATH. This should happen automatically if you install ANTLR using Homebrew on Mac or Chocolatey on Windows.
     - The `antlr4-python3-runtime` package should be installed using pip.
 
-Before running KnitScript for the first time, or after changing the
-`KnitScript.g4` grammar file, run `python setup.py build`.
+Before running KnitScript for the first time, or after changing the `KnitScript.g4` grammar file, run `python setup.py build`.
 
-To run a KnitScript program, run `python -m knitscript <filename>`. If you run
-`python setup.py develop`, you can also run KnitScript programs using
-`knitscript <filename>`.
+To run a KnitScript program, run `python -m knitscript <filename>`. If you run `python setup.py develop`, you can also run KnitScript programs using `knitscript <filename>`.
 
 # License
 
