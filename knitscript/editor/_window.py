@@ -70,6 +70,10 @@ class Window(Frame):
 
         self.pack(expand=YES, fill=BOTH)
         self.master.wm_protocol("WM_DELETE_WINDOW", on_delete)
+        self.master.createcommand(
+            "tkAboutDialog",
+            lambda: self.master.call("::tk::mac::standardAboutPanel")
+        )
         self.master.createcommand("::tk::mac::Quit", on_delete)
 
     def new(self) -> None:

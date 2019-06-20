@@ -61,7 +61,12 @@ setup(
     app=["knitscript/editor/__main__.py"],
     options={
         "py2app": {
-            "plist": {"CFBundleName": "KnitScript Editor"},
+            "plist": {
+                "CFBundleName": "KnitScript Editor",
+                "NSHumanReadableCopyright":
+                    "Copyright 2019 Sarah Marshall and Kimberly Ruth\n" +
+                    "MIT License"
+            },
             "extra_scripts": ["scripts/knitscript.py"]
         }
     },
