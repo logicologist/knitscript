@@ -1,8 +1,8 @@
 # What is KnitScript?
 
-KnitScript is a computer language that helps you design knitting patterns more easily. In KnitScript, patterns are composed of modular sub-patterns that let you describe which textures go where and how big those textures should be, instead of working at the level of individual stitch-by-stitch instructions.
+KnitScript is a computer language that helps you design knitting patterns more easily. In KnitScript, patterns are composed of sub-patterns that let you describe which textures go where and how big those textures should be, instead of working at the level of individual stitch-by-stitch instructions. Of course, you can also define patterns by writing out the stitches row-by-row, so you aren't limited to the textures that come with KnitScript.
 
-For example, this KnitScript program describes a pattern with stockinette stitch, seed stitch, ribbing, and the slipped waves texture in each of the four corners, surrounded by a garter stitch border:
+This KnitScript program describes a pattern with stockinette stitch, seed stitch, ribbing, and the slipped waves texture in each of the four corners, surrounded by a garter stitch border:
 
     pattern squares
       fill (slippedWaves, 8, 8), fill (stst, 8, 8).
