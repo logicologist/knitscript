@@ -13,24 +13,24 @@ For example, this KnitScript program describes a pattern with stockinette stitch
 
 Running this program gives you these instructions that you can use to knit the pattern:
 
-    WS: CO 20. (20 sts)
-    **
-    RS: K 20. (20 sts)
-    rep from ** 4 times
-    **
-    RS: K 20. (20 sts)
-    WS: K 2, [K, SL] 4, P 8, K 2. (20 sts)
-    RS: K 20. (20 sts)
-    WS: K 2, [SL, K] 4, P 8, K 2. (20 sts)
-    rep from ** 2 times
-    **
-    RS: K 2, [K, P] 4, [K, P] 4, K 2. (20 sts)
-    WS: K 2, [P, K] 4, [K, P] 4, K 2. (20 sts)
-    rep from ** 4 times
-    **
-    RS: K 20. (20 sts)
-    rep from ** 4 times
-    RS: *BO; rep from * to end. (0 sts)
+> WS: CO 20. (20 sts)  
+> **  
+> RS: K 20. (20 sts)  
+> rep from ** 4 times  
+> **  
+> RS: K 20. (20 sts)  
+> WS: K 2, [K, SL] 4, P 8, K 2. (20 sts)  
+> RS: K 20. (20 sts)  
+> WS: K 2, [SL, K] 4, P 8, K 2. (20 sts)  
+> rep from ** 2 times  
+> **  
+> RS: K 2, [K, P] 4, [K, P] 4, K 2. (20 sts)  
+> WS: K 2, [P, K] 4, [K, P] 4, K 2. (20 sts)  
+> rep from ** 4 times  
+> **  
+> RS: K 20. (20 sts)  
+> rep from ** 4 times  
+> RS: *BO; rep from * to end. (0 sts)
 
 KnitScript verifies that every pattern is correct. If the pattern runs out of stitches, has too many stitches left over, or uses a stitch incorrectly, KnitScript will tell you what the problem is.
 
