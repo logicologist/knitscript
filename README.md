@@ -1,4 +1,6 @@
-KnitScript is a computer language that helps you design knitting patterns more easily, using modular sub-patterns that can be composed together. Instead of working at the level of individual stitches, patterns can be made by describing which textures should go where and how big those textures should be.
+# What is KnitScript?
+
+KnitScript is a computer language that helps you design knitting patterns more easily by using modular sub-patterns that can be composed together. Instead of working at the level of individual stitches, patterns can be made by describing which textures go where and how big those textures should be.
 
 For example, this KnitScript program describes a pattern with stockinette stitch, seed stitch, ribbing, and the slipped waves texture in each of the four corners (each corner is 8 stitches wide and 8 rows tall), surrounded by a garter stitch border:
 
@@ -32,7 +34,7 @@ Running this program gives you these instructions that you can use to knit the p
 
 KnitScript verifies that every pattern is correct. If the pattern runs out of stitches, has too many stitches left over, or uses a stitch incorrectly, KnitScript will tell you what the problem is.
 
-Read the [KnitScript tutorial][tutorial] and watch the [demo video][demo] to learn more, and download the [KnitScript editor](https://bitbucket.org/logicologist/knitscript/downloads/) for Windows or Mac to start creating your own patterns (**NOTE:** the KnitScript editor hasn't been released yet).
+Read the [**KnitScript tutorial**][tutorial] and watch the [**demo video**][demo] to learn more, and download the [**KnitScript editor**](https://bitbucket.org/logicologist/knitscript/downloads/) for Windows or Mac to start creating your own patterns (**NOTE:** the KnitScript editor hasn't been released yet).
 
 # Further Reading
 
@@ -42,6 +44,8 @@ KnitScript started as a student project in the spring of 2019 for [CSE 402][cse4
 * [Design Document][design-doc]
 * [Final Report][report]
 * [Poster Slides][poster]
+
+KnitScript was inspired by other knitting languages like [Purl](http://chelsea.lol/purl-undergrad/), [KP](http://www.cs.cmu.edu/~taey/pub/knit.pdf) and [Knitting Visualizer](http://www.columbia.edu/~syy2114/knitting-visualizer/).
 
 # Source Code
 
