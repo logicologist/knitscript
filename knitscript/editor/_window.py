@@ -164,7 +164,7 @@ class Window(Frame):
         menu = Menu(self.master)
         menu.add_cascade(label="File", menu=self._create_file_menu(menu),
                          underline=0)
-        menu.add_cascade(label="Edit", menu=self._create_edit_menu(menu),
+        menu.add_cascade(label="Edit", menu=_create_edit_menu(menu),
                          underline=0)
         return menu
 
@@ -191,64 +191,10 @@ class Window(Frame):
         self.master.bind_all(_KEYS["close"][1], lambda event: self.close())
         return menu
 
-    def _create_edit_menu(self, master: Menu) -> Menu:
-        menu = Menu(master, tearoff=0)
-        menu.add_command(
-            label="Undo", command=lambda: self.focus_get().edit_undo(),
-            underline=0, accelerator=_KEYS["undo"][0]
-        )
-        menu.add_command(
-            label="Redo", command=lambda: self.focus_get().edit_redo(),
-            underline=0, accelerator=_KEYS["redo"][0]
-        )
-        menu.add_separator()
-        menu.add_command(
-            label="Cut",
-            command=lambda: self.focus_get().event_generate("<<Cut>>"),
-            underline=2, accelerator=_KEYS["cut"][0]
-        )
-        menu.add_command(
-            label="Copy",
-            command=lambda: self.focus_get().event_generate("<<Copy>>"),
-            underline=0, accelerator=_KEYS["copy"][0]
-        )
-        menu.add_command(
-            label="Paste",
-            command=lambda: self.focus_get().event_generate("<<Paste>>"),
-            underline=0, accelerator=_KEYS["paste"][0]
-        )
-        menu.add_separator()
-        menu.add_command(
-            label="Delete",
-            command=lambda: self.focus_get().delete(SEL_FIRST, SEL_LAST),
-            underline=0, accelerator=_KEYS["delete"][0]
-        )
-
-        def before():
-            text = self.focus_get()
-            if not isinstance(text, Text):
-                for i in 0, 1, 3, 4, 5, 7:
-                    menu.entryconfigure(i, state=DISABLED)
-            else:
-                menu.entryconfigure(0, state=_to_state(text.edit("canundo")))
-                menu.entryconfigure(1, state=_to_state(text.edit("canredo")))
-                has_selection = text.tag_ranges(SEL) != ()
-                for i in 3, 4, 7:
-                    menu.entryconfigure(i, state=_to_state(has_selection))
-                try:
-                    self.clipboard_get()
-                    menu.entryconfigure(5, state=NORMAL)
-                except TclError:
-                    menu.entryconfigure(5, state=DISABLED)
-
-        menu.configure(postcommand=before)
-        return menu
-
 
 class _Editor(Frame):
     """A text editor widget."""
 
-    # noinspection PyShadowingNames
     def __init__(self, master: Widget, document: FileDocument, **kwargs) \
             -> None:
         """
@@ -261,6 +207,9 @@ class _Editor(Frame):
         self.pack_propagate(False)
         text = Text(self, undo=True, font=_get_fixed_font(), padx=5, pady=5,
                     relief=FLAT, highlightthickness=0)
+
+        menu = _create_edit_menu(text)
+        text.bind("<Button-3>", partial(_show_context_menu, menu), add=True)
 
         scrollbar = Scrollbar(self, command=text.yview)
         text.configure(yscrollcommand=scrollbar.set)
@@ -315,7 +264,6 @@ class _Preview(Frame):
     A live preview widget that displays the output of a KnitScript document.
     """
 
-    # noinspection PyShadowingNames
     def __init__(self, master: Widget, document: FileDocument, **kwargs) \
             -> None:
         """
@@ -334,9 +282,14 @@ class _Preview(Frame):
                               if platform.system() == "Darwin"
                               else "systemMenu"),
                           highlightthickness=0)
+
+        menu = _create_edit_menu(self._text)
+        self._text.bind("<Button-3>", partial(_show_context_menu, menu),
+                        add=True)
+
         redirector = WidgetRedirector(self._text)
-        redirector.register("insert", lambda *args, **kwargs: "break")
-        redirector.register("delete", lambda *args, **kwargs: "break")
+        redirector.register("insert", lambda *args: "break")
+        redirector.register("delete", lambda *args: "break")
 
         scrollbar = Scrollbar(self, command=self._text.yview)
         self._text.configure(yscrollcommand=scrollbar.set)
@@ -416,3 +369,62 @@ def _strip_trailing_newline(s: str) -> str:
 
 def _to_state(b: bool) -> str:
     return NORMAL if b else DISABLED
+
+
+def _create_edit_menu(master: Widget) -> Menu:
+    menu = Menu(master, tearoff=0)
+    menu.add_command(
+        label="Undo", command=lambda: master.focus_get().edit_undo(),
+        underline=0, accelerator=_KEYS["undo"][0]
+    )
+    menu.add_command(
+        label="Redo", command=lambda: master.focus_get().edit_redo(),
+        underline=0, accelerator=_KEYS["redo"][0]
+    )
+    menu.add_separator()
+    menu.add_command(
+        label="Cut",
+        command=lambda: master.focus_get().event_generate("<<Cut>>"),
+        underline=2, accelerator=_KEYS["cut"][0]
+    )
+    menu.add_command(
+        label="Copy",
+        command=lambda: master.focus_get().event_generate("<<Copy>>"),
+        underline=0, accelerator=_KEYS["copy"][0]
+    )
+    menu.add_command(
+        label="Paste",
+        command=lambda: master.focus_get().event_generate("<<Paste>>"),
+        underline=0, accelerator=_KEYS["paste"][0]
+    )
+    menu.add_separator()
+    menu.add_command(
+        label="Delete",
+        command=lambda: master.focus_get().delete(SEL_FIRST, SEL_LAST),
+        underline=0, accelerator=_KEYS["delete"][0]
+    )
+
+    def before():
+        text = master.focus_get()
+        if not isinstance(text, Text):
+            for i in 0, 1, 3, 4, 5, 7:
+                menu.entryconfigure(i, state=DISABLED)
+        else:
+            menu.entryconfigure(0, state=_to_state(text.edit("canundo")))
+            menu.entryconfigure(1, state=_to_state(text.edit("canredo")))
+            has_selection = text.tag_ranges(SEL) != ()
+            for i in 3, 4, 7:
+                menu.entryconfigure(i, state=_to_state(has_selection))
+            try:
+                master.clipboard_get()
+                menu.entryconfigure(5, state=NORMAL)
+            except TclError:
+                menu.entryconfigure(5, state=DISABLED)
+
+    menu.configure(postcommand=before)
+    return menu
+
+
+def _show_context_menu(menu: Menu, event: Event) -> None:
+    menu.master.focus_set()
+    menu.tk_popup(event.x_root, event.y_root)
