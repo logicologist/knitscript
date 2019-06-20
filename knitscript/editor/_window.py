@@ -1,6 +1,6 @@
 import os
 import platform
-from functools import wraps
+from functools import partial, wraps
 from idlelib.redirector import WidgetRedirector
 from io import StringIO
 from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, NORMAL, NS, \
@@ -248,6 +248,7 @@ class Window(Frame):
 class _Editor(Frame):
     """A text editor widget."""
 
+    # noinspection PyShadowingNames
     def __init__(self, master: Widget, document: FileDocument, **kwargs) \
             -> None:
         """
@@ -258,14 +259,14 @@ class _Editor(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-        self._text = Text(self, undo=True, font=_get_fixed_font(),
-                          padx=5, pady=5, relief=FLAT, highlightthickness=0)
+        text = Text(self, undo=True, font=_get_fixed_font(), padx=5, pady=5,
+                    relief=FLAT, highlightthickness=0)
 
-        scrollbar = Scrollbar(self, command=self._text.yview)
-        self._text.configure(yscrollcommand=scrollbar.set)
+        scrollbar = Scrollbar(self, command=text.yview)
+        text.configure(yscrollcommand=scrollbar.set)
         scrollbar.pack(side=RIGHT, fill=Y)
-        self._text.pack(side=LEFT, expand=YES, fill=BOTH)
-        self.bind("<FocusIn>", lambda event: self._text.focus_set())
+        text.pack(side=LEFT, expand=YES, fill=BOTH)
+        self.bind("<FocusIn>", lambda event: text.focus_set())
 
         # TODO:
         #  This is kind of a hack to stop Ctrl-O from inserting a new line. :/
@@ -274,32 +275,36 @@ class _Editor(Frame):
                 self.master.open()
                 return "break"
 
-            self._text.bind("<Control-o>", on_open)
+            text.bind("<Control-o>", on_open)
 
-        def on_text_key() -> None:
-            document.text = _strip_trailing_newline(self._text.get("1.0", END))
-            document.modified = self._text.edit_modified()
+        def on_change(operation, *args):
+            operation(*args)
+            document.text = _strip_trailing_newline(text.get("1.0", END))
+            document.modified = text.edit_modified()
 
-        self._text.bind("<Key>", lambda event: self.after_idle(on_text_key),
-                        add=True)
+        redirector = WidgetRedirector(text)
+        insert = redirector.register("insert", None)
+        delete = redirector.register("delete", None)
+        redirector.register("insert", partial(on_change, insert))
+        redirector.register("delete", partial(on_change, delete))
 
         def bind_text_modified():
             def on_text_modified(_event: Event) -> None:
-                document.modified = self._text.edit_modified()
+                document.modified = text.edit_modified()
 
-            self._text.edit_modified(False)
-            self._text.bind("<<Modified>>", on_text_modified, add=True)
+            text.edit_modified(False)
+            text.bind("<<Modified>>", on_text_modified, add=True)
 
-        self._text.insert("1.0", document.text)
+        text.insert("1.0", document.text)
         self.after_idle(bind_text_modified)
 
         def on_document_opened(_event: Event) -> None:
-            self._text.replace("1.0", END, document.text)
-            self._text.edit_modified(False)
+            text.replace("1.0", END, document.text)
+            text.edit_modified(False)
 
         def on_document_modified(_event: Event):
-            if document.modified != self._text.edit_modified():
-                self._text.edit_modified(document.modified)
+            if document.modified != text.edit_modified():
+                text.edit_modified(document.modified)
 
         document.bind("<<Opened>>", on_document_opened, add=True)
         document.bind("<<Modified>>", on_document_modified, add=True)
