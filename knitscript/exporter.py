@@ -2,7 +2,7 @@ from functools import singledispatch
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
     Node, Pattern, Row, RowRepeat, StitchLit
-from knitscript.asttools import to_fixed_repeat
+from knitscript._asttools import to_fixed_repeat
 
 
 @singledispatch

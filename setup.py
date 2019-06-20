@@ -12,7 +12,7 @@ class KnitScriptBuildPy(build_py):
     def run(self) -> None:
         antlr = find_executable("antlr4") or find_executable("antlr")
         spawn([antlr,
-               "-o", "knitscript/parser",
+               "-o", "knitscript/_parser",
                "-no-listener",
                "-Dlanguage=Python3",
                "KnitScript.g4"])

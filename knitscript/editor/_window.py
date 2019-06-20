@@ -10,7 +10,7 @@ from tkinter.font import Font, nametofont
 from tkinter.ttk import Frame, Scrollbar, Separator
 from typing import Callable, TypeVar
 
-from knitscript.editor.document import FileDocument
+from knitscript.editor._document import FileDocument
 from knitscript.loader import load_text
 
 _T = TypeVar("_T")

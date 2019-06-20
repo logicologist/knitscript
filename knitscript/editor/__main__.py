@@ -1,6 +1,6 @@
 from tkinter import Tk
 
-from knitscript.editor.window import Window
+from knitscript.editor._window import Window
 
 
 def main() -> None:

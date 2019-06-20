@@ -9,15 +9,17 @@ from antlr4 import CommonTokenStream, FileStream, InputStream, \
     RecognitionException, Recognizer, Token
 from antlr4.error.ErrorListener import ErrorListener
 
-from knitscript.astgen import build_ast
+from knitscript._astgen import build_ast
 from knitscript.astnodes import Call, Document, NativeFunction, NaturalLit, \
     Node, Pattern, PatternDef, Source, Using
-from knitscript.asttools import Error
+from knitscript._asttools import Error
 from knitscript.exporter import export_text
 from knitscript.interpreter import count_rows, do_call, enclose, fill, \
-    infer_counts, prepare_pattern, reflect, substitute
-from knitscript.parser.KnitScriptLexer import KnitScriptLexer
-from knitscript.parser.KnitScriptParser import KnitScriptParser
+    infer_counts, interpret_pattern, reflect, substitute
+# noinspection PyProtectedMember
+from knitscript._parser.KnitScriptLexer import KnitScriptLexer
+# noinspection PyProtectedMember
+from knitscript._parser.KnitScriptParser import KnitScriptParser
 from knitscript.verifier import verify_pattern
 
 _T_co = TypeVar("_T_co")
@@ -109,7 +111,7 @@ def _show(out: Optional[TextIO],
     if out is None:
         return
     assert isinstance(pattern, Pattern)
-    pattern = prepare_pattern(pattern)
+    pattern = interpret_pattern(pattern)
     if description:
         out.write(f"\n\033[1m{description.value}\033[0m\n\n")
     out.write(f"{export_text(pattern)}\n\n")

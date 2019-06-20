@@ -4,10 +4,12 @@ from typing import Collection, Union
 
 from antlr4 import FileStream, ParserRuleContext
 
-from knitscript.astnodes import Block, Call, Document, ExpandingStitchRepeat, \
-    FixedBlockRepeat, FixedStitchRepeat, Get, NaturalLit, Node, PatternDef, \
-    Pattern, Row, RowRepeat, Side, Source, StitchLit, StringLit, Using
-from knitscript.parser.KnitScriptParser import KnitScriptParser
+from knitscript.astnodes import Block, Call, Document, \
+    ExpandingStitchRepeat, FixedBlockRepeat, FixedStitchRepeat, Get, \
+    NaturalLit, Node, PatternDef, Pattern, Row, RowRepeat, Side, Source, \
+    StitchLit, StringLit, Using
+# noinspection PyProtectedMember
+from knitscript._parser.KnitScriptParser import KnitScriptParser
 from knitscript.stitch import Stitch
 
 

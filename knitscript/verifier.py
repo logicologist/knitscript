@@ -4,7 +4,7 @@ from typing import Generator, Sequence
 
 from knitscript.astnodes import ExpandingStitchRepeat, FixedStitchRepeat, \
     Knittable, Node, Pattern, RowRepeat, Row, StitchLit
-from knitscript.asttools import Error, to_fixed_repeat
+from knitscript._asttools import Error, to_fixed_repeat
 from knitscript.stitch import Stitch
 
 
@@ -19,7 +19,7 @@ def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:
     :param pattern: the pattern to verify
     :return: a generator producing all of the errors in the pattern, if any
     """
-    yield from verify_counts(pattern, 0)
+    yield from _verify_counts(pattern, 0)
     assert isinstance(pattern, Knittable)
     if pattern.consumes != 0:
         yield KnitError(
@@ -35,7 +35,7 @@ def verify_pattern(pattern: Pattern) -> Generator[KnitError, None, None]:
 
 # noinspection PyUnusedLocal
 @singledispatch
-def verify_counts(node: Node, available: int) \
+def _verify_counts(node: Node, available: int) \
         -> Generator[KnitError, None, None]:
     """
     Checks stitch counts for consistency, and verifies that every row has
@@ -48,18 +48,18 @@ def verify_counts(node: Node, available: int) \
     raise TypeError(f"unsupported node {type(node).__name__}")
 
 
-@verify_counts.register
+@_verify_counts.register
 def _(stitch: StitchLit, available: int) -> Generator[KnitError, None, None]:
     yield from _at_least(stitch.consumes, available, stitch)
 
 
-@verify_counts.register
+@_verify_counts.register
 def _(fixed: FixedStitchRepeat, available: int) \
         -> Generator[KnitError, None, None]:
     consumes = 0
     produces = 0
     for stitch in fixed.stitches:
-        yield from verify_counts(stitch, available - consumes)
+        yield from _verify_counts(stitch, available - consumes)
         assert isinstance(stitch, Knittable)
         consumes += stitch.consumes
         produces += stitch.produces
@@ -67,27 +67,27 @@ def _(fixed: FixedStitchRepeat, available: int) \
         yield from _at_least(fixed.times.value * consumes, available, fixed)
 
 
-@verify_counts.register
+@_verify_counts.register
 def _(expanding: ExpandingStitchRepeat, available: int) \
         -> Generator[KnitError, None, None]:
-    yield from verify_counts(to_fixed_repeat(expanding),
-                             available - expanding.to_last.value)
+    yield from _verify_counts(to_fixed_repeat(expanding),
+                              available - expanding.to_last.value)
     n = (available - expanding.to_last.value) // expanding.consumes
     yield from _exactly(n * expanding.consumes,
                         available - expanding.to_last.value,
                         expanding)
 
 
-@verify_counts.register
+@_verify_counts.register
 def _(row: Row, available: int) -> Generator[KnitError, None, None]:
-    yield from verify_counts(to_fixed_repeat(row), available)
+    yield from _verify_counts(to_fixed_repeat(row), available)
 
 
-@verify_counts.register
+@_verify_counts.register
 def _(repeat: RowRepeat, available: int) -> Generator[KnitError, None, None]:
     start = available
     for row in repeat.rows:
-        yield from verify_counts(row, available)
+        yield from _verify_counts(row, available)
         assert isinstance(row, Knittable)
         yield from _exactly(row.consumes, available, row)
         available = row.produces
@@ -95,9 +95,9 @@ def _(repeat: RowRepeat, available: int) -> Generator[KnitError, None, None]:
         yield from _exactly(start, available, repeat)
 
 
-@verify_counts.register
+@_verify_counts.register
 def _(pattern: Pattern, available: int) -> Generator[KnitError, None, None]:
-    yield from verify_counts(to_fixed_repeat(pattern), available)
+    yield from _verify_counts(to_fixed_repeat(pattern), available)
 
 
 def _at_least(expected: int, actual: int, node: Node) \
@@ -242,4 +242,3 @@ def _(row: Row) -> Generator[KnitError, None, None]:
     stitches = list(_unroll_row(row))
     if stitches[0] == Stitch.MAKE_1_LEFT or stitches[0] == Stitch.MAKE_1_RIGHT:
         yield KnitError("Make 1 on first stitch of row", row)
-

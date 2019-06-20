@@ -5,5 +5,5 @@ __pycache__
 /dist
 
 /knitscript.egg-info
-/knitscript/parser/*
-!/knitscript/parser/__init__.py
+/knitscript/_parser/*
+!/knitscript/_parser/__init__.py

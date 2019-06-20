@@ -11,7 +11,7 @@ from typing import Callable, Iterable, Iterator, Generator, Mapping, \
 from knitscript.astnodes import Block, Call, ExpandingStitchRepeat, \
     FixedBlockRepeat, FixedStitchRepeat, Get, Knittable, NativeFunction, \
     NaturalLit, Node, Pattern, Row, RowRepeat, Side, StitchLit
-from knitscript.asttools import Error, ast_map, ast_reduce, to_fixed_repeat
+from knitscript._asttools import Error, ast_map, ast_reduce, to_fixed_repeat
 from knitscript.stitch import Stitch
 
 _T = TypeVar("_T")
@@ -23,7 +23,7 @@ class InterpretError(Error):
     """
 
 
-def prepare_pattern(pattern: Pattern) -> Pattern:
+def interpret_pattern(pattern: Pattern) -> Pattern:
     """
     Interprets and prepares the pattern for exporting.
 
