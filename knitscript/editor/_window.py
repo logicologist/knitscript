@@ -4,8 +4,8 @@ from functools import wraps
 from idlelib.redirector import WidgetRedirector
 from io import StringIO
 from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, NORMAL, NS, \
-    NSEW, RIGHT, Text, Tk, VERTICAL, Y, YES, Widget, filedialog, \
-    messagebox
+    NSEW, RIGHT, SEL, SEL_FIRST, SEL_LAST, TclError, Text, Tk, VERTICAL, Y, \
+    YES, Widget, filedialog, messagebox
 from tkinter.font import Font, nametofont
 from tkinter.ttk import Frame, Scrollbar, Separator
 from typing import Callable, TypeVar
@@ -20,14 +20,26 @@ if platform.system() == "Darwin":
         "new": ("Cmd+N", "<Command-n>"),
         "open": ("Cmd+O", "<Command-o>"),
         "save": ("Cmd+S", "<Command-s>"),
-        "close": ("Cmd+W", "<Command-w>")
+        "close": ("Cmd+W", "<Command-w>"),
+        "undo": ("Cmd+Z", "<Command-z>"),
+        "redo": ("Cmd+Y", "<Command-y>"),
+        "cut": ("Cmd+X", "<Command-x>"),
+        "copy": ("Cmd+C", "<Command-c>"),
+        "paste": ("Cmd+V", "<Command-v>"),
+        "delete": ("Del", "<Delete>")
     }
 else:
     _KEYS = {
         "new": ("Ctrl+N", "<Control-n>"),
         "open": ("Ctrl+O", "<Control-o>"),
         "save": ("Ctrl+S", "<Control-s>"),
-        "close": ("Ctrl+W", "<Control-w>")
+        "close": ("Ctrl+W", "<Control-w>"),
+        "undo": ("Ctrl+Z", "<Control-z>"),
+        "redo": ("Ctrl+Y", "<Control-y>"),
+        "cut": ("Ctrl+X", "<Control-x>"),
+        "copy": ("Ctrl+C", "<Control-c>"),
+        "paste": ("Ctrl+V", "<Control-v>"),
+        "delete": ("Del", "<Delete>")
     }
 
 _DEFAULT_DOCUMENT = ("pattern hello\n" +
@@ -149,30 +161,86 @@ class Window(Frame):
 
     def _create_menu(self) -> Menu:
         menu = Menu(self.master)
-        file_menu = Menu(menu, tearoff=0)
-        file_menu.add_command(label="New", command=self.new,
-                              underline=0, accelerator=_KEYS["new"][0])
+        menu.add_cascade(label="File", menu=self._create_file_menu(menu),
+                         underline=0)
+        menu.add_cascade(label="Edit", menu=self._create_edit_menu(menu),
+                         underline=0)
+        return menu
+
+    def _create_file_menu(self, master: Menu) -> Menu:
+        menu = Menu(master, tearoff=0)
+        menu.add_command(label="New", command=self.new,
+                         underline=0, accelerator=_KEYS["new"][0])
         self.master.bind_all(_KEYS["new"][1], lambda event: self.new())
-        file_menu.add_command(label="Open", command=self.open,
-                              underline=0, accelerator=_KEYS["open"][0])
+        menu.add_command(label="Open", command=self.open,
+                         underline=0, accelerator=_KEYS["open"][0])
         self.master.bind_all(_KEYS["open"][1], lambda event: self.open())
-        file_menu.add_command(label="Save", command=self.save,
-                              underline=0, accelerator=_KEYS["save"][0])
+        menu.add_command(label="Save", command=self.save,
+                         underline=0, accelerator=_KEYS["save"][0])
         self.master.bind_all(_KEYS["save"][1], lambda event: self.save())
-        file_menu.entryconfigure(2, state=DISABLED)
-        self._document.bind(
-            "<<Modified>>",
-            lambda event: file_menu.entryconfigure(
-                2, state=NORMAL if self._document.modified else DISABLED
-            ),
-            add=True
-        )
-        file_menu.add_command(label="Save As", command=self.save_as,
-                              underline=5)
-        file_menu.add_command(label="Close", command=self.close,
-                              underline=0, accelerator=_KEYS["close"][0])
+        menu.entryconfigure(2, state=DISABLED)
+        self._document.bind("<<Modified>>",
+                            lambda event: menu.entryconfigure(
+                                2, state=_to_state(self._document.modified)
+                            ),
+                            add=True)
+        menu.add_command(label="Save As", command=self.save_as, underline=5)
+        menu.add_command(label="Close", command=self.close,
+                         underline=0, accelerator=_KEYS["close"][0])
         self.master.bind_all(_KEYS["close"][1], lambda event: self.close())
-        menu.add_cascade(label="File", menu=file_menu, underline=0)
+        return menu
+
+    def _create_edit_menu(self, master: Menu) -> Menu:
+        menu = Menu(master, tearoff=0)
+        menu.add_command(
+            label="Undo", command=lambda: self.focus_get().edit_undo(),
+            underline=0, accelerator=_KEYS["undo"][0]
+        )
+        menu.add_command(
+            label="Redo", command=lambda: self.focus_get().edit_redo(),
+            underline=0, accelerator=_KEYS["redo"][0]
+        )
+        menu.add_separator()
+        menu.add_command(
+            label="Cut",
+            command=lambda: self.focus_get().event_generate("<<Cut>>"),
+            underline=2, accelerator=_KEYS["cut"][0]
+        )
+        menu.add_command(
+            label="Copy",
+            command=lambda: self.focus_get().event_generate("<<Copy>>"),
+            underline=0, accelerator=_KEYS["copy"][0]
+        )
+        menu.add_command(
+            label="Paste",
+            command=lambda: self.focus_get().event_generate("<<Paste>>"),
+            underline=0, accelerator=_KEYS["paste"][0]
+        )
+        menu.add_separator()
+        menu.add_command(
+            label="Delete",
+            command=lambda: self.focus_get().delete(SEL_FIRST, SEL_LAST),
+            underline=0, accelerator=_KEYS["delete"][0]
+        )
+
+        def before():
+            text = self.focus_get()
+            if not isinstance(text, Text):
+                for i in 0, 1, 3, 4, 5, 7:
+                    menu.entryconfigure(i, state=DISABLED)
+            else:
+                menu.entryconfigure(0, state=_to_state(text.edit("canundo")))
+                menu.entryconfigure(1, state=_to_state(text.edit("canredo")))
+                has_selection = text.tag_ranges(SEL) != ()
+                for i in 3, 4, 7:
+                    menu.entryconfigure(i, state=_to_state(has_selection))
+                try:
+                    self.clipboard_get()
+                    menu.entryconfigure(5, state=NORMAL)
+                except TclError:
+                    menu.entryconfigure(5, state=DISABLED)
+
+        menu.configure(postcommand=before)
         return menu
 
 
@@ -330,10 +398,14 @@ def _get_fixed_font() -> Font:
     return font
 
 
-def _strip_trailing_newline(string: str) -> str:
-    if len(string) >= 2 and string[-2:] == "\r\n":
-        return string[:-2]
-    elif len(string) >= 1 and string[-1] == "\n":
-        return string[:-1]
+def _strip_trailing_newline(s: str) -> str:
+    if len(s) >= 2 and s[-2:] == "\r\n":
+        return s[:-2]
+    elif len(s) >= 1 and s[-1] == "\n":
+        return s[:-1]
     else:
-        return string
+        return s
+
+
+def _to_state(b: bool) -> str:
+    return NORMAL if b else DISABLED
