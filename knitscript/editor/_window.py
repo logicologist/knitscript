@@ -3,9 +3,10 @@ import platform
 from functools import partial, wraps
 from idlelib.redirector import WidgetRedirector
 from io import StringIO
-from tkinter import BOTH, DISABLED, END, Event, FLAT, LEFT, Menu, NORMAL, NS, \
-    NSEW, RIGHT, SEL, SEL_FIRST, SEL_LAST, TclError, Text, Tk, VERTICAL, Y, \
-    YES, Widget, filedialog, messagebox
+from itertools import takewhile
+from tkinter import BOTH, DISABLED, END, Event, FLAT, INSERT, LEFT, Menu, \
+    NORMAL, NS, NSEW, RIGHT, SEL, SEL_FIRST, SEL_LAST, TclError, Text, Tk, \
+    VERTICAL, Y, YES, Widget, filedialog, messagebox
 from tkinter.font import Font, nametofont
 from tkinter.ttk import Frame, Scrollbar, Separator
 from typing import Callable, TypeVar
@@ -79,7 +80,7 @@ class Window(Frame):
         self._editor.grid(row=0, column=0, sticky=NSEW)
         self._editor.focus_set()
 
-        def update_title():
+        def update_title() -> None:
             self.master.title(self._document.name +
                               (" — Edited" if self._document.modified else ""))
 
@@ -92,7 +93,7 @@ class Window(Frame):
         preview = _Preview(self, self._document, width=500, height=500)
         preview.grid(row=0, column=2, sticky=NSEW)
 
-        def on_delete():
+        def on_delete() -> None:
             if self._can_reset_document():
                 self.master.destroy()
 
@@ -220,13 +221,25 @@ class _Editor(Frame):
         # TODO:
         #  This is kind of a hack to stop Ctrl-O from inserting a new line. :/
         if platform.system() != "Darwin":
-            def on_open(_event):
+            def on_open(_event: Event) -> str:
                 self.master.open()
                 return "break"
 
             text.bind("<Control-o>", on_open)
 
-        def on_change(operation, *args):
+        def on_enter(_event: Event) -> str:
+            # Keep the indent on the new line the same as the current line.
+            line = text.get("insert linestart", "insert lineend")
+            indent = " " * sum(1 for _ in takewhile(lambda c: c == " ", line))
+            if text.tag_ranges(SEL) == ():
+                text.insert(INSERT, "\n" + indent)
+            else:
+                text.replace(SEL_FIRST, SEL_LAST, "\n" + indent)
+            return "break"
+
+        text.bind("<Return>", on_enter)
+
+        def on_change(operation: Callable[..., None], *args) -> None:
             operation(*args)
             document.text = _strip_trailing_newline(text.get("1.0", END))
             document.modified = text.edit_modified()
@@ -234,10 +247,12 @@ class _Editor(Frame):
         redirector = WidgetRedirector(text)
         insert = redirector.register("insert", None)
         delete = redirector.register("delete", None)
+        replace = redirector.register("replace", None)
         redirector.register("insert", partial(on_change, insert))
         redirector.register("delete", partial(on_change, delete))
+        redirector.register("replace", partial(on_change, replace))
 
-        def bind_text_modified():
+        def bind_text_modified() -> None:
             def on_text_modified(_event: Event) -> None:
                 document.modified = text.edit_modified()
 
@@ -251,7 +266,7 @@ class _Editor(Frame):
             text.replace("1.0", END, document.text)
             text.edit_modified(False)
 
-        def on_document_modified(_event: Event):
+        def on_document_modified(_event: Event) -> None:
             if document.modified != text.edit_modified():
                 text.edit_modified(document.modified)
 
