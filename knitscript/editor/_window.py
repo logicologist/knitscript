@@ -19,13 +19,15 @@ if platform.system() == "Darwin":
     _KEYS = {
         "new": ("Cmd+N", "<Command-n>"),
         "open": ("Cmd+O", "<Command-o>"),
-        "save": ("Cmd+S", "<Command-s>")
+        "save": ("Cmd+S", "<Command-s>"),
+        "close": ("Cmd+W", "<Command-w>")
     }
 else:
     _KEYS = {
         "new": ("Ctrl+N", "<Control-n>"),
         "open": ("Ctrl+O", "<Control-o>"),
-        "save": ("Ctrl+S", "<Control-s>")
+        "save": ("Ctrl+S", "<Control-s>"),
+        "close": ("Ctrl+W", "<Control-w>")
     }
 
 _DEFAULT_DOCUMENT = ("pattern hello\n" +
@@ -126,6 +128,14 @@ class Window(Frame):
             self._document.save_as(file)
         return file is not None
 
+    def close(self) -> None:
+        """
+        Closes the window after asking the user to save (if there are any
+        unsaved changes).
+        """
+        if self._can_reset_document():
+            self.master.destroy()
+
     def _can_reset_document(self) -> bool:
         if not self._document.modified:
             return True
@@ -157,7 +167,11 @@ class Window(Frame):
             ),
             add=True
         )
-        file_menu.add_command(label="Save As", command=self.save_as)
+        file_menu.add_command(label="Save As", command=self.save_as,
+                              underline=5)
+        file_menu.add_command(label="Close", command=self.close,
+                              underline=0, accelerator=_KEYS["close"][0])
+        self.master.bind_all(_KEYS["close"][1], lambda event: self.close())
         menu.add_cascade(label="File", menu=file_menu, underline=0)
         return menu
 
