@@ -15,6 +15,19 @@ from knitscript.loader import load_text
 
 _T = TypeVar("_T")
 
+if platform.system() == "Darwin":
+    _KEYS = {
+        "new": ("Cmd+N", "<Command-n>"),
+        "open": ("Cmd+O", "<Command-o>"),
+        "save": ("Cmd+S", "<Command-s>")
+    }
+else:
+    _KEYS = {
+        "new": ("Ctrl+N", "<Control-n>"),
+        "open": ("Ctrl+O", "<Control-o>"),
+        "save": ("Ctrl+S", "<Control-s>")
+    }
+
 _DEFAULT_DOCUMENT = ("pattern hello\n" +
                      "  row: CO 12.\n" +
                      "  row: K to end.\n" +
@@ -128,14 +141,14 @@ class Window(Frame):
         menu = Menu(self.master)
         file_menu = Menu(menu, tearoff=0)
         file_menu.add_command(label="New", command=self.new,
-                              underline=0, accelerator="Ctrl+N")
-        self.master.bind_all("<Control-n>", lambda event: self.new())
+                              underline=0, accelerator=_KEYS["new"][0])
+        self.master.bind_all(_KEYS["new"][1], lambda event: self.new())
         file_menu.add_command(label="Open", command=self.open,
-                              underline=0, accelerator="Ctrl+O")
-        self.master.bind_all("<Control-o>", lambda event: self.open())
+                              underline=0, accelerator=_KEYS["open"][0])
+        self.master.bind_all(_KEYS["open"][1], lambda event: self.open())
         file_menu.add_command(label="Save", command=self.save,
-                              underline=0, accelerator="Ctrl+S")
-        self.master.bind_all("<Control-s>", lambda event: self.save())
+                              underline=0, accelerator=_KEYS["save"][0])
+        self.master.bind_all(_KEYS["save"][1], lambda event: self.save())
         file_menu.entryconfigure(2, state=DISABLED)
         self._document.bind(
             "<<Modified>>",
@@ -172,11 +185,12 @@ class _Editor(Frame):
 
         # TODO:
         #  This is kind of a hack to stop Ctrl-O from inserting a new line. :/
-        def on_open(_event):
-            self.master.open()
-            return "break"
+        if platform.system() != "Darwin":
+            def on_open(_event):
+                self.master.open()
+                return "break"
 
-        self._text.bind("<Control-o>", on_open)
+            self._text.bind("<Control-o>", on_open)
 
         def on_text_key() -> None:
             document.text = _strip_trailing_newline(self._text.get("1.0", END))
