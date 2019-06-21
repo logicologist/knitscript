@@ -29,6 +29,9 @@ if platform.system() == "Darwin":
         "paste": ("Cmd+V", "<Command-v>"),
         "delete": (None, None)
     }
+    _BUTTONS = {
+        "context_menu": "<Button-2>"
+    }
 else:
     _KEYS = {
         "new": ("Ctrl+N", "<Control-n>"),
@@ -41,6 +44,9 @@ else:
         "copy": ("Ctrl+C", "<Control-c>"),
         "paste": ("Ctrl+V", "<Control-v>"),
         "delete": ("Del", "<Delete>")
+    }
+    _BUTTONS = {
+        "context_menu": "<Button-3>"
     }
 
 _DEFAULT_DOCUMENT = ("pattern hello\n" +
@@ -210,7 +216,8 @@ class _Editor(Frame):
                     relief=FLAT, highlightthickness=0)
 
         menu = _create_edit_menu(text)
-        text.bind("<Button-3>", partial(_show_context_menu, menu), add=True)
+        text.bind(_BUTTONS["context_menu"], partial(_show_context_menu, menu),
+                  add=True)
 
         scrollbar = Scrollbar(self, command=text.yview)
         text.configure(yscrollcommand=scrollbar.set)
@@ -299,8 +306,8 @@ class _Preview(Frame):
                           highlightthickness=0)
 
         menu = _create_edit_menu(self._text)
-        self._text.bind("<Button-3>", partial(_show_context_menu, menu),
-                        add=True)
+        self._text.bind(_BUTTONS["context_menu"],
+                        partial(_show_context_menu, menu), add=True)
 
         redirector = WidgetRedirector(self._text)
         redirector.register("insert", lambda *args: "break")
