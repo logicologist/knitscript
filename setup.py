@@ -70,6 +70,5 @@ setup(
             "extra_scripts": ["scripts/knitscript.py"]
         }
     },
-    package_data={"knitscript.library": ["*.ks"]},
-    include_package_data=True
+    package_data={"knitscript.library": ["*.ks"]}
 )
