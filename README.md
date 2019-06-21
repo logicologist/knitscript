@@ -38,7 +38,7 @@ And knitting from the instructions gives you this. :)
 
 KnitScript verifies that every pattern is correct. If the pattern runs out of stitches, has too many stitches left over, or uses a stitch incorrectly, KnitScript will tell you what the problem is.
 
-Read the [**KnitScript tutorial**][tutorial] and watch the [**demo video**][demo] to learn more, and download the [**KnitScript editor**](https://bitbucket.org/logicologist/knitscript/downloads/) for Windows or Mac to start creating your own patterns (**NOTE:** the KnitScript editor hasn't been released yet).
+Read the [**KnitScript tutorial**][tutorial] and watch the [**demo video**][demo] to learn more, and download the [**KnitScript editor**](https://bitbucket.org/logicologist/knitscript/downloads/) for Windows or Mac to start creating your own patterns (**NOTE:** the KnitScript editor hasn't been released yet). For more information, see the [**language reference**](https://bitbucket.org/logicologist/knitscript/wiki/Language%20Reference) page.
 
 # Further Reading
 
