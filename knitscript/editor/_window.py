@@ -27,7 +27,7 @@ if platform.system() == "Darwin":
         "cut": ("Cmd+X", "<Command-x>"),
         "copy": ("Cmd+C", "<Command-c>"),
         "paste": ("Cmd+V", "<Command-v>"),
-        "delete": ("Del", "<Delete>")
+        "delete": (None, None)
     }
 else:
     _KEYS = {
