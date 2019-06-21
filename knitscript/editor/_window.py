@@ -6,7 +6,7 @@ from io import StringIO
 from itertools import takewhile
 from tkinter import BOTH, DISABLED, END, Event, FLAT, INSERT, LEFT, Menu, \
     NORMAL, NS, NSEW, RIGHT, SEL, SEL_FIRST, SEL_LAST, TclError, Text, Tk, \
-    VERTICAL, Y, YES, Widget, filedialog, messagebox
+    VERTICAL, WORD, Widget, Y, YES, filedialog, messagebox
 from tkinter.font import Font, nametofont
 from tkinter.ttk import Frame, Scrollbar, Separator
 from typing import Callable, TypeVar
@@ -212,8 +212,8 @@ class _Editor(Frame):
         """
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
-        text = Text(self, undo=True, font=_get_fixed_font(), padx=5, pady=5,
-                    relief=FLAT, highlightthickness=0)
+        text = Text(self, undo=True, font=_get_fixed_font(), wrap=WORD,
+                    padx=5, pady=5, relief=FLAT, highlightthickness=0)
 
         menu = _create_edit_menu(text)
         text.bind(_BUTTONS["context_menu"], partial(_show_context_menu, menu),
@@ -297,8 +297,7 @@ class _Preview(Frame):
         super().__init__(master, **kwargs)
         self.pack_propagate(False)
         self._text = Text(self,
-                          font=_get_default_font(),
-                          padx=5, pady=5,
+                          font=_get_default_font(), wrap=WORD, padx=5, pady=5,
                           relief=FLAT,
                           bg=("systemSheetBackground"
                               if platform.system() == "Darwin"
