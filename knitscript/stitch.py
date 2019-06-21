@@ -85,4 +85,4 @@ class Stitch(Enum):
         for stitch in cls:
             if stitch.symbol == symbol:
                 return stitch
-        raise ValueError("no such stitch")
+        raise ValueError(f"unrecognized stitch \"{symbol}\"")
